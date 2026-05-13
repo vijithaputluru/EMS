@@ -46,7 +46,7 @@ services:
 
     build:
 
-      context: ./Frontend/EMS
+      context: ./Frontend
 
       dockerfile: Dockerfile
 
