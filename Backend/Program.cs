@@ -1,4 +1,4 @@
-﻿using EmployeeManagementSystem.Controllers;
+using EmployeeManagementSystem.Controllers;
 
 using EmployeeManagementSystem.Data;
 
