@@ -1,0 +1,643 @@
+:root {
+  --font-sans: "Inter", "Poppins", "Segoe UI", Roboto, Arial, sans-serif;
+  --bg-app: #f5f7fa;
+  --bg-page: #ffffff;
+  --bg-muted: #f5f7fa;
+  --bg-soft: #eef4f8;
+  --navy-950: #041c32;
+  --navy-900: #06283d;
+  --navy-800: #12324a;
+  --text-strong: #041c32;
+  --text-body: #334155;
+  --text-muted: #64748b;
+  --border-soft: #e2e8f0;
+  --border-strong: #d7e1eb;
+  --teal-600: #00d1d1;
+  --teal-500: #0fd8d8;
+  --teal-100: rgba(0, 209, 209, 0.12);
+  --danger-500: #dc2626;
+  --danger-50: #fef2f2;
+  --shadow-xs: 0 1px 2px rgba(4, 28, 50, 0.03);
+  --shadow-sm: 0 8px 20px rgba(4, 28, 50, 0.04);
+  --shadow-md: 0 14px 30px rgba(4, 28, 50, 0.06);
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --content-max: 1400px;
+  --space-page: clamp(16px, 2.5vw, 32px);
+  --space-section: clamp(16px, 2vw, 24px);
+  --space-card: clamp(16px, 1.6vw, 22px);
+  --button-font-family: "Inter", "Poppins", "Segoe UI", Roboto, Arial, sans-serif;
+  --button-font-weight: 600;
+  --page-heading-font-family: "Inter", "Poppins", "Segoe UI", Roboto, Arial, sans-serif;
+  --page-heading-font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  --page-heading-font-weight: 700;
+  --page-heading-color: #041c32;
+  --page-heading-letter-spacing: -0.03em;
+  --page-subtitle-font-size: 0.875rem;
+  --page-subtitle-color: #64748b;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-7: 1.75rem;
+  --space-8: 2rem;
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.6;
+  --app-modal-overlay-z: 12000;
+  --app-modal-surface-z: 12010;
+  --app-select-chevron-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23041c32' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  font-family: var(--font-sans);
+  line-height: var(--line-height-normal);
+  font-weight: 400;
+  color: var(--text-body);
+  background: var(--bg-app);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+html {
+  overflow-x: hidden;
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  background: var(--bg-app);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: var(--line-height-normal);
+  overflow-x: hidden;
+}
+
+#root {
+  width: 100%;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button,
+[role="button"],
+input[type="button"],
+input[type="reset"],
+input[type="submit"] {
+  font-family: var(--button-font-family) !important;
+  font-style: normal !important;
+  font-weight: var(--button-font-weight) !important;
+  letter-spacing: 0 !important;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+input,
+select,
+textarea {
+  border-radius: 12px;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+select:not([multiple]):not([size]):not([size="1"]),
+select:not([multiple])[size="1"],
+.react-datepicker__month-select,
+.react-datepicker__year-select {
+  padding-right: 2.75rem !important;
+  background-image: var(--app-select-chevron-icon);
+  background-repeat: no-repeat;
+  background-position: right 0.9rem center;
+  background-size: 1rem;
+}
+
+select::-ms-expand {
+  display: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible {
+  outline: none;
+}
+
+::selection {
+  background: rgba(20, 184, 166, 0.18);
+  color: var(--text-strong);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+*:hover {
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 999px;
+}
+
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+.app-card,
+.app-panel,
+.app-surface {
+  background: var(--bg-page);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.app-surface-muted {
+  background: var(--bg-muted);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+}
+
+.app-page-title {
+  margin: 0;
+  color: var(--page-heading-color);
+  font-family: var(--page-heading-font-family);
+  font-size: var(--page-heading-font-size);
+  font-weight: var(--page-heading-font-weight);
+  letter-spacing: var(--page-heading-letter-spacing);
+}
+
+.app-page-subtitle {
+  margin: 8px 0 0;
+  color: var(--page-subtitle-color);
+  font-size: var(--page-subtitle-font-size);
+  line-height: 1.6;
+}
+
+.title,
+.main-title,
+.page-title,
+.udb-title,
+.leave-main-title,
+.attendance-header h2,
+.holiday-header h2,
+.company-header h2,
+.job-header-unique h2,
+.projects-header h2,
+.dept-header h2,
+.leave-header h2,
+.emp-header-unique h2,
+.notifications-header h2,
+.assets-header h2,
+.roles-header-bar h2,
+.task-header h2,
+.clients-header h2,
+.ems-task-header-wrapper h2,
+.offer-header h2,
+.reports-header h2,
+.payroll-header h2,
+.payslip-header h1 {
+  margin-top: 0 !important;
+  color: var(--page-heading-color) !important;
+  font-family: var(--page-heading-font-family) !important;
+  font-size: var(--page-heading-font-size) !important;
+  font-style: normal !important;
+  font-weight: var(--page-heading-font-weight) !important;
+  letter-spacing: var(--page-heading-letter-spacing) !important;
+  line-height: 1.12 !important;
+}
+
+.subtitle,
+.page-subtitle,
+.udb-subtitle,
+.attendance-subtitle,
+.holiday-header p,
+.company-header p,
+.projects-header p,
+.dept-header p,
+.leave-header p,
+.emp-header-unique p,
+.notifications-header p,
+.assets-header p,
+.clients-header p,
+.task-header p,
+.ems-task-header-wrapper p,
+.offer-header p,
+.reports-header p,
+.payroll-header p,
+.payslip-header p {
+  color: var(--page-subtitle-color) !important;
+  font-family: var(--page-heading-font-family) !important;
+  font-size: var(--page-subtitle-font-size) !important;
+  font-style: normal !important;
+  font-weight: 400 !important;
+  letter-spacing: 0 !important;
+  line-height: 1.6 !important;
+}
+
+.app-inline-error,
+.field-error,
+.form-error,
+.error {
+  color: var(--danger-500);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.app-button-primary,
+.app-button-secondary,
+.app-button-danger {
+  min-height: 42px;
+  padding: 0.625rem 1.125rem;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 0.875rem;
+  font-weight: 600;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.app-button-primary {
+  background: linear-gradient(135deg, #00d1d1 0%, #0fc2ce 100%);
+  border-color: #00d1d1;
+  color: #041c32;
+  box-shadow: 0 6px 14px rgba(0, 209, 209, 0.12);
+}
+
+.app-button-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #10dbdb 0%, #1acbd6 100%);
+  border-color: #10dbdb;
+  transform: translateY(-1px);
+}
+
+.app-button-secondary {
+  background: #ffffff;
+  border-color: var(--border-strong);
+  color: var(--text-body);
+}
+
+.app-button-danger {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+.app-button-secondary:hover:not(:disabled) {
+  background: var(--bg-muted);
+  border-color: #c6d2df;
+}
+
+.app-button-danger:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #dc2626;
+}
+
+.app-button-primary:disabled,
+.app-button-secondary:disabled,
+.app-button-danger:disabled,
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+  transform: none;
+}
+
+.app-input,
+.app-select,
+.app-textarea,
+.app-date-input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0.75rem 0.875rem;
+  border-radius: 12px;
+  border: 1px solid #d7e1ea;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.875rem;
+  line-height: var(--line-height-normal);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.app-textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.app-input:focus,
+.app-select:focus,
+.app-textarea:focus,
+.app-date-input:focus {
+  border-color: #00d1d1;
+  box-shadow: 0 0 0 3px rgba(0, 209, 209, 0.12);
+}
+
+.app-truncate {
+  display: inline-block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.app-empty-state {
+  padding: 2rem 1.25rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
+  line-height: var(--line-height-relaxed);
+}
+
+.app-table-empty-cell {
+  padding: 2rem 1.25rem;
+  text-align: center !important;
+  color: var(--text-muted);
+  font-size: 0.875rem;
+}
+
+.app-table-header-center th {
+  text-align: center;
+}
+
+.app-table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-table-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.app-date-input-wrapper {
+  display: block;
+  width: 100%;
+}
+
+.react-datepicker-popper {
+  z-index: 9999 !important;
+}
+
+.app-date-calendar,
+.react-datepicker {
+  border: 1px solid var(--border-soft) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 18px 38px rgba(4, 28, 50, 0.12) !important;
+  font-family: var(--font-sans) !important;
+}
+
+.react-datepicker__header {
+  background: #f8fbfd !important;
+  border-bottom: 1px solid var(--border-soft) !important;
+  padding-top: 0.875rem !important;
+}
+
+.react-datepicker__current-month,
+.react-datepicker-time__header,
+.react-datepicker-year-header {
+  color: var(--text-strong) !important;
+  font-size: 0.9375rem !important;
+  font-weight: 700 !important;
+}
+
+.react-datepicker__day-name,
+.react-datepicker__day,
+.react-datepicker__time-name {
+  width: 2rem !important;
+  line-height: 2rem !important;
+  margin: 0.2rem !important;
+}
+
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+  background: #00d1d1 !important;
+  color: #041c32 !important;
+}
+
+.react-datepicker__day:hover,
+.react-datepicker__month-text:hover,
+.react-datepicker__quarter-text:hover,
+.react-datepicker__year-text:hover {
+  background: rgba(0, 209, 209, 0.12) !important;
+}
+
+.react-datepicker__navigation-icon::before {
+  border-color: #06283d !important;
+}
+
+.react-datepicker__month-dropdown,
+.react-datepicker__year-dropdown,
+.react-datepicker__month-select,
+.react-datepicker__year-select {
+  border-radius: 10px !important;
+  border: 1px solid var(--border-soft) !important;
+  padding: 0.35rem 0.5rem !important;
+  font-family: var(--font-sans) !important;
+}
+
+body.app-modal-open {
+  overflow: hidden !important;
+}
+
+body.app-modal-open .app-header,
+body.app-modal-open .sidebar,
+body.app-modal-open .sidebar-backdrop {
+  pointer-events: none !important;
+}
+
+:is(
+  .attendance-modal-overlay,
+  .apply-modal-overlay,
+  .asset-delete-overlay,
+  .change-password-overlay,
+  .clients-add-modal-overlay-unique,
+  .client-drawer-overlay,
+  .client-modal-overlay,
+  .client-view-overlay,
+  .company-modal-overlay,
+  .delete-overlay,
+  .dept-members-overlay,
+  .dept-modal-overlay,
+  .emp-delete-overlay,
+  .emp-modal-overlay,
+  .ems-task-create-overlay,
+  .ems-task-delete-overlay,
+  .ems-task-view-overlay,
+  .holiday-modal-overlay,
+  .image-modal-overlay,
+  .job-modal-overlay,
+  .leave-details-overlay,
+  .modal,
+  .projects-modal-overlay,
+  .roles-modal-overlay
+) {
+  position: fixed !important;
+  inset: 0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  padding: clamp(16px, 3vw, 32px) !important;
+  overflow-y: auto;
+  background: rgba(4, 28, 50, 0.42) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+  z-index: var(--app-modal-overlay-z) !important;
+  isolation: isolate;
+}
+
+:is(
+  .attendance-modal,
+  .apply-modal-box,
+  .asset-delete-modal,
+  .change-password-modal,
+  .clients-add-modal-box-unique,
+  .client-view-modal,
+  .company-modal-box,
+  .delete-modal,
+  .dept-members-modal,
+  .dept-modal-box,
+  .emp-delete-modal,
+  .emp-modal-box,
+  .ems-task-create-popup,
+  .ems-task-delete-popup,
+  .ems-task-view-popup,
+  .holiday-modal-box,
+  .image-modal,
+  .job-modal-box,
+  .leave-details-container,
+  .modal-content,
+  .projects-modal,
+  .projects-modal-small,
+  .roles-modal-container
+) {
+  position: relative !important;
+  inset: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  left: auto !important;
+  margin: 0 auto !important;
+  z-index: var(--app-modal-surface-z) !important;
+  max-height: min(calc(100vh - 32px), 100%) !important;
+}
+
+.app-month-picker {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.app-month-picker-select {
+  min-width: 150px;
+}
+
+@supports not ((backdrop-filter: blur(14px)) or (-webkit-backdrop-filter: blur(14px))) {
+  .app-header,
+  .header-icon-button,
+  .profile-dropdown,
+  .page-shell :is(
+    .emp-modal-overlay,
+    .emp-delete-overlay,
+    .dept-modal-overlay,
+    .delete-overlay,
+    .clients-add-modal-overlay-unique,
+    .client-modal-overlay,
+    .client-drawer-overlay,
+    .client-view-overlay
+  ) {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+@media (hover: none) {
+  .app-button-primary:hover,
+  .app-button-secondary:hover,
+  .app-button-danger:hover {
+    transform: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-month-picker {
+    width: 100%;
+  }
+
+  .app-month-picker-select {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+}

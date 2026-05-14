@@ -1,0 +1,102 @@
+.salary-structure-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 20px;
+}
+
+.salary-structure-slider-head {
+  margin-bottom: 18px;
+}
+
+.salary-structure-slider-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.salary-structure-slider-note {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* CONTROLS */
+
+.salary-structure-ctc-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.salary-ctc-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 12px;
+  background: #14b8a6;
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.salary-ctc-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.salary-ctc-value {
+  min-width: 220px;
+  height: 46px;
+  border: 1px solid #d7e3ef;
+  border-radius: 14px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f766e;
+}
+
+/* RANGE */
+
+.salary-structure-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #14b8a6 0%,
+    #14b8a6 var(--range-progress),
+    #d9e4ea var(--range-progress),
+    #d9e4ea 100%
+  );
+  outline: none;
+  cursor: pointer;
+}
+
+.salary-structure-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 3px solid #ffffff;
+  background: #14b8a6;
+  cursor: pointer;
+  margin-top: -7px;
+}
+
+.salary-structure-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: transparent;
+}
