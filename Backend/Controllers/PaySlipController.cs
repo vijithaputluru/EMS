@@ -169,8 +169,8 @@ namespace EmployeeManagementSystem.Controllers
                 p.Generated_On,
 
                 // FIXED URLS
-                PreviewUrl = $"/api/PaySlip/preview/{p.Id}",
-                DownloadUrl = $"/api/PaySlip/download/{p.Id}"
+                PreviewUrl = $"/PaySlip/preview/{p.Id}",
+                DownloadUrl = $"/PaySlip/download/{p.Id}"
             });
 
             return Ok(result);
