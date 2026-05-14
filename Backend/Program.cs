@@ -21,6 +21,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 using System.Text;
+using Microsoft.AspNetCore.HttpOverrides;
 
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 
@@ -87,23 +88,20 @@ builder.Services.AddScoped<ModuleSearchService>();
 // ================= CORS =================
 
 builder.Services.AddCors(options =>
-
 {
-
     options.AddPolicy("AllowAll", policy =>
-
     {
-
         policy
-
-            .AllowAnyOrigin()   // ✅ allow ALL domains
-
+            .WithOrigins(
+                "http://3.108.78.39",
+                "https://3.108.78.39",
+                "http://localhost:5173",
+                "http://localhost:4200"
+            )
             .AllowAnyHeader()
-
-            .AllowAnyMethod();
-
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
-
 });
 
 // ================= JWT =================
@@ -115,6 +113,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
 
     {
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
 
         options.TokenValidationParameters = new TokenValidationParameters
 
@@ -217,22 +217,28 @@ builder.Services.AddSwaggerGen(options =>
 // ================= BUILD =================
 
 var app = builder.Build();
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor |
+        ForwardedHeaders.XForwardedProto
+});
+
+app.UseHttpsRedirection();
 
 app.UseStaticFiles();
 
-app.UseRouting(); // Required for endpoint routing
-
-// Enable CORS
+app.UseRouting();
 
 app.UseCors("AllowAll");
-
-app.UseAuthentication();
-
-app.UseAuthorization();
 
 app.UseSwagger();
 
 app.UseSwaggerUI();
+
+app.UseAuthentication();
+
+app.UseAuthorization();
 
 app.MapControllers();
 

@@ -8,6 +8,23 @@
   overflow: hidden;
   font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
+.employee-left input[type="checkbox"],
+.select-all-label input[type="checkbox"] {
+  width: 20px !important;
+  height: 20px !important;
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  appearance: auto !important;
+  -webkit-appearance: checkbox !important;
+  accent-color: #2563eb;
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 10px;
+  border: 1px solid #2563eb;
+  background: white;
+}
+ 
 
 /* =========================
    LEFT PANEL
