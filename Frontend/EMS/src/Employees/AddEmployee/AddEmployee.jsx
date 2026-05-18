@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import api from "../../api/axiosInstance";
 import { API_ENDPOINTS, buildApiUrl } from "../../api/endpoints";
+import { getStoredToken } from "../../utils/authStorage";
 
 import Stepper from "./Stepper";
 
@@ -28,10 +29,7 @@ function AddEmployee() {
   useEffect(() => {
     const fetchEmployeeDetails = async () => {
       try {
-        const token =
-          localStorage.getItem("token") ||
-          localStorage.getItem("authToken") ||
-          localStorage.getItem("jwtToken");
+        const token = getStoredToken();
 
         const config = {
           headers: {

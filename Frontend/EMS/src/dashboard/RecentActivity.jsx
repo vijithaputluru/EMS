@@ -62,7 +62,7 @@ function RecentActivity() {
     }
   };
 
-  const formatTime = (time) => timeAgo(time, time || "");
+  const formatTime = (time) => timeAgo(time);
 
   return (
     <div className="activity">

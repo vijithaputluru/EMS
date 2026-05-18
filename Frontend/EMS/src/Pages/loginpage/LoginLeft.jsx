@@ -3,6 +3,7 @@ import { FaEnvelope, FaEye, FaEyeSlash, FaLock } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/axiosInstance";
 import { API_ENDPOINTS } from "../../api/endpoints";
+import { clearAuthData, getAuthStorage } from "../../utils/authStorage";
 import AuthField from "./AuthField";
 import { isValidEmail } from "./authUtils";
 
@@ -86,7 +87,7 @@ export default function LoginLeft() {
     setError("");
     setLoading(true);
 
-    const storage = rememberMe ? localStorage : sessionStorage;
+    const storage = getAuthStorage(rememberMe);
 
     try {
       let response;
@@ -149,13 +150,12 @@ export default function LoginLeft() {
         role = role.trim().toLowerCase();
       }
 
-      localStorage.clear();
-      sessionStorage.clear();
+      clearAuthData();
 
       storage.setItem("token", token);
       storage.setItem("role", role);
-      storage.setItem("roleName", roleName);
-      storage.setItem("roleId", roleId);
+      storage.setItem("roleName", roleName || "");
+      storage.setItem("roleId", roleId || "");
       storage.setItem("email", form.email);
 
       let modules = [];
@@ -173,12 +173,19 @@ export default function LoginLeft() {
             }
           );
 
-          if (Array.isArray(modulesResponse.data)) {
-            modules = modulesResponse.data.map((module) => ({
-              moduleId: module.moduleId,
-              moduleName: module.moduleName,
+          const moduleData =
+            modulesResponse.data?.data?.$values ||
+            modulesResponse.data?.data ||
+            modulesResponse.data?.$values ||
+            modulesResponse.data ||
+            [];
+
+          if (Array.isArray(moduleData)) {
+            modules = moduleData.map((module) => ({
+              moduleId: module.moduleId ?? module.ModuleId,
+              moduleName: module.moduleName ?? module.ModuleName,
               canAccess: true,
-            }));
+            })).filter((module) => module.moduleName);
           }
         } catch (moduleError) {
           console.error("Modules API Error:", moduleError.message);
@@ -186,6 +193,7 @@ export default function LoginLeft() {
       }
 
       storage.setItem("modules", JSON.stringify(modules));
+      storage.setItem("permissions", JSON.stringify(modules));
 
       if (rememberMe) {
         localStorage.setItem("rememberEmail", form.email);

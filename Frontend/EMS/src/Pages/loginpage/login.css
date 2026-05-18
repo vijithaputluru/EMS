@@ -868,3 +868,9 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
     font-size: 20px;
   }
 }
+.auth-field-error {
+  margin-top: 6px;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 500;
+}

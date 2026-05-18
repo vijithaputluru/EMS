@@ -4,53 +4,54 @@
   background: #ffffff;
   padding: 20px;
 }
-
+ 
 .salary-structure-slider-head {
   margin-bottom: 18px;
 }
-
+ 
 .salary-structure-slider-title {
   margin: 0 0 4px;
   font-size: 16px;
   font-weight: 700;
   color: #0f172a;
 }
-
+ 
 .salary-structure-slider-note {
   margin: 0;
   font-size: 13px;
   color: #64748b;
 }
-
-/* CONTROLS */
-
+ 
+/* MAIN CONTROLS */
+ 
 .salary-structure-ctc-controls {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 14px;
-  margin-bottom: 22px;
+  margin-bottom: 18px;
 }
-
+ 
 .salary-ctc-btn {
-  width: 44px;
+  min-width: 70px;
   height: 44px;
   border: none;
   border-radius: 12px;
   background: #14b8a6;
   color: #ffffff;
-  font-size: 24px;
+  font-size: 16px;
   font-weight: 700;
   cursor: pointer;
+  padding: 0 14px;
 }
-
+ 
 .salary-ctc-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
-
+ 
 .salary-ctc-value {
-  min-width: 220px;
+  min-width: 240px;
   height: 46px;
   border: 1px solid #d7e3ef;
   border-radius: 14px;
@@ -59,13 +60,45 @@
   align-items: center;
   justify-content: center;
   padding: 0 18px;
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   color: #0f766e;
 }
-
+ 
+/* SMALL BUTTONS */
+ 
+.salary-quick-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+ 
+.salary-small-btn {
+  border: none;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #0f172a;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+ 
+.salary-small-btn:hover {
+  background: #14b8a6;
+  color: #ffffff;
+}
+ 
+.salary-small-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+ 
 /* RANGE */
-
+ 
 .salary-structure-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -82,7 +115,7 @@
   outline: none;
   cursor: pointer;
 }
-
+ 
 .salary-structure-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
@@ -94,9 +127,21 @@
   cursor: pointer;
   margin-top: -7px;
 }
-
+ 
 .salary-structure-slider::-webkit-slider-runnable-track {
   height: 8px;
   border-radius: 999px;
   background: transparent;
 }
+ 
+/* LABELS */
+ 
+.salary-slider-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+}
+ 

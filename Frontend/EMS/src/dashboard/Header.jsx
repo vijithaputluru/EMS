@@ -13,6 +13,11 @@ import {
 import { useLocation, useNavigate } from "react-router-dom";
 import api from "../api/axiosInstance";
 import { API_ENDPOINTS } from "../api/endpoints";
+import {
+  clearAuthData,
+  getStoredAuthValue,
+  getStoredRole,
+} from "../utils/authStorage";
 import ChangePasswordModal from "./ChangePasswordModal";
 
 const getGreetingMeta = () => {
@@ -47,14 +52,8 @@ function Header({ collapsed = false, isMobileViewport = false, onToggle }) {
   const [notifications, setNotifications] = useState([]);
   const [greetingMeta, setGreetingMeta] = useState(getGreetingMeta());
 
-  const role =
-    localStorage.getItem("role") ||
-    sessionStorage.getItem("role") ||
-    "user";
-  const email =
-    localStorage.getItem("email") ||
-    sessionStorage.getItem("email") ||
-    "No Email";
+  const role = getStoredRole();
+  const email = getStoredAuthValue("email", "No Email");
 
   const profileLabel = useMemo(() => {
     const safeEmail = String(email || "").trim();
@@ -145,16 +144,7 @@ function Header({ collapsed = false, isMobileViewport = false, onToggle }) {
     : "var(--layout-sidebar-width)";
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("role");
-    localStorage.removeItem("email");
-    localStorage.removeItem("roleName");
-
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("role");
-    sessionStorage.removeItem("email");
-    sessionStorage.removeItem("roleName");
-
+    clearAuthData();
     navigate("/login");
   };
 

@@ -234,6 +234,7 @@ namespace EmployeeManagementSystem.Services
             var attendanceList = await _context.Attendance
                 .AsNoTracking()
                 .Where(x => x.Attendance_Date == today)
+                .OrderBy(x => x.Attendance_Date)
                .AsNoTracking().ToListAsync();
 
             var result = new List<object>();
@@ -279,16 +280,19 @@ namespace EmployeeManagementSystem.Services
             var attendanceData = await _context.Attendance
                 .AsNoTracking()
                 .Where(x => x.Attendance_Date.Month == month && x.Attendance_Date.Year == year)
+                .OrderBy(x => x.Attendance_Date)
                 .AsNoTracking().ToListAsync();
 
             var holidays = await _context.Holidays
                 .AsNoTracking()
                 .Where(h => h.Holiday_Date.Month == month && h.Holiday_Date.Year == year)
+                .OrderBy(h => h.Holiday_Date)
                 .AsNoTracking().ToListAsync();
 
             var leaves = await _context.EmployeeLeaves
                 .AsNoTracking()
                 .Where(l => l.Status == "Approved")
+                .OrderBy(l => l.FromDate)
                 .AsNoTracking().ToListAsync();
 
             var result = new List<AdminEmployeeAttendanceDto>();
@@ -398,6 +402,7 @@ namespace EmployeeManagementSystem.Services
 
                             a.Attendance_Date < weekEnd)
 
+                .OrderBy(a => a.Attendance_Date)
                .AsNoTracking().ToListAsync();
 
             var result = new List<object>();
@@ -511,6 +516,7 @@ namespace EmployeeManagementSystem.Services
 
                             a.Attendance_Date < weekEnd)
 
+                .OrderBy(a => a.Attendance_Date)
                .AsNoTracking().ToListAsync();
 
             var result = new List<object>();
@@ -613,6 +619,7 @@ namespace EmployeeManagementSystem.Services
 
                             a.Attendance_Date < tomorrow)
 
+                .OrderBy(a => a.Attendance_Date)
                 .AsNoTracking().ToListAsync();
 
             var totalDays = DateTime.DaysInMonth(today.Year, today.Month);
@@ -767,6 +774,7 @@ namespace EmployeeManagementSystem.Services
 
                             a.Attendance_Date <= lastMonthEnd)
 
+                .OrderBy(a => a.Attendance_Date)
                 .AsNoTracking().ToListAsync();
 
             var totalDays = DateTime.DaysInMonth(lastMonthStart.Year, lastMonthStart.Month);

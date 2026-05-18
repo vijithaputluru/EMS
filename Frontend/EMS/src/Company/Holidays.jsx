@@ -14,6 +14,7 @@ import {
   getTodayInputValue,
   toIsoDateString,
 } from "../utils/date";
+import { getStoredToken } from "../utils/authStorage";
 
 const EMPTY_HOLIDAY = {
   id: null,
@@ -24,7 +25,7 @@ const EMPTY_HOLIDAY = {
 };
 
 function Holidays() {
-  const token = localStorage.getItem("token");
+  const token = getStoredToken();
 
   const [showHolidayModal, setShowHolidayModal] = useState(false);
   const [holidays, setHolidays] = useState([]);
@@ -241,7 +242,7 @@ function Holidays() {
       <div className="holiday-header">
         <div>
           <h2>Company Holidays</h2>
-          <p>{holidays.length} holidays this year</p>
+          <p>{holidays.length} Holidays This Year</p>
         </div>
 
         <button

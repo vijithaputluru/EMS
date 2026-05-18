@@ -11,6 +11,7 @@ import {
   getInputDateValue,
   getTodayInputValue,
 } from "../utils/date";
+import { getStoredToken } from "../utils/authStorage";
 
 function AttendanceTable({
   viewMode = "daily",
@@ -37,7 +38,7 @@ function AttendanceTable({
     checkOut: ""
   });
 
-  const token = localStorage.getItem("token");
+  const token = getStoredToken();
 
   // =========================
   // DEFAULT OFFICE TIME

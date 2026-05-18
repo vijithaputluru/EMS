@@ -1,14 +1,7 @@
 import axios from "axios";
 import { BASE_URL } from "./config";
 import { sortNestedCollectionsByRecency } from "../utils/collections";
-
-const getStoredToken = () =>
-  localStorage.getItem("token") ||
-  localStorage.getItem("authToken") ||
-  localStorage.getItem("jwtToken") ||
-  sessionStorage.getItem("token") ||
-  sessionStorage.getItem("authToken") ||
-  sessionStorage.getItem("jwtToken");
+import { getStoredToken } from "../utils/authStorage";
 
 const api = axios.create({
   baseURL: BASE_URL,

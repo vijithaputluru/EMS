@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/axiosInstance";
 import { API_ENDPOINTS } from "../api/endpoints";
 import { formatCurrency } from "../utils/formatters";
+import { getStoredToken } from "../utils/authStorage";
 import {
   FaUsers,
   FaBuilding,
@@ -17,7 +18,7 @@ import {
 } from "react-icons/fa";
 
 function Reports() {
-  const token = localStorage.getItem("token");
+  const token = getStoredToken();
   const navigate = useNavigate();
 
   const [reportCards, setReportCards] = useState([]);

@@ -18,31 +18,13 @@ import {
 import { NavLink, useLocation } from "react-router-dom";
 import "./Sidebar.css";
 import pirnavLogo from "../assets/pirnav.png";
+import { getStoredPermissions, getStoredRole } from "../utils/authStorage";
 
 const normalize = (name) =>
   (name || "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "")
     .trim();
-
-const getPermissions = () => {
-  try {
-    return (
-      JSON.parse(localStorage.getItem("modules")) ||
-      JSON.parse(localStorage.getItem("permissions")) ||
-      JSON.parse(sessionStorage.getItem("modules")) ||
-      JSON.parse(sessionStorage.getItem("permissions")) ||
-      []
-    );
-  } catch {
-    return [];
-  }
-};
-
-const getRoleName = () =>
-  (localStorage.getItem("role") ||
-    sessionStorage.getItem("role") ||
-    "").toLowerCase();
 
 const EXPANDABLE_MENUS = [
   {
@@ -243,8 +225,8 @@ const getSubmenuLinkClassName = ({ isActive }) =>
   `submenu-item ${isActive ? "active" : ""}`;
 
 const hasPermission = (module) => {
-  const role = getRoleName();
-  const permissions = getPermissions();
+  const role = getStoredRole();
+  const permissions = getStoredPermissions();
   const normalizedModule = normalize(module);
 
   if (role === "admin") {
@@ -289,7 +271,7 @@ function SubmenuLink({ to, icon, label, onClick }) {
 
 function Sidebar({ collapsed, isMobile = false, mobileOpen = false, onClose }) {
   const location = useLocation();
-  const roleName = getRoleName();
+  const roleName = getStoredRole();
   const isCompact = !isMobile && collapsed;
   const routeMenu = isCompact ? null : getMenuKeyFromPath(location.pathname);
   const [menuState, setMenuState] = useState(() => ({

@@ -93,6 +93,7 @@ public class ClientsController : ControllerBase
         // Fetch projects using ClientId
         var projects = await _context.Projects
             .Where(p => p.ClientId == clientId)
+            .OrderBy(p => p.Start_Date)
             .Select(p => new
             {
                 p.Project_Id,

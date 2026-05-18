@@ -144,22 +144,102 @@
   font-size: 15px;
 }
 
+/* =========================================
+   TABLE WRAPPER
+========================================= */
+
+.emp-table-wrapper {
+  width: 100%;
+  position: relative;
+}
+
+/* =========================================
+   SCROLL MESSAGE
+========================================= */
+
+.emp-scroll-hint {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #eefcfc;
+  border: 1px solid rgba(0, 209, 209, 0.18);
+  color: #0b7d8f;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  animation: scrollPulse 2s infinite;
+}
+
+@keyframes scrollPulse {
+  0% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.7;
+  }
+}
+
+/* =========================================
+   TABLE CONTAINER
+========================================= */
+
 .emp-table-container {
   background: #ffffff;
   border-radius: 20px;
   border: 1px solid rgba(4, 28, 50, 0.08);
+
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 2px;
+
+  width: 100%;
+  position: relative;
+
+  scrollbar-width: thin;
+  scrollbar-color: #00d1d1 #edf2f7;
 }
+
+/* Chrome Scrollbar */
+
+.emp-table-container::-webkit-scrollbar {
+  height: 10px;
+}
+
+.emp-table-container::-webkit-scrollbar-track {
+  background: #edf2f7;
+  border-radius: 20px;
+}
+
+.emp-table-container::-webkit-scrollbar-thumb {
+  background: #00d1d1;
+  border-radius: 20px;
+}
+
+/* =========================================
+   TABLE
+========================================= */
 
 .emp-table {
   width: 100%;
-  min-width: 1320px;
+  min-width: 1450px;
+
   border-collapse: separate;
   border-spacing: 0;
+
   table-layout: fixed;
 }
+
+/* =========================================
+   TABLE HEADER
+========================================= */
 
 .emp-table thead {
   background: #f8fbfd;
@@ -167,7 +247,7 @@
 
 .emp-table th,
 .emp-table td {
-  padding: 14px 16px;
+  padding: 16px;
   border-bottom: 1px solid #edf3f7;
   font-size: 14px;
   vertical-align: middle;
@@ -177,24 +257,33 @@
   position: sticky;
   top: 0;
   z-index: 2;
+
+  background: #f8fbfd;
+
   color: #06283d;
   font-weight: 700;
+
   white-space: nowrap;
-  background: #f8fbfd;
   text-align: left;
 }
+
+/* centered columns */
 
 .emp-table th:nth-child(2),
 .emp-table th:nth-child(5),
 .emp-table th:nth-child(7),
 .emp-table th:nth-child(8),
-.emp-table th:nth-child(9) {
+.emp-table th:nth-child(9),
+.emp-table td:nth-child(2),
+.emp-table td:nth-child(5),
+.emp-table td:nth-child(7),
+.emp-table td:nth-child(8) {
   text-align: center;
 }
 
-.emp-table tbody tr:last-child td {
-  border-bottom: none;
-}
+/* =========================================
+   ROWS
+========================================= */
 
 .emp-row-click {
   cursor: pointer;
@@ -203,9 +292,7 @@
 
 .emp-row-click td {
   background: #ffffff;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
 .emp-row-click:nth-child(even) td {
@@ -216,6 +303,14 @@
   background: #f3fcfc;
 }
 
+.emp-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* =========================================
+   NAME / ID
+========================================= */
+
 .emp-name-col,
 .emp-id-col {
   white-space: nowrap;
@@ -224,73 +319,87 @@
 .emp-name {
   display: block;
   width: 100%;
-  white-space: nowrap !important;
+
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+
   font-weight: 600;
   color: #041c32;
-  font-size: 14px;
 }
 
 .emp-id-code {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
   width: 120px;
   height: 38px;
+
   padding: 0 12px;
+
   border-radius: 999px;
-  border: 1px solid rgba(0, 209, 209, 0.16);
+
   background: rgba(0, 209, 209, 0.06);
+  border: 1px solid rgba(0, 209, 209, 0.16);
+
   color: #06283d;
+
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  white-space: nowrap;
+
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+/* =========================================
+   TEXT TRUNCATION
+========================================= */
 
 .emp-cell-truncate {
   display: inline-block;
+
   max-width: 220px;
-  white-space: nowrap;
+
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+
   vertical-align: middle;
 }
+
+/* =========================================
+   JOINED COLUMN
+========================================= */
 
 .emp-table td:nth-child(8),
 .emp-table th:nth-child(8) {
   white-space: nowrap;
 }
 
+/* =========================================
+   ACTION COLUMN
+========================================= */
+
 .emp-action-col {
   position: sticky;
   right: 0;
-  z-index: 2;
-  width: 130px;
+
+  z-index: 3;
+
+  width: 140px;
+
   text-align: center !important;
+
   background: #ffffff;
+
   border-left: 1px solid #edf3f7;
 }
 
 .emp-table thead .emp-action-col {
   background: #f8fbfd;
-  z-index: 3;
-}
-
-.emp-table td:nth-child(7),
-.emp-table th:nth-child(7) {
-  white-space: nowrap;
-}
-
-/* Joined column text in next line */
-.emp-table td:nth-child(8),
-.emp-table th:nth-child(8) {
-  white-space: normal !important;
-  word-break: break-word;
-  line-height: 1.4;
 }
 
 .emp-row-click:hover .emp-action-col {
@@ -301,42 +410,49 @@
   background: #fbfdff;
 }
 
+/* =========================================
+   EMPTY STATE
+========================================= */
+
 .emp-empty-state {
-  padding: 34px 20px;
+  padding: 36px 20px;
+
   text-align: center !important;
+
   color: #64748b;
   font-size: 14px;
 }
 
+/* =========================================
+   ACTION BUTTONS
+========================================= */
+
 .action-btns {
   display: flex;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  flex-wrap: nowrap;
-}
 
-.emp-table td:nth-child(2),
-.emp-table td:nth-child(5),
-.emp-table td:nth-child(7),
-.emp-table td:nth-child(8) {
-  text-align: center;
+  flex-wrap: nowrap;
 }
 
 .edit-btn,
 .delete-btn {
   min-height: 34px;
-  border: 1px solid transparent;
+
   padding: 7px 12px;
+
   border-radius: 10px;
+  border: 1px solid transparent;
+
   cursor: pointer;
+
   font-size: 12px;
   font-weight: 600;
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
+
   white-space: nowrap;
+
+  transition: all 0.2s ease;
 }
 
 .edit-btn {
@@ -361,6 +477,16 @@
   background: #ffeaea;
   border-color: #ffbbbb;
   transform: translateY(-1px);
+}
+
+/* =========================================
+   SHOW SCROLL MESSAGE
+========================================= */
+
+@media (max-width: 1600px) {
+  .emp-scroll-hint {
+    display: flex;
+  }
 }
 
 .emp-modal-overlay,
@@ -455,9 +581,33 @@
 
 .emp-modal-header {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.emp-modal-close-icon {
+  width: 38px;
+  height: 38px;
+  border: none;
+  outline: none;
+  cursor: pointer;
+  border-radius: 10px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #1e293b;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.emp-modal-close-icon:hover {
+  background: #f1f5f9;
+}
+
+.emp-modal-close-icon svg {
+  stroke-width: 2.5;
 }
 
 .emp-modal-description {
@@ -700,4 +850,44 @@
   .emp-delete-btn {
     width: 100%;
   }
+}
+/* =========================
+   READ ONLY / DISABLED FIELDS
+========================= */
+
+.emp-field-group input:disabled,
+.emp-field-group select:disabled,
+.emp-field-group textarea:disabled {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
+  border: 1px solid #dbe4ee !important;
+  box-shadow: none !important;
+}
+
+/* placeholder color */
+.emp-field-group input:disabled::placeholder {
+  color: #94a3b8;
+}
+
+/* remove hover/focus effects */
+.emp-field-group input:disabled:hover,
+.emp-field-group input:disabled:focus,
+.emp-field-group select:disabled:hover,
+.emp-field-group select:disabled:focus {
+  border-color: #dbe4ee !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* optional lock-style visual */
+.emp-field-group input:disabled,
+.emp-field-group select:disabled {
+  user-select: none;
+}
+
+/* disabled select arrow */
+.emp-field-group select:disabled {
+  opacity: 0.9;
 }

@@ -57,43 +57,60 @@ function Roles() {
 
   const handleRolesChange = (e) => {
     const { name, value } = e.target;
+
+    let nextValue = value;
+
+    // ROLE NAME VALIDATION
+    if (name === "roleName") {
+      nextValue = value
+        .replace(/[^A-Za-z0-9\s]/g, "") // allow alphabets + optional numbers
+        .replace(/\s+/g, " ")
+        .replace(/^\s+/g, "")
+        .slice(0, 15);
+    }
+
     const nextForm = {
       ...rolesForm,
-      [name]: name === "roleName" ? value.replace(/^\s+/g, "") : value
+      [name]: nextValue,
     };
 
     setRolesForm(nextForm);
+
     setErrors((prev) => ({
       ...prev,
       [name]:
         name === "roleName"
-          ? nextForm.roleName.trim()
-            ? ""
-            : "Role Name is required"
+          ? validateRoleName(nextValue)
           : nextForm.status
             ? ""
-            : "Status is required"
+            : "Status is required",
     }));
   };
 
   const validateRoleForm = () => {
-    const trimmedRoleName = rolesForm.roleName.trim().replace(/\s+/g, " ");
+    const trimmedRoleName = rolesForm.roleName
+      .trim()
+      .replace(/\s+/g, " ");
+
     const nextErrors = {};
 
-    if (!trimmedRoleName) {
-      nextErrors.roleName = "Role Name is required";
-    } else if (trimmedRoleName.length < 2) {
-      nextErrors.roleName = "Role Name must be at least 2 characters";
+    // ROLE NAME
+    const roleNameError = validateRoleName(trimmedRoleName);
+
+    if (roleNameError) {
+      nextErrors.roleName = roleNameError;
     }
 
+    // STATUS
     if (!rolesForm.status) {
       nextErrors.status = "Status is required";
     }
 
     setErrors(nextErrors);
+
     setRolesForm((prev) => ({
       ...prev,
-      roleName: trimmedRoleName
+      roleName: trimmedRoleName,
     }));
 
     return Object.keys(nextErrors).length === 0;
@@ -258,9 +275,8 @@ function Roles() {
 
                     <button
                       type="button"
-                      className={`roles-action-btn delete ${
-                        r.users > 0 ? "is-disabled" : ""
-                      }`}
+                      className={`roles-action-btn delete ${r.users > 0 ? "is-disabled" : ""
+                        }`}
                       aria-label={`Delete ${r.roleName}`}
                       onClick={() => {
                         if (r.users > 0) {
@@ -295,6 +311,8 @@ function Roles() {
                 onChange={handleRolesChange}
                 aria-invalid={Boolean(errors.roleName)}
                 className={errors.roleName ? "has-error" : ""}
+                maxLength={15}
+                autoComplete="off"
               />
               {errors.roleName && <p className="roles-error">{errors.roleName}</p>}
             </div>

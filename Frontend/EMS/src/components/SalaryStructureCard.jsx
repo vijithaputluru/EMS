@@ -5,7 +5,7 @@ import {
   SALARY_MIN,
   formatCurrency,
 } from "../utils/salaryStructure";
-
+ 
 function SalaryStructureCard({
   idPrefix,
   ctcValue,
@@ -13,81 +13,161 @@ function SalaryStructureCard({
   onCtcChange,
   sliderRef = null,
 }) {
-  const sliderProgress =
-    ((ctcValue - SALARY_MIN) /
-      (SALARY_MAX - SALARY_MIN)) *
-    100;
-
+  const parsedCtcValue = Number(ctcValue);
+  const currentValue = Number.isFinite(parsedCtcValue)
+    ? parsedCtcValue
+    : SALARY_MIN;
+ 
+  // SLIDER PROGRESS
+  const sliderProgress = Math.max(
+    0,
+    Math.min(
+      100,
+      ((currentValue - SALARY_MIN) /
+        (SALARY_MAX - SALARY_MIN)) *
+      100
+    )
+  );
+ 
+  // COMMON UPDATE FUNCTION
+  const updateSalary = (amount) => {
+    if (typeof onCtcChange === "function") {
+      onCtcChange((previousValue) => {
+        const safePreviousValue = Number.isFinite(Number(previousValue))
+          ? Number(previousValue)
+          : SALARY_MIN;
+        const updatedValue =
+          safePreviousValue +
+          Number(amount);
+ 
+        return Math.max(
+          SALARY_MIN,
+          Math.min(SALARY_MAX, updatedValue)
+        );
+      });
+    }
+  };
+ 
   return (
     <div className="salary-structure-card">
-
+ 
       {/* TITLE */}
       <div className="salary-structure-slider-head">
         <div>
           <p className="salary-structure-slider-title">
             Salary Range
           </p>
-
+ 
           <p className="salary-structure-slider-note">
-            Use slider or + / - buttons to change salary.
+            Use slider or quick buttons to change salary.
           </p>
         </div>
       </div>
-
-      {/* CONTROLS */}
+ 
+      {/* MAIN CONTROLS */}
       <div className="salary-structure-ctc-controls">
-
-        {/* MINUS */}
+ 
+        {/* MINUS 10K */}
         <button
           type="button"
           className="salary-ctc-btn"
-          onClick={() =>
-            onCtcChange(
-              Math.max(
-                SALARY_MIN,
-                Number(ctcValue) - 10000
-              )
-            )
-          }
+          onClick={() => updateSalary(-10000)}
           disabled={disabled}
         >
-          -
+          -10K
         </button>
-
+ 
         {/* VALUE */}
         <div className="salary-ctc-value">
-          {formatCurrency(ctcValue)}
+          {formatCurrency(currentValue)}
         </div>
-
-        {/* PLUS */}
+ 
+        {/* PLUS 10K */}
         <button
           type="button"
           className="salary-ctc-btn"
-          onClick={() =>
-            onCtcChange(
-              Math.min(
-                SALARY_MAX,
-                Number(ctcValue) + 10000
-              )
-            )
-          }
+          onClick={() => updateSalary(10000)}
           disabled={disabled}
         >
-          +
+          +10K
         </button>
       </div>
-
-      {/* RANGE */}
+ 
+      {/* QUICK BUTTONS */}
+      <div className="salary-quick-buttons">
+ 
+        {/* 1000 */}
+        <button
+          type="button"
+          className="salary-small-btn"
+          onClick={() => updateSalary(-1000)}
+          disabled={disabled}
+        >
+          -1000
+        </button>
+ 
+        <button
+          type="button"
+          className="salary-small-btn"
+          onClick={() => updateSalary(1000)}
+          disabled={disabled}
+        >
+          +1000
+        </button>
+ 
+        {/* 100 */}
+        <button
+          type="button"
+          className="salary-small-btn"
+          onClick={() => updateSalary(-100)}
+          disabled={disabled}
+        >
+          -100
+        </button>
+ 
+        <button
+          type="button"
+          className="salary-small-btn"
+          onClick={() => updateSalary(100)}
+          disabled={disabled}
+        >
+          +100
+        </button>
+ 
+        {/* 1 */}
+        <button
+          type="button"
+          className="salary-small-btn"
+          onClick={() => updateSalary(-1)}
+          disabled={disabled}
+        >
+          -1
+        </button>
+ 
+        <button
+          type="button"
+          className="salary-small-btn"
+          onClick={() => updateSalary(1)}
+          disabled={disabled}
+        >
+          +1
+        </button>
+ 
+      </div>
+ 
+      {/* RANGE SLIDER */}
       <input
         id={`${idPrefix}-ctc-slider`}
         ref={sliderRef}
         type="range"
         min={SALARY_MIN}
         max={SALARY_MAX}
-        step={10000}
-        value={ctcValue}
+        step={1}
+        value={currentValue}
         onChange={(event) =>
-          onCtcChange(Number(event.target.value))
+          onCtcChange(
+            Number(event.target.value)
+          )
         }
         disabled={disabled}
         className="salary-structure-slider"
@@ -95,8 +175,22 @@ function SalaryStructureCard({
           "--range-progress": `${sliderProgress}%`,
         }}
       />
+ 
+      {/* MIN / MAX LABELS */}
+      <div className="salary-slider-labels">
+        <span>
+          {formatCurrency(SALARY_MIN)}
+        </span>
+ 
+        <span>
+          {formatCurrency(SALARY_MAX)}
+        </span>
+      </div>
+ 
     </div>
   );
 }
-
+ 
 export default SalaryStructureCard;
+ 
+ 

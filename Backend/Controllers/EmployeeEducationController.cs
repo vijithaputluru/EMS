@@ -86,6 +86,8 @@ namespace EmployeeManagementSystem.Controllers
 
                 .Where(e => e.Employee_Id == employeeId)
 
+                .OrderBy(e => e.YearOfPassing)
+
                 .ToListAsync();
 
             return Ok(data);

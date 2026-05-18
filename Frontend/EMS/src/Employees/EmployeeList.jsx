@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
 import "./EmployeeList.css";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axiosInstance";
@@ -184,7 +185,19 @@ function EmployeeList() {
 
     setEmpForm((prev) => ({
       ...prev,
-      [name]: name === "id" ? formatEmployeeCode(value) : value,
+      [name]:
+        name === "id"
+          ? value
+            .toUpperCase()
+            .replace(/[^A-Z0-9]/g, "")
+            .slice(0, 7)
+          : name === "name"
+            ? value
+              .replace(/[^A-Za-z\s]/g, "")
+              .slice(0, 40)
+            : name === "email"
+              ? value.slice(0, 40)
+              : value,
     }));
 
     setErrors((prev) => ({
@@ -226,43 +239,113 @@ function EmployeeList() {
   const validateEmployee = () => {
     const nextErrors = {};
 
-    if (!empForm.id.trim()) {
+    // =========================
+    // EMPLOYEE ID VALIDATION
+    // =========================
+    const employeeId = empForm.id.trim().toUpperCase();
+
+    if (!employeeId) {
       nextErrors.id = "Employee ID is required";
-    } else if (!isEditMode) {
-      const idExists = empList.some(
-        (emp) => String(emp.id).toLowerCase() === empForm.id.trim().toLowerCase()
-      );
+    } else {
+      // 1 or 2 alphabets + exactly 5 digits
+      // Examples:
+      // P12345
+      // EM12345
 
-      if (idExists) {
-        nextErrors.id = "Employee ID already exists.";
+      const employeeIdRegex = /^[A-Z]{1}[0-9]{3}$/;
+
+      if (!employeeIdRegex.test(employeeId)) {
+        nextErrors.id =
+          "Employee ID must contain 1 alphabet followed by exactly 3 numbers";
+      } else if (!isEditMode) {
+        const idExists = empList.some(
+          (emp) =>
+            String(emp.id).toLowerCase() === employeeId.toLowerCase()
+        );
+
+        if (idExists) {
+          nextErrors.id = "Employee ID already exists.";
+        }
       }
     }
 
-    if (!empForm.name.trim()) {
+    // =========================
+    // NAME VALIDATION
+    // =========================
+    const employeeName = empForm.name.trim();
+
+    if (!employeeName) {
       nextErrors.name = "Employee name is required";
-    }
+    } else {
+      // only alphabets + spaces
+      const nameRegex = /^[A-Za-z\s]+$/;
 
-    if (!empForm.email.trim()) {
-      nextErrors.email = "Email is required";
-    } else if (!isValidEmail(empForm.email)) {
-      nextErrors.email = "Invalid email format";
-    } else if (!isEditMode) {
-      const emailExists = empList.some(
-        (emp) => String(emp.email).toLowerCase() === empForm.email.trim().toLowerCase()
-      );
-
-      if (emailExists) {
-        nextErrors.email = "Email already exists.";
+      if (!nameRegex.test(employeeName)) {
+        nextErrors.name =
+          "Name should contain only alphabets";
+      } else if (employeeName.length > 40) {
+        nextErrors.name =
+          "Name should not exceed 40 characters";
       }
     }
 
-    if (!empForm.dept) nextErrors.dept = "Department is required";
-    if (!empForm.roleId) nextErrors.roleId = "Role is required";
-    if (!empForm.status) nextErrors.status = "Status is required";
-    if (!empForm.joined) nextErrors.joined = "Joining date is required";
-    if (!isEmployeeSalaryValid) nextErrors.ctc = "Please review the salary structure.";
+    // =========================
+    // EMAIL VALIDATION
+    // =========================
+    const email = empForm.email.trim().toLowerCase();
+
+    if (!email) {
+      nextErrors.email = "Email is required";
+    } else {
+      // only gmail.com or pirnav.com
+      const emailRegex =
+        /^[a-zA-Z0-9._%+-]{1,30}@(gmail\.com|pirnav\.com)$/;
+
+      if (!emailRegex.test(email)) {
+        nextErrors.email =
+          "Only @gmail.com or @pirnav.com emails are allowed";
+      } else if (email.length > 40) {
+        nextErrors.email =
+          "Email should not exceed 40 characters";
+      } else if (!isEditMode) {
+        const emailExists = empList.some(
+          (emp) =>
+            String(emp.email).toLowerCase() === email
+        );
+
+        if (emailExists) {
+          nextErrors.email = "Email already exists.";
+        }
+      }
+    }
+
+    // =========================
+    // OTHER VALIDATIONS
+    // =========================
+
+    if (!empForm.dept) {
+      nextErrors.dept = "Department is required";
+    }
+
+    if (!empForm.roleId) {
+      nextErrors.roleId = "Role is required";
+    }
+
+    if (!empForm.status) {
+      nextErrors.status = "Status is required";
+    }
+
+    if (!empForm.joined) {
+      nextErrors.joined = "Joining date is required";
+    }
+
+    if (!isEmployeeSalaryValid) {
+      nextErrors.ctc =
+        "Please review the salary structure.";
+    }
 
     setErrors(nextErrors);
+
     return Object.keys(nextErrors).length === 0;
   };
 
@@ -537,7 +620,13 @@ function EmployeeList() {
         </div>
       </div>
 
-      <div className="emp-table-container">
+      <div className="emp-table-wrapper">
+
+  <div className="emp-scroll-hint">
+    ← Scroll horizontally to view more employee details →
+  </div>
+
+  <div className="emp-table-container">
         <table className="emp-table">
           <colgroup>
             <col style={{ width: "270px" }} />  {/* Employee Name */}
@@ -634,6 +723,7 @@ function EmployeeList() {
           </tbody>
         </table>
       </div>
+      </div>
 
       {empShowModal && (
         <div className="emp-modal-overlay">
@@ -641,11 +731,21 @@ function EmployeeList() {
             <div className="emp-modal-header">
               <div>
                 <h3>{isEditMode ? "Edit Employee" : "Add Employee"}</h3>
+
                 <p className="emp-modal-description">
                   Maintain employee details and set the annual salary structure in
                   one clean workspace.
                 </p>
               </div>
+
+              <button
+                type="button"
+                className="emp-modal-close-icon"
+                onClick={() => setEmpShowModal(false)}
+                disabled={isSubmitting}
+              >
+                <X size={22} />
+              </button>
             </div>
 
             <div className="emp-modal-form-grid">

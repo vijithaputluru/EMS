@@ -195,7 +195,9 @@ public class EmployeeLeaveService : IEmployeeLeaveService
 
     {
 
-        var leaves = await _context.EmployeeLeaves.ToListAsync();
+        var leaves = await _context.EmployeeLeaves
+            .OrderBy(l => l.FromDate)
+            .ToListAsync();
 
         return new OkObjectResult(leaves);
 
@@ -214,6 +216,8 @@ public class EmployeeLeaveService : IEmployeeLeaveService
         var leaves = await _context.EmployeeLeaves
 
             .Where(l => l.EmployeeId == employee.Employee_Id)
+
+            .OrderBy(l => l.FromDate)
 
             .ToListAsync();
 

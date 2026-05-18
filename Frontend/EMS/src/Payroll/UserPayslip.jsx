@@ -13,6 +13,7 @@ import {
 import "./UserPayslip.css";
 import api from "../api/axiosInstance";
 import { extractCollection } from "../utils/collections";
+import { getStoredRole, getStoredToken } from "../utils/authStorage";
 
 import {
   API_ENDPOINTS,
@@ -23,13 +24,8 @@ function UserPayslip() {
   const [payslips, setPayslips] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const token =
-    localStorage.getItem("token") ||
-    sessionStorage.getItem("token");
-
-  const role =
-    localStorage.getItem("role") ||
-    sessionStorage.getItem("role");
+  const token = getStoredToken();
+  const role = getStoredRole();
 
   useEffect(() => {
     fetchPayslips();

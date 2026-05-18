@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom";
+import { getStoredPermissions, getStoredRole } from "../utils/authStorage";
 
 /* ✅ NORMALIZE */
 const normalize = (name) => {
@@ -37,20 +38,13 @@ const mapModule = (name) => {
 };
 
 /* ✅ GET PERMISSIONS */
-const getPermissions = () => {
-  try {
-    return (
-      JSON.parse(localStorage.getItem("permissions")) ||
-      JSON.parse(sessionStorage.getItem("permissions")) ||
-      []
-    );
-  } catch {
-    return [];
-  }
-};
-
 const PermissionRoute = ({ children, module }) => {
-  const permissions = getPermissions();
+  const role = getStoredRole();
+  const permissions = getStoredPermissions();
+
+  if (role === "admin") {
+    return children;
+  }
 
   /* ⏳ WAIT */
   if (!Array.isArray(permissions)) {
@@ -66,7 +60,7 @@ const PermissionRoute = ({ children, module }) => {
       typeof p === "string" ? p : p?.moduleName;
 
     return (
-      p?.canAccess === true &&
+      (p?.canAccess ?? p?.CanAccess ?? true) === true &&
       mapModule(moduleName) === routeModule
     );
   });

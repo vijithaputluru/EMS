@@ -67,40 +67,98 @@ function Clients() {
     loadProjectCounts();
   }, []);
 
-  const validateField = (name, draft = newClient) => {
-    const value = String(draft[name] ?? "").trim();
+const validateField = (name, draft = newClient) => {
+  const value = String(draft[name] ?? "").trim();
 
-    if (name === "client_Name") {
-      if (!value) return "Client Name is required";
-      if (value.length < 2) return "Client Name must be at least 2 characters";
-      return "";
+  // CLIENT NAME
+  if (name === "client_Name") {
+    if (!value) {
+      return "Client Name is required";
     }
 
-    if (name === "description") {
-      if (!value) return "";
-      if (value.length < 5) return "Description must be at least 5 characters";
-      return "";
+    if (value.length < 2) {
+      return "Client Name must be at least 2 characters";
     }
 
-    if (name === "location") {
-      if (!value) return "Location is required";
-      return "";
+    if (value.length > 25) {
+      return "Client Name cannot exceed 25 characters";
     }
 
-    if (name === "phone") {
-      if (!value) return "Phone is required";
-      if (!/^\d{10}$/.test(value)) return "Enter a valid 10-digit phone number";
-      return "";
-    }
-
-    if (name === "email") {
-      if (!value) return "Email is required";
-      if (!isValidEmail(value)) return "Enter a valid email";
-      return "";
+    if (!/^[A-Za-z\s]+$/.test(value)) {
+      return "Only alphabets are allowed";
     }
 
     return "";
-  };
+  }
+
+  // DESCRIPTION
+  if (name === "description") {
+    if (!value) {
+      return "";
+    }
+
+    if (value.length > 30) {
+      return "Description cannot exceed 30 characters";
+    }
+
+    if (!/^[A-Za-z\s]+$/.test(value)) {
+      return "Description allows only alphabets";
+    }
+
+    return "";
+  }
+
+  // LOCATION
+  if (name === "location") {
+    if (!value) {
+      return "Location is required";
+    }
+
+    if (value.length > 15) {
+      return "Location cannot exceed 15 characters";
+    }
+
+    if (!/^[A-Za-z\s]+$/.test(value)) {
+      return "Only alphabets are allowed";
+    }
+
+    return "";
+  }
+
+  // PHONE
+  if (name === "phone") {
+    if (!value) {
+      return "Phone is required";
+    }
+
+    if (!/^[0-9]{10}$/.test(value)) {
+      return "Phone Number must contain exactly 10 digits";
+    }
+
+    return "";
+  }
+
+  // EMAIL
+  if (name === "email") {
+    if (!value) {
+      return "Email is required";
+    }
+
+    if (value.length > 40) {
+      return "Email cannot exceed 40 characters";
+    }
+
+    if (
+      !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.com$/.test(value)
+    ) {
+      return "Enter valid email (Example: demo@gmail.com)";
+    }
+
+    return "";
+  }
+
+  return "";
+};
 
   const validateForm = (draft = newClient) => {
     const nextErrors = {
@@ -139,34 +197,68 @@ function Clients() {
     }
   };
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    let nextValue = value;
+const handleChange = (event) => {
+  const { name, value } = event.target;
 
-    if (name === "phone") {
-      nextValue = value.replace(/\D/g, "").slice(0, 10);
-    }
+  let nextValue = value;
 
-    const draft = {
-      ...newClient,
-      [name]:
-        name === "client_Name" || name === "location" || name === "description"
-          ? nextValue.replace(/^\s+/g, "")
-          : nextValue,
+  // CLIENT NAME
+  if (name === "client_Name") {
+    nextValue = value
+      .replace(/[^A-Za-z\s]/g, "")
+      .replace(/\s+/g, " ")
+      .replace(/^\s+/g, "")
+      .slice(0, 25);
+  }
+
+  // DESCRIPTION
+  if (name === "description") {
+    nextValue = value
+      .replace(/[^A-Za-z\s]/g, "")
+      .replace(/\s+/g, " ")
+      .replace(/^\s+/g, "")
+      .slice(0, 30);
+  }
+
+  // LOCATION
+  if (name === "location") {
+    nextValue = value
+      .replace(/[^A-Za-z\s]/g, "")
+      .replace(/\s+/g, " ")
+      .replace(/^\s+/g, "")
+      .slice(0, 15);
+  }
+
+  // PHONE
+  if (name === "phone") {
+    nextValue = value
+      .replace(/\D/g, "")
+      .slice(0, 10);
+  }
+
+  // EMAIL
+  if (name === "email") {
+    nextValue = value.slice(0, 40);
+  }
+
+  const draft = {
+    ...newClient,
+    [name]: nextValue,
+  };
+
+  setNewClient(draft);
+
+  setErrors((prev) => {
+    const nextErrors = {
+      ...prev,
+      [name]: validateField(name, draft),
     };
 
-    setNewClient(draft);
-    setErrors((prev) => {
-      const nextErrors = {
-        ...prev,
-        [name]: validateField(name, draft),
-      };
-
-      return Object.fromEntries(
-        Object.entries(nextErrors).filter(([, error]) => error)
-      );
-    });
-  };
+    return Object.fromEntries(
+      Object.entries(nextErrors).filter(([, error]) => error)
+    );
+  });
+};
 
   const closeModal = () => {
     if (saving) return;

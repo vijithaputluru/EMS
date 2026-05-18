@@ -45,12 +45,16 @@ const normalizeClients = (response) =>
 
 const sanitizeProjectName = (value) =>
   String(value)
-    .replace(/[^\w\s-]/g, "")
+    .replace(/[^A-Za-z\s]/g, "")
     .replace(/\s+/g, " ")
-    .replace(/^\s+/g, "");
+    .replace(/^\s+/g, "")
+    .slice(0, 20);
 
 const sanitizeProjectId = (value) =>
-  String(value).toUpperCase().replace(/[^A-Z0-9-]/g, "");
+  String(value)
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 6);
 
 const sanitizeTeamSize = (value) =>
   String(value).replace(/\D/g, "").slice(0, 4);
@@ -217,31 +221,48 @@ function Projects() {
     const trimmedValue = value.trim();
 
     switch (fieldName) {
-      case "name": {
-        if (!trimmedValue) return "Project Name is required";
-        if (trimmedValue.length < 3) return "Project Name must be at least 3 characters";
-        if (trimmedValue.length > 100) return "Project Name cannot exceed 100 characters";
-        if (!/^[A-Za-z0-9 _-]+$/.test(trimmedValue)) {
-          return "Use only letters, numbers, spaces, - or _";
-        }
-        return "";
-      }
+    case "name": {
+  if (!trimmedValue) {
+    return "Project Name is required";
+  }
 
-      case "id": {
-        if (!trimmedValue) return "Project ID is required";
-        if (!/^[A-Z]{2,10}-?\d{1,10}$/.test(trimmedValue)) {
-          return "Use a format like PRJ001";
-        }
+  if (trimmedValue.length < 3) {
+    return "Project Name must be at least 3 characters";
+  }
 
-        const idExists = projectsList.some(
-          (project) =>
-            String(project.id).toLowerCase() === trimmedValue.toLowerCase() &&
-            String(project.id).toLowerCase() !== String(draftForm.originalId).toLowerCase()
-        );
+  if (trimmedValue.length > 20) {
+    return "Project Name cannot exceed 20 characters";
+  }
 
-        if (idExists) return "Project ID already exists";
-        return "";
-      }
+  if (!/^[A-Za-z\s]+$/.test(trimmedValue)) {
+    return "Only alphabets are allowed";
+  }
+
+  return "";
+}
+
+     case "id": {
+  if (!trimmedValue) {
+    return "Project ID is required";
+  }
+
+  if (!/^[A-Z]{3}[0-9]{3}$/.test(trimmedValue)) {
+    return "Project ID must be 3 alphabets and 3 numbers (Example: PRJ001)";
+  }
+
+  const idExists = projectsList.some(
+    (project) =>
+      String(project.id).toLowerCase() === trimmedValue.toLowerCase() &&
+      String(project.id).toLowerCase() !==
+        String(draftForm.originalId).toLowerCase()
+  );
+
+  if (idExists) {
+    return "Project ID already exists";
+  }
+
+  return "";
+}
 
       case "client":
         return trimmedValue ? "" : "Client is required";

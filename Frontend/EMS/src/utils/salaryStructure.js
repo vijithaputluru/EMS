@@ -1,9 +1,8 @@
 export const SALARY_MIN = 100000;
 export const SALARY_MAX = 5000000;
-export const SALARY_STEP = 10000;
 export const DEFAULT_CONVEYANCE = 19200;
 export const DEFAULT_MEDICAL_ALLOWANCE = 15000;
-
+ 
 export const SALARY_BREAKUP_FIELDS = [
   {
     name: "basic",
@@ -31,7 +30,7 @@ export const SALARY_BREAKUP_FIELDS = [
     aliases: ["otherAllowance", "other_Allowance", "specialAllowance", "other"],
   },
 ];
-
+ 
 export const createManualSalaryFieldMap = () => ({
   basic: false,
   hra: false,
@@ -39,17 +38,17 @@ export const createManualSalaryFieldMap = () => ({
   medicalAllowance: false,
   otherAllowance: false,
 });
-
+ 
 const currencyFormatter = new Intl.NumberFormat("en-IN", {
   style: "currency",
   currency: "INR",
   maximumFractionDigits: 0,
 });
-
+ 
 const numberFormatter = new Intl.NumberFormat("en-IN", {
   maximumFractionDigits: 0,
 });
-
+ 
 const unwrapSalarySource = (source) =>
   source?.salaryStructure ||
   source?.salaryBreakup ||
@@ -58,57 +57,54 @@ const unwrapSalarySource = (source) =>
   source?.data ||
   source ||
   {};
-
+ 
 const extractNumericValue = (source, aliases) => {
   for (const alias of aliases) {
     const rawValue = source?.[alias];
-
+ 
     if (rawValue !== null && rawValue !== undefined && rawValue !== "") {
       const numericValue = Number(rawValue);
-
+ 
       if (Number.isFinite(numericValue)) {
         return Math.max(0, Math.round(numericValue));
       }
     }
   }
-
+ 
   return null;
 };
-
+ 
 export const parseCurrencyInput = (value) => {
   const digitsOnly = String(value ?? "").replace(/\D/g, "");
-
+ 
   if (!digitsOnly) {
     return 0;
   }
-
+ 
   return Number(digitsOnly);
 };
-
+ 
 export const clampAnnualCtc = (value) => {
   const numericValue = Number(value);
-
+ 
   if (!Number.isFinite(numericValue)) {
     return SALARY_MIN;
   }
-
-  const roundedValue =
-    Math.round(numericValue / SALARY_STEP) * SALARY_STEP;
-
-  return Math.min(Math.max(roundedValue, SALARY_MIN), SALARY_MAX);
+ 
+  return Math.min(Math.max(numericValue, SALARY_MIN), SALARY_MAX);
 };
-
+ 
 export const formatCurrency = (value) =>
   currencyFormatter.format(Number.isFinite(Number(value)) ? Number(value) : 0);
-
+ 
 export const formatNumberInput = (value) =>
   numberFormatter.format(Number.isFinite(Number(value)) ? Number(value) : 0);
-
+ 
 export const formatLpa = (value) => {
   const lpaValue = Number(value || 0) / 100000;
   return `${Number(lpaValue.toFixed(1)).toString()} LPA`;
 };
-
+ 
 export const calculateSalaryBreakup = (
   ctcAnnual,
   values = {},
@@ -121,7 +117,7 @@ export const calculateSalaryBreakup = (
     conveyance: DEFAULT_CONVEYANCE,
     medicalAllowance: DEFAULT_MEDICAL_ALLOWANCE,
   };
-
+ 
   const structure = {
     basic: manualFields.basic
       ? Math.max(0, Number(values.basic) || 0)
@@ -137,54 +133,54 @@ export const calculateSalaryBreakup = (
       : defaults.medicalAllowance,
     otherAllowance: 0,
   };
-
+ 
   const committedWithoutOther =
     structure.basic +
     structure.hra +
     structure.conveyance +
     structure.medicalAllowance;
-
+ 
   structure.otherAllowance = manualFields.otherAllowance
     ? Math.max(0, Number(values.otherAllowance) || 0)
     : Math.max(normalizedCtc - committedWithoutOther, 0);
-
+ 
   structure.totalCtc =
     structure.basic +
     structure.hra +
     structure.conveyance +
     structure.medicalAllowance +
     structure.otherAllowance;
-
+ 
   return structure;
 };
-
+ 
 export const validateSalaryBreakup = (ctcAnnual, breakup) => {
   const nextErrors = {};
   const normalizedCtc = clampAnnualCtc(ctcAnnual);
-
+ 
   SALARY_BREAKUP_FIELDS.forEach(({ name, label }) => {
     const numericValue = Number(breakup?.[name]);
-
+ 
     if (!Number.isFinite(numericValue)) {
       nextErrors[name] = `${label} must be a valid amount.`;
       return;
     }
-
+ 
     if (numericValue < 0) {
       nextErrors[name] = `${label} cannot be negative.`;
     }
   });
-
+ 
   const totalCtc = Number(breakup?.totalCtc) || 0;
-
+ 
   if (totalCtc > normalizedCtc) {
     nextErrors.total =
       "Salary breakup total cannot exceed the selected Annual CTC.";
   }
-
+ 
   return nextErrors;
 };
-
+ 
 export const extractManualOverrideFields = (source) => {
   const unwrappedSource = unwrapSalarySource(source);
   const nextManualFields = createManualSalaryFieldMap();
@@ -192,7 +188,7 @@ export const extractManualOverrideFields = (source) => {
     unwrappedSource.manualOverrideFields ||
     unwrappedSource.manualFields ||
     [];
-
+ 
   if (Array.isArray(manualOverrideFields)) {
     manualOverrideFields.forEach((fieldName) => {
       if (fieldName in nextManualFields) {
@@ -200,10 +196,10 @@ export const extractManualOverrideFields = (source) => {
       }
     });
   }
-
+ 
   return nextManualFields;
 };
-
+ 
 export const extractSalaryBreakup = (
   source,
   ctcAnnual,
@@ -211,18 +207,18 @@ export const extractSalaryBreakup = (
 ) => {
   const unwrappedSource = unwrapSalarySource(source);
   const seededValues = {};
-
+ 
   SALARY_BREAKUP_FIELDS.forEach(({ name, aliases }) => {
     const numericValue = extractNumericValue(unwrappedSource, aliases);
-
+ 
     if (numericValue !== null) {
       seededValues[name] = numericValue;
     }
   });
-
+ 
   return calculateSalaryBreakup(ctcAnnual, seededValues, manualFields);
 };
-
+ 
 export const buildSalaryBreakupPayload = (
   ctcAnnual,
   breakup,
@@ -236,7 +232,7 @@ export const buildSalaryBreakupPayload = (
   const manualOverrideFields = Object.entries(manualFields)
     .filter(([, isManual]) => isManual)
     .map(([fieldName]) => fieldName);
-
+ 
   return {
     annualCtc: clampAnnualCtc(ctcAnnual),
     basic: normalizedBreakup.basic,
@@ -248,3 +244,5 @@ export const buildSalaryBreakupPayload = (
     manualOverrideFields,
   };
 };
+ 
+ 

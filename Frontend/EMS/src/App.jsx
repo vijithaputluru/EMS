@@ -46,30 +46,13 @@ import Reports from "./Reports/Reports";
 
 import MainLayout from "./MainLayout";
 import GlobalUiController from "./components/GlobalUiController";
+import {
+  getStoredPermissions,
+  getStoredRole,
+  getStoredToken,
+} from "./utils/authStorage";
 
 /* ================= HELPERS ================= */
-
-const getToken = () =>
-  localStorage.getItem("token") || sessionStorage.getItem("token");
-
-const getRole = () =>
-  (localStorage.getItem("role") ||
-    sessionStorage.getItem("role") ||
-    "user").toLowerCase();
-
-const getModules = () => {
-  try {
-    return (
-      JSON.parse(localStorage.getItem("modules")) ||
-      JSON.parse(localStorage.getItem("permissions")) ||
-      JSON.parse(sessionStorage.getItem("modules")) ||
-      JSON.parse(sessionStorage.getItem("permissions")) ||
-      []
-    );
-  } catch {
-    return [];
-  }
-};
 
 const normalize = (name) =>
   (name || "")
@@ -82,18 +65,18 @@ const normalize = (name) =>
 /* ================= ROUTES ================= */
 
 const PrivateRoute = ({ children }) => {
-  return getToken() ? children : <Navigate to="/login" replace />;
+  return getStoredToken() ? children : <Navigate to="/login" replace />;
 };
 
 /* ================= PERMISSION ================= */
 
 const PermissionRoute = ({ module, children }) => {
-  const role = getRole();
+  const role = getStoredRole();
 
   // ADMIN → full access
   if (role === "admin") return children;
 
-  const modules = getModules();
+  const modules = getStoredPermissions();
 
   // NO DEFAULT MODULES
   if (!modules || modules.length === 0) {
@@ -174,7 +157,7 @@ function App() {
           <Route
             path="/add-employee"
             element={
-              getRole() === "user" ? (
+              getStoredRole() === "user" ? (
                 <AddEmployee />
               ) : (
                 <PermissionRoute module="Add Employee">

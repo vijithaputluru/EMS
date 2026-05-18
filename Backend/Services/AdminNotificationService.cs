@@ -42,7 +42,7 @@ namespace EmployeeManagementSystem.Services
 
                 .Where(x => x.IsRead == false)
 
-                .OrderByDescending(x => x.CreatedAt)
+                .OrderBy(x => x.CreatedAt)
 
                 .Take(10)
 

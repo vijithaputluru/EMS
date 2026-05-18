@@ -6,9 +6,10 @@ import { API_ENDPOINTS } from "../api/endpoints";
 import TruncatedText from "../components/TruncatedText";
 import { extractCollection, sortByRecency } from "../utils/collections";
 import { formatDate } from "../utils/date";
+import { getStoredToken } from "../utils/authStorage";
 
 function Holidays() {
-  const token = localStorage.getItem("token");
+  const token = getStoredToken();
 
   const [holidays, setHolidays] = useState([]);
 
@@ -19,7 +20,7 @@ function Holidays() {
       const res = await api.get(API_ENDPOINTS.company.holidays.list, {
         headers: {
           Authorization: `Bearer ${token}`,
-        }
+        },
       });
 
       const data = extractCollection(res.data);
@@ -43,11 +44,10 @@ function Holidays() {
           ? item.holiday_Date.split("T")[0]
           : "",
         day: item.day || "",
-        type: item.type || ""
+        type: item.type || "",
       }));
 
       setHolidays(formatted);
-
     } catch (err) {
       console.error("Fetch error:", err);
     }
@@ -65,49 +65,212 @@ function Holidays() {
       <div className="holiday-header">
         <div>
           <h2>Company Holidays</h2>
-          <p>{holidays.length} holidays this year</p>
+          <p>{holidays.length} Holidays This Year</p>
         </div>
       </div>
 
       <div className="holiday-table-wrapper">
 
-        <table className="holiday-table">
+        <table
+          className="holiday-table"
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+            tableLayout: "fixed",
+          }}
+        >
 
           <thead>
             <tr>
-              <th>S.No</th>
-              <th>Holiday Name</th>
-              <th>Date</th>
-              <th>Day</th>
-              <th>Type</th>
+
+              <th
+                style={{
+                  width: "70px",
+                  textAlign: "center",
+                  padding: "18px 16px",
+                }}
+              >
+                S.No
+              </th>
+
+              <th
+                style={{
+                  width: "42%",
+                  textAlign: "center",
+                  padding: "18px 16px",
+                }}
+              >
+                Holiday Name
+              </th>
+
+              <th
+                style={{
+                  width: "160px",
+                  textAlign: "center",
+                  padding: "18px 16px",
+                }}
+              >
+                Date
+              </th>
+
+              <th
+                style={{
+                  width: "140px",
+                  textAlign: "center",
+                  padding: "18px 16px",
+                }}
+              >
+                Day
+              </th>
+
+              <th
+                style={{
+                  width: "140px",
+                  textAlign: "center",
+                  padding: "18px 16px",
+                }}
+              >
+                Type
+              </th>
+
             </tr>
           </thead>
 
           <tbody>
 
             {holidays.length === 0 ? (
+
               <tr>
-                <td colSpan="5" style={{ textAlign: "center" }}>
+                <td
+                  colSpan="5"
+                  style={{
+                    textAlign: "center",
+                    padding: "24px",
+                  }}
+                >
                   No Holidays Found
                 </td>
               </tr>
-            ) : (
-              holidays.map((h, i) => (
-                <tr key={h.id}>
-                  <td>{i + 1}</td>
 
-                  <td>
-                    <div className="holiday-name-cell" title={h.name}>
-                      <FaCalendarAlt className="holiday-icon" />
-                      <TruncatedText className="holiday-name-text" value={h.name} />
+            ) : (
+
+              holidays.map((h, i) => (
+
+                <tr
+                  key={h.id}
+                  style={{
+                    height: "90px",
+                    borderBottom: "1px solid #e5e7eb",
+                  }}
+                >
+
+                  {/* SERIAL NUMBER */}
+
+                  <td
+                    style={{
+                      textAlign: "center",
+                      verticalAlign: "middle",
+                      padding: "16px",
+                    }}
+                  >
+                    {i + 1}
+                  </td>
+
+                  {/* HOLIDAY NAME */}
+
+                  <td
+                    style={{
+                      textAlign: "center",
+                      verticalAlign: "middle",
+                      padding: "16px 24px",
+                    }}
+                  >
+                    <div
+                      title={h.name}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: "12px",
+
+                        maxWidth: "340px",
+                        margin: "0 auto",
+
+                        verticalAlign: "middle",
+                      }}
+                    >
+
+                      <FaCalendarAlt
+                        style={{
+                          flexShrink: 0,
+                          fontSize: "16px",
+                          color: "#0f172a",
+                        }}
+                      />
+
+                      <div
+                        style={{
+                          whiteSpace: "normal",
+                          overflowWrap: "break-word",
+                          wordBreak: "break-word",
+                          lineHeight: "1.5",
+                          textAlign: "left",
+
+                          display: "-webkit-box",
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                        }}
+                      >
+                        <TruncatedText value={h.name} />
+                      </div>
+
                     </div>
                   </td>
 
-                  <td>{formatDate(h.date)}</td>
-                  <td>{h.day}</td>
-                  <td>{h.type}</td>
+                  {/* DATE */}
+
+                  <td
+                    style={{
+                      textAlign: "center",
+                      verticalAlign: "middle",
+                      whiteSpace: "nowrap",
+                      padding: "16px",
+                    }}
+                  >
+                    {formatDate(h.date)}
+                  </td>
+
+                  {/* DAY */}
+
+                  <td
+                    style={{
+                      textAlign: "center",
+                      verticalAlign: "middle",
+                      whiteSpace: "nowrap",
+                      padding: "16px",
+                    }}
+                  >
+                    {h.day}
+                  </td>
+
+                  {/* TYPE */}
+
+                  <td
+                    style={{
+                      textAlign: "center",
+                      verticalAlign: "middle",
+                      whiteSpace: "nowrap",
+                      padding: "16px",
+                    }}
+                  >
+                    {h.type}
+                  </td>
+
                 </tr>
+
               ))
+
             )}
 
           </tbody>

@@ -50,10 +50,12 @@ namespace EmployeeManagementSystem.Controllers
 
             var education = await _context.EmployeeEducations
                 .Where(e => e.Employee_Id == employeeId)
+                .OrderBy(e => e.YearOfPassing)
                 .ToListAsync();
 
             var experience = await _context.EmployeeExperiences
                 .Where(e => e.Employee_Id == employeeId)
+                .OrderBy(e => e.FromDate)
                 .ToListAsync();
 
             return Ok(new
@@ -278,10 +280,12 @@ namespace EmployeeManagementSystem.Controllers
 
             var education = await _context.EmployeeEducations
                 .Where(e => e.Employee_Id == employeeId)
+                .OrderBy(e => e.YearOfPassing)
                 .ToListAsync();
 
             var experience = await _context.EmployeeExperiences
                 .Where(e => e.Employee_Id == employeeId)
+                .OrderBy(e => e.FromDate)
                 .ToListAsync();
 
             return Ok(new

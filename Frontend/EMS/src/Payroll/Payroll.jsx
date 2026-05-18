@@ -4,6 +4,7 @@ import api from "../api/axiosInstance";
 import { API_ENDPOINTS, buildApiUrl } from "../api/endpoints";
 import { formatDate } from "../utils/date";
 import { formatCurrency as formatAppCurrency } from "../utils/formatters";
+import { getStoredToken } from "../utils/authStorage";
 import {
   FaDownload,
   FaAngleLeft,
@@ -43,7 +44,7 @@ function Payroll() {
   const [recentRowsPerPage, setRecentRowsPerPage] = useState(10);
   const [recentLoading, setRecentLoading] = useState(false);
 
-  const token = localStorage.getItem("token");
+  const token = getStoredToken();
 
   const months = [
     "January", "February", "March", "April", "May", "June",

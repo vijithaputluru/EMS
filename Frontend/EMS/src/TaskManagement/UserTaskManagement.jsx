@@ -4,6 +4,7 @@ import api from "../api/axiosInstance";
 import { API_ENDPOINTS } from "../api/endpoints";
 import { extractCollection, sortByRecency } from "../utils/collections";
 import { formatDate } from "../utils/date";
+import { getStoredToken } from "../utils/authStorage";
 
 function UserTaskManagement() {
   const [tasks, setTasks] = useState([]);
@@ -15,7 +16,7 @@ function UserTaskManagement() {
   // =========================
   const fetchTasks = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getStoredToken();
 
       if (!token) {
         console.error("❌ No token found");
@@ -57,7 +58,7 @@ function UserTaskManagement() {
   // =========================
   const updateTaskStatus = async (taskId, newStatus) => {
     try {
-      const token = localStorage.getItem("token");
+      const token = getStoredToken();
       setUpdatingId(taskId);
 
       console.log("🛠 Updating Task ID:", taskId);

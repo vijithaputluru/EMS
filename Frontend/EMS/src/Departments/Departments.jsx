@@ -112,34 +112,47 @@ function Departments() {
     );
   }, [selectedDept, normalizedEmployees]);
 
-  const validateField = (name, draft = newDept) => {
-    const value = String(draft[name] ?? "").trim();
+const validateField = (name, draft = newDept) => {
+  const value = String(draft[name] ?? "").trim();
 
-    if (name === "name") {
-      if (!value) return "Department Name is required";
-      if (value.length < 2) return "Department Name must be at least 2 characters";
-      if (!/^[A-Za-z0-9 &-]+$/.test(value)) {
-        return "Use only letters, numbers, spaces, & or -";
-      }
-      return "";
+  if (name === "name") {
+    if (!value) return "Department Name is required";
+
+    if (value.length > 25) {
+      return "Department Name cannot exceed 25 characters";
     }
 
-    if (name === "head") {
-      return value ? "" : "Department Head is required";
-    }
-
-    if (name === "building") {
-      if (!value) return "Building is required";
-      if (value.length < 2) return "Building must be at least 2 characters";
-      return "";
-    }
-
-    if (name === "status") {
-      return value ? "" : "Status is required";
+    if (!/^[A-Za-z\s]+$/.test(value)) {
+      return "Department Name must contain only alphabets";
     }
 
     return "";
-  };
+  }
+
+  if (name === "head") {
+    return value ? "" : "Department Head is required";
+  }
+
+  if (name === "building") {
+    if (!value) return "Building is required";
+
+    if (value.length > 25) {
+      return "Building cannot exceed 25 characters";
+    }
+
+    if (!/^[A-Za-z\s]+$/.test(value)) {
+      return "Building must contain only alphabets";
+    }
+
+    return "";
+  }
+
+  if (name === "status") {
+    return value ? "" : "Status is required";
+  }
+
+  return "";
+};
 
   const validateForm = (draft = newDept) => {
     const nextErrors = {

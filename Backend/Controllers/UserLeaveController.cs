@@ -51,6 +51,7 @@ namespace EmployeeManagementSystem.Controllers
 
             var leaves = await _context.EmployeeLeaves
                 .Where(x => x.EmployeeId == employeeId)
+                .OrderBy(x => x.FromDate)
                 .ToListAsync();
 
             return Ok(leaves);

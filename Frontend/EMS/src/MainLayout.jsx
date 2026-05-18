@@ -4,6 +4,13 @@ import Sidebar from "./Sidebar/Sidebar";
 import Header from "./dashboard/Header";
 import api from "./api/axiosInstance";
 import { API_ENDPOINTS } from "./api/endpoints";
+import {
+  getActiveAuthStorage,
+  getStoredPermissions,
+  getStoredRole,
+  getStoredRoleName,
+  getStoredToken,
+} from "./utils/authStorage";
 
 const MOBILE_LAYOUT_QUERY = "(max-width: 767px)";
 
@@ -58,40 +65,65 @@ function MainLayout() {
 
   useEffect(() => {
     const fetchPermissions = async () => {
+      const storage = getActiveAuthStorage();
+      const setStoredPermissions = (permissions) => {
+        storage.setItem("permissions", JSON.stringify(permissions));
+        storage.setItem("modules", JSON.stringify(permissions));
+      };
+      const normalizePermissionList = (data) => {
+        const list =
+          data?.data?.$values ||
+          data?.data ||
+          data?.$values ||
+          data ||
+          [];
+
+        if (!Array.isArray(list)) {
+          return [];
+        }
+
+        return list
+          .filter((permission) => (permission.canAccess ?? permission.CanAccess ?? true) === true)
+          .map((permission) => ({
+            moduleId: permission.moduleId ?? permission.ModuleId,
+            moduleName: (permission.moduleName || permission.ModuleName || "").trim(),
+            canAccess: true,
+          }))
+          .filter((permission) => permission.moduleName);
+      };
+
       try {
-        const token =
-          localStorage.getItem("token") ||
-          sessionStorage.getItem("token");
-
-        const role =
-          (localStorage.getItem("role") ||
-            sessionStorage.getItem("role") ||
-            "").toLowerCase();
-
-        let roleName =
-          localStorage.getItem("roleName") ||
-          sessionStorage.getItem("roleName");
+        const token = getStoredToken();
+        const role = getStoredRole();
+        let roleName = getStoredRoleName();
 
         if (!token) {
-          localStorage.setItem("permissions", JSON.stringify([]));
+          setStoredPermissions([]);
           return;
         }
 
         if (role === "admin") {
-          localStorage.setItem(
-            "permissions",
-            JSON.stringify([{ moduleName: "ALL" }])
-          );
+          setStoredPermissions([{ moduleName: "ALL", canAccess: true }]);
           return;
         }
 
-        if (role === "user") {
-          localStorage.setItem("permissions", JSON.stringify([]));
+        const allowedModulesResponse = await api.get(
+          API_ENDPOINTS.rolePermission.allowedModules,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+        const allowedModules = normalizePermissionList(allowedModulesResponse.data);
+
+        if (allowedModules.length > 0) {
+          setStoredPermissions(allowedModules);
           return;
         }
 
         if (!roleName) {
-          localStorage.setItem("permissions", JSON.stringify([]));
+          setStoredPermissions(getStoredPermissions());
           return;
         }
 
@@ -103,40 +135,20 @@ function MainLayout() {
           },
         });
 
-        const data =
-          res?.data?.data?.$values ||
-          res?.data?.data ||
-          res?.data ||
-          [];
+        const permissions = normalizePermissionList(res.data);
 
-        if (!Array.isArray(data) || data.length === 0) {
-          localStorage.setItem("permissions", JSON.stringify([]));
+        if (permissions.length === 0) {
+          setStoredPermissions(getStoredPermissions());
           return;
         }
 
-        const uniqueModules = [
-          ...new Set(
-            data
-              .filter((permission) => (permission.canAccess ?? permission.CanAccess) === true)
-              .map((permission) =>
-                (permission.moduleName || permission.ModuleName || "")
-                  .replace("User ", "")
-                  .trim()
-              )
-              .filter(Boolean)
-          ),
-        ];
-
-        localStorage.setItem(
-          "permissions",
-          JSON.stringify(uniqueModules.map((moduleName) => ({ moduleName })))
-        );
+        setStoredPermissions(permissions);
       } catch (error) {
         console.error(
           "Permission initialization error:",
           error?.response?.data || error.message
         );
-        localStorage.setItem("permissions", JSON.stringify([]));
+        setStoredPermissions(getStoredPermissions());
       } finally {
         setReady(true);
       }

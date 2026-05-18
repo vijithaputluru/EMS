@@ -146,6 +146,7 @@ public class TaskManagementController : ControllerBase
 
         var tasks = await _context.TaskManagement
             .Where(t => t.AssignedTo == employee.Employee_Id)
+            .OrderBy(t => t.DueDate)
             .ToListAsync();
 
         var updatedTasks = tasks.Select(task =>

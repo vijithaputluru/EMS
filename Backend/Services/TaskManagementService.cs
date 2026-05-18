@@ -60,7 +60,9 @@ namespace EmployeeManagementSystem.Services
         // GET ALL TASKS
         public async Task<List<TaskManagement>> GetAllTasks()
         {
-            return await _context.TaskManagement.ToListAsync();
+            return await _context.TaskManagement
+                .OrderBy(t => t.DueDate)
+                .ToListAsync();
         }
 
         // GET BY ID
@@ -68,6 +70,7 @@ namespace EmployeeManagementSystem.Services
         {
             return await _context.TaskManagement
                 .Where(t => t.AssignedTo == employeeId)
+                .OrderBy(t => t.DueDate)
                 .ToListAsync();
         }
 
@@ -192,6 +195,7 @@ namespace EmployeeManagementSystem.Services
 
             var tasks = await _context.TaskManagement
                 .Where(t => t.AssignedTo == employee.Employee_Id)
+                .OrderBy(t => t.DueDate)
                 .ToListAsync();
 
             var updatedTasks = tasks.Select(task =>

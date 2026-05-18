@@ -179,35 +179,70 @@ export const toIsoDateString = (value) => {
 
 export const sortDate = compareDatesDesc;
 
-export const timeAgo = (value, fallback = "-") => {
-  const parsedDate = parseDate(value);
+export const timeAgo = (dateString) => {
 
-  if (!parsedDate) {
-    return fallback;
-  }
+  if (!dateString) return "Just now";
 
-  const diffInMilliseconds = Math.max(0, Date.now() - parsedDate.getTime());
-  const diffInMinutes = Math.floor(diffInMilliseconds / (1000 * 60));
+  const activityDate = new Date(dateString);
 
-  if (diffInMinutes < 1) {
+  // invalid date check
+  if (isNaN(activityDate.getTime())) {
     return "Just now";
   }
 
-  if (diffInMinutes < 60) {
-    return `${diffInMinutes} min${diffInMinutes === 1 ? "" : "s"} ago`;
+  const now = new Date();
+
+  // difference in seconds
+  let seconds = Math.floor(
+    (now.getTime() - activityDate.getTime()) / 1000
+  );
+
+  // prevent negative values
+  if (seconds < 0) {
+    seconds = Math.abs(seconds);
   }
 
-  const diffInHours = Math.floor(diffInMinutes / 60);
-  if (diffInHours < 24) {
-    return `${diffInHours} hr${diffInHours === 1 ? "" : "s"} ago`;
+  // less than 5 sec
+  if (seconds < 5) {
+    return "Just now";
   }
 
-  const diffInDays = Math.floor(diffInHours / 24);
-  if (diffInDays < 7) {
-    return `${diffInDays} day${diffInDays === 1 ? "" : "s"} ago`;
+  // seconds
+  if (seconds < 60) {
+    return `${seconds} second${seconds > 1 ? "s" : ""} ago`;
   }
 
-  return formatDate(parsedDate, fallback);
+  const minutes = Math.floor(seconds / 60);
+
+  // minutes
+  if (minutes < 60) {
+    return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+  }
+
+  const hours = Math.floor(minutes / 60);
+
+  // hours
+  if (hours < 24) {
+    return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+  }
+
+  const days = Math.floor(hours / 24);
+
+  // days
+  if (days < 30) {
+    return `${days} day${days > 1 ? "s" : ""} ago`;
+  }
+
+  const months = Math.floor(days / 30);
+
+  // months
+  if (months < 12) {
+    return `${months} month${months > 1 ? "s" : ""} ago`;
+  }
+
+  const years = Math.floor(months / 12);
+
+  return `${years} year${years > 1 ? "s" : ""} ago`;
 };
 
 export const isDateRangeValid = (fromDate, toDate) => {

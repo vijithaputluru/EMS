@@ -27,7 +27,7 @@ namespace EmployeeManagementSystem.Services
             var moduleMap = new Dictionary<string, Func<Task<object>>>
             {
                 ["payroll"] = async () => await _context.PaySlips
-                    .OrderByDescending(p => p.Generated_On)
+                    .OrderBy(p => p.Generated_On)
                     .Take(10)
                     .ToListAsync(),
 
@@ -40,10 +40,12 @@ namespace EmployeeManagementSystem.Services
                     .ToListAsync(),
 
                 ["tasks"] = async () => await _context.TaskManagement
+                    .OrderBy(t => t.DueDate)
                     .Take(10)
                     .ToListAsync(),
 
                 ["leaves"] = async () => await _context.EmployeeLeaves
+                    .OrderBy(l => l.FromDate)
                     .Take(10)
                     .ToListAsync(),
             };
