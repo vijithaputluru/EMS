@@ -59,7 +59,7 @@ namespace EmployeeManagementSystem.Controllers
             //    return Unauthorized("Only admin can view offer letters.");
 
             var letters = await _context.OfferLetters
-                .OrderBy(x => x.Generated_On)
+                .OrderByDescending(x => x.Id)
                 .Select(x => new
                 {
                     x.Id,

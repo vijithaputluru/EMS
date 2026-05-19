@@ -87,6 +87,8 @@ builder.Services.AddScoped<ModuleSearchService>();
 
 // ================= CORS =================
 
+// ================= CORS =================
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -96,11 +98,12 @@ builder.Services.AddCors(options =>
                 "http://3.108.78.39",
                 "https://3.108.78.39",
                 "http://localhost:5173",
-                "http://localhost:4200"
+                "http://127.0.0.1:5173",
+                "http://localhost:4200",
+                "https://marian-undeported-shanon.ngrok-free.dev"
             )
             .AllowAnyHeader()
-            .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowAnyMethod();
     });
 });
 

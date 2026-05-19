@@ -19,7 +19,6 @@ public class HolidaysController : ControllerBase
     public async Task<IActionResult> GetAll()
     {
         var holidays = await _context.Holidays
-            .OrderBy(h => h.Holiday_Date)
             .Select(h => new HolidayDto
             {
                 Id = h.Id,

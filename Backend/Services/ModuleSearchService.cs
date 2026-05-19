@@ -40,12 +40,10 @@ namespace EmployeeManagementSystem.Services
                     .ToListAsync(),
 
                 ["tasks"] = async () => await _context.TaskManagement
-                    .OrderBy(t => t.DueDate)
                     .Take(10)
                     .ToListAsync(),
 
                 ["leaves"] = async () => await _context.EmployeeLeaves
-                    .OrderBy(l => l.FromDate)
                     .Take(10)
                     .ToListAsync(),
             };

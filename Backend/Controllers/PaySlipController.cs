@@ -151,19 +151,7 @@ namespace EmployeeManagementSystem.Controllers
             var payslips = await _context.PaySlips
                 .Where(p => p.EmployeeId == employee.Employee_Id)
                 .OrderBy(p => p.Year)
-                .ThenBy(p => p.Month == "January" ? 1
-                    : p.Month == "February" ? 2
-                    : p.Month == "March" ? 3
-                    : p.Month == "April" ? 4
-                    : p.Month == "May" ? 5
-                    : p.Month == "June" ? 6
-                    : p.Month == "July" ? 7
-                    : p.Month == "August" ? 8
-                    : p.Month == "September" ? 9
-                    : p.Month == "October" ? 10
-                    : p.Month == "November" ? 11
-                    : p.Month == "December" ? 12
-                    : 13)
+                .ThenBy(p => p.Month)
                 .ToListAsync();
 
             var baseUrl = $"{Request.Scheme}://{Request.Host}";

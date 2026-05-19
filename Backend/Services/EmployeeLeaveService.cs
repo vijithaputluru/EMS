@@ -96,108 +96,186 @@ public class EmployeeLeaveService : IEmployeeLeaveService
         return new OkObjectResult("Leave applied successfully");
 
     }
+
     public async Task<IActionResult> UpdateStatus(int id, string status)
+
     {
+
         var leave = await _context.EmployeeLeaves.FindAsync(id);
 
         if (leave == null)
+
             return new NotFoundObjectResult("Leave not found");
 
         var fromDate = DateTime.SpecifyKind(leave.FromDate, DateTimeKind.Utc);
+
         var toDate = DateTime.SpecifyKind(leave.ToDate, DateTimeKind.Utc);
 
         //---------------------------------------
+
         // ✅ STORE OLD STATUS (IMPORTANT FIX)
+
         //---------------------------------------
+
         var oldStatus = leave.Status;
 
         //---------------------------------------
+
         // ✅ CHECK BEFORE UPDATE (KEEP YOUR LOGIC)
+
         //---------------------------------------
+
         if (leave.Status == "Approved" && status == "Approved")
+
             return new BadRequestObjectResult("Already approved");
 
         //---------------------------------------
+
         // GET BALANCE
+
         //---------------------------------------
+
         var balance = await _context.EmployeeLeaveBalances
+
             .FirstOrDefaultAsync(b => b.Employee_Id == leave.EmployeeId);
 
         if (balance == null)
+
         {
+
             balance = new EmployeeLeaveBalance
+
             {
+
                 Employee_Id = leave.EmployeeId
+
             };
+
             _context.EmployeeLeaveBalances.Add(balance);
+
             await _context.SaveChangesAsync();
+
         }
 
         int days = await CalculateWorkingDays(fromDate, toDate);
+
         var leaveType = leave.LeaveType?.Trim().ToLower();
 
         //---------------------------------------
+
         // ✅ CASE 1: Pending/Rejected → Approved
+
         //---------------------------------------
+
         if (oldStatus != "Approved" && status == "Approved")
+
         {
+
             switch (leaveType)
+
             {
+
                 case "casual":
+
                     balance.Casual_Used += days;
+
                     break;
 
                 case "sick":
+
                     balance.Sick_Used += days;
+
                     break;
 
                 case "earned":
+
                 case "earned leave":
+
                     balance.Earned_Used += days;
+
                     break;
+
             }
+
         }
 
         //---------------------------------------
+
         // ✅ CASE 2: Approved → Rejected
+
         //---------------------------------------
+
         if (oldStatus == "Approved" && status == "Rejected")
+
         {
+
             switch (leaveType)
+
             {
+
                 case "casual":
+
                     balance.Casual_Used -= days;
+
                     break;
 
                 case "sick":
+
                     balance.Sick_Used -= days;
+
                     break;
 
                 case "earned":
+
                 case "earned leave":
+
                     balance.Earned_Used -= days;
+
                     break;
+
             }
+
         }
 
         //---------------------------------------
+
         // UPDATE STATUS
+
         //---------------------------------------
+
         leave.Status = status;
 
-        //---------------------------------------
+        _context.UserNotifications.Add(new UserNotification
+
+        {
+
+            Employee_Id = leave.EmployeeId,
+
+            Title = "Leave Status Update",
+
+            Message = status == "Approved"
+
+        ? "Your leave request has been approved"
+
+        : "Your leave request has been rejected",
+
+            IsRead = false,
+
+            CreatedAt = DateTime.UtcNow
+
+        });
+
         await _context.SaveChangesAsync();
 
         return new OkObjectResult("Leave updated successfully");
+
     }
 
     public async Task<IActionResult> GetAllLeaves()
 
     {
 
-        var leaves = await _context.EmployeeLeaves
-            .OrderBy(l => l.FromDate)
-            .ToListAsync();
+        var leaves = await _context.EmployeeLeaves.ToListAsync();
 
         return new OkObjectResult(leaves);
 
@@ -216,8 +294,6 @@ public class EmployeeLeaveService : IEmployeeLeaveService
         var leaves = await _context.EmployeeLeaves
 
             .Where(l => l.EmployeeId == employee.Employee_Id)
-
-            .OrderBy(l => l.FromDate)
 
             .ToListAsync();
 
@@ -383,23 +459,34 @@ public class EmployeeLeaveService : IEmployeeLeaveService
                 var toDate = DateTime.SpecifyKind(leave.ToDate, DateTimeKind.Utc);
 
                 int days = await CalculateWorkingDays(fromDate, toDate);
+
                 var leaveType = leave.LeaveType?.Trim().ToLower();
 
-               switch (leaveType)
-{
-    case "casual":
-        balance.Casual_Used -= days;
-        break;
+                switch (leaveType)
 
-    case "sick":
-        balance.Sick_Used -= days;
-        break;
+                {
 
-    case "earned":
-    case "earned leave":
-        balance.Earned_Used -= days;
-        break;
-}
+                    case "casual":
+
+                        balance.Casual_Used -= days;
+
+                        break;
+
+                    case "sick":
+
+                        balance.Sick_Used -= days;
+
+                        break;
+
+                    case "earned":
+
+                    case "earned leave":
+
+                        balance.Earned_Used -= days;
+
+                        break;
+
+                }
 
             }
 

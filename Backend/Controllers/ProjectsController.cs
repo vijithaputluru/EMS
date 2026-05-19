@@ -19,7 +19,6 @@ public class ProjectsController : ControllerBase
     {
         var projects = await _context.Projects
             .Include(p => p.Client)   // 🔥 REQUIRED
-            .OrderBy(p => p.Start_Date)
             .Select(p => new ProjectDto
             {
                 Project_Name = p.Project_Name,

@@ -455,7 +455,7 @@ namespace EmployeeManagementSystem.Services
             GetRecentPayslips()
         {
             return await _context.PaySlips
-                .OrderBy(x => x.Generated_On)
+                .OrderByDescending(x => x.Id)
                 .ToListAsync();
         }
 
