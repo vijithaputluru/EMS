@@ -783,7 +783,7 @@ function EmployeeList() {
                   value={empForm.email}
                   onChange={handleEmpChange}
                   placeholder="Enter employee email"
-                  disabled={isSubmitting || isEditMode}
+                  disabled={isSubmitting}
                 />
                 {errors.email && <p className="form-error">{errors.email}</p>}
               </div>

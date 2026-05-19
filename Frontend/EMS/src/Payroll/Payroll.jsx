@@ -506,6 +506,16 @@ function Payroll() {
               <div
                 key={emp.employee_Id}
                 className={`employee-card ${isActive ? "active" : ""} ${generating ? "disabled-card" : ""}`}
+                style={{
+                  padding: "8px 10px",
+                  minHeight: "52px",
+                  border: isActive
+                    ? "2px solid #2563eb"
+                    : "1px solid #dbe3ee",
+                  borderRadius: "10px",
+                  marginBottom: "2px",
+                  background: "#fff"
+                }}
                 onClick={() => handleCardClick(emp)}
               >
                 <div className="employee-left">
@@ -519,9 +529,39 @@ function Payroll() {
                     }}
                     onClick={(e) => e.stopPropagation()}
                   />
-                  <div>
-                    <strong>{emp.name}</strong>
-                    <p>{emp.employee_Id}</p>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "center",
+                      gap: "2px",
+                      lineHeight: "1"
+                    }}
+                  >
+                    <div
+                      style={{
+                        margin: "0",
+                        padding: "0",
+                        lineHeight: "1.3",
+                        fontSize: "14px",
+                        fontWeight: "400"
+                      }}
+                    >
+                      {emp.name}
+                    </div>
+
+                    <p
+                      style={{
+                        margin: "0",
+                        marginTop: "2px",
+                        padding: "0",
+                        lineHeight: "1",
+                        fontSize: "12px",
+                        color: "#64748b"
+                      }}
+                    >
+                      {emp.employee_Id}
+                    </p>
                   </div>
                 </div>
                 <span className="dept">{emp.department}</span>
@@ -826,15 +866,16 @@ function Payroll() {
               style={{
                 overflowX: "auto",
                 border: "1px solid #e2e8f0",
-                borderRadius: "14px",
-                background: "#fff"
+                borderRadius: "12px",
+                background: "#fff",
+                position: "relative"
               }}
             >
               <table
                 className="payroll-table"
                 style={{
                   width: "100%",
-                  minWidth: "1200px",
+                  minWidth: "1100px",
                   borderCollapse: "separate",
                   borderSpacing: 0,
                   tableLayout: "fixed"
@@ -860,10 +901,14 @@ function Payroll() {
                       <th
                         key={title}
                         style={{
+                          position: title === "Employee" ? "sticky" : "static",
+                          left: title === "Employee" ? 0 : "auto",
+                          zIndex: title === "Employee" ? 20 : 1,
+                          background: "#f8fafc",
                           width,
                           minWidth: width,
                           maxWidth: width,
-                          padding: "18px 0px",
+                          padding: "12px 0px",
                           paddingLeft:
                             title === "Net Pay"
                               ? "35px"
@@ -878,7 +923,7 @@ function Payroll() {
                           borderBottom: "1px solid #e2e8f0",
                           whiteSpace: "nowrap",
                           background: "#f8fafc",
-                          height: "64px",
+                          height: "48px",
                           lineHeight: "20px",
                           letterSpacing: "0.4px"
                         }}
@@ -932,23 +977,30 @@ function Payroll() {
                           key={p.id || index}
                           style={{
                             background: "#fff",
-                            transition: "0.2s ease"
+                            transition: "0.2s ease",
+                            height: "42px"
                           }}
                         >
                           {/* EMPLOYEE */}
                           <td
                             style={{
-                              padding: "18px 20px",
+                              padding: "0px 8px",
                               borderBottom: "1px solid #f1f5f9",
-                              verticalAlign: "middle"
+                              verticalAlign: "middle",
+                              position: "sticky",
+                              left: 0,
+                              zIndex: 10,
+                              background: "#fff",
+                              boxShadow: "6px 0 10px rgba(0,0,0,0.06)"
                             }}
                           >
                             <div
                               style={{
                                 fontWeight: 600,
                                 color: "#111827",
-                                fontSize: "14px",
-                                marginBottom: "5px"
+                                fontSize: "13px",
+                                marginBottom: "1px",
+                                lineHeight: "16px"
                               }}
                             >
                               {emp?.name || p.employeeName || p.employeeId}
@@ -956,8 +1008,9 @@ function Payroll() {
 
                             <div
                               style={{
-                                fontSize: "13px",
-                                color: "#64748b"
+                                fontSize: "11px",
+                                color: "#64748b",
+                                lineHeight: "14px"
                               }}
                             >
                               {p.employeeId}
@@ -967,10 +1020,12 @@ function Payroll() {
                           {/* DEPARTMENT */}
                           <td
                             style={{
-                              padding: "18px 20px",
+                              padding: "4px 10px",
                               borderBottom: "1px solid #f1f5f9",
                               color: "#111827",
-                              verticalAlign: "middle"
+                              verticalAlign: "middle",
+                              fontSize: "13px",
+                              lineHeight: "16px"
                             }}
                           >
                             {emp?.department || p.department || "-"}
@@ -979,12 +1034,14 @@ function Payroll() {
                           {/* PERIOD */}
                           <td
                             style={{
-                              padding: "18px 20px",
+                              padding: "4px 10px",
                               borderBottom: "1px solid #f1f5f9",
                               textAlign: "center",
                               color: "#111827",
                               verticalAlign: "middle",
-                              whiteSpace: "nowrap"
+                              whiteSpace: "nowrap",
+                              fontSize: "13px",
+                              lineHeight: "16px"
                             }}
                           >
                             {p.month || "-"} {p.year || ""}
@@ -993,15 +1050,16 @@ function Payroll() {
                           {/* NET PAY */}
                           <td
                             style={{
-                              padding: "18px 24px 18px 18px",
+                              padding: "4px 14px 4px 10px",
                               borderBottom: "1px solid #f1f5f9",
                               textAlign: "right",
                               verticalAlign: "middle",
                               fontWeight: 700,
                               color: "#059669",
-                              fontSize: "15px",
+                              fontSize: "13px",
                               fontVariantNumeric: "tabular-nums",
-                              whiteSpace: "nowrap"
+                              whiteSpace: "nowrap",
+                              lineHeight: "16px"
                             }}
                           >
                             {formatCurrency(p.netPay, true)}
@@ -1010,14 +1068,15 @@ function Payroll() {
                           {/* DEDUCTION */}
                           <td
                             style={{
-                              padding: "18px 24px 18px 18px",
+                              padding: "4px 14px 4px 10px",
                               borderBottom: "1px solid #f1f5f9",
                               textAlign: "right",
                               verticalAlign: "middle",
                               color: "#dc2626",
-                              fontSize: "15px",
+                              fontSize: "13px",
                               fontVariantNumeric: "tabular-nums",
-                              whiteSpace: "nowrap"
+                              whiteSpace: "nowrap",
+                              lineHeight: "16px"
                             }}
                           >
                             {formatCurrency(
@@ -1032,15 +1091,16 @@ function Payroll() {
                           {/* CTC */}
                           <td
                             style={{
-                              padding: "18px 24px 18px 18px",
+                              padding: "4px 14px 4px 10px",
                               borderBottom: "1px solid #f1f5f9",
                               textAlign: "right",
                               verticalAlign: "middle",
                               fontWeight: 700,
                               color: "#111827",
-                              fontSize: "15px",
+                              fontSize: "13px",
                               fontVariantNumeric: "tabular-nums",
-                              whiteSpace: "nowrap"
+                              whiteSpace: "nowrap",
+                              lineHeight: "16px"
                             }}
                           >
                             {formatCurrency(ctcValue, true)}
@@ -1049,13 +1109,13 @@ function Payroll() {
                           {/* GENERATED */}
                           <td
                             style={{
-                              padding: "18px 20px",
+                              padding: "4px 10px",
                               borderBottom: "1px solid #f1f5f9",
                               textAlign: "center",
                               verticalAlign: "middle",
                               color: "#475569",
-                              fontSize: "14px",
-                              lineHeight: "20px"
+                              fontSize: "12px",
+                              lineHeight: "16px"
                             }}
                           >
                             {p.parsedGeneratedDate
@@ -1077,7 +1137,7 @@ function Payroll() {
                           {/* ACTION */}
                           <td
                             style={{
-                              padding: "18px 20px",
+                              padding: "4px 10px",
                               borderBottom: "1px solid #f1f5f9",
                               textAlign: "center",
                               verticalAlign: "middle"
@@ -1096,7 +1156,7 @@ function Payroll() {
                                 title="Download Payslip"
                                 style={{
                                   cursor: "pointer",
-                                  fontSize: "18px",
+                                  fontSize: "15px",
                                   color: "#2563eb"
                                 }}
                               />

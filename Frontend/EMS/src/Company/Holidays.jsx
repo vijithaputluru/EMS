@@ -7,7 +7,7 @@ import api from "../api/axiosInstance";
 import { API_ENDPOINTS } from "../api/endpoints";
 import AppDatePicker from "../components/AppDatePicker";
 import TruncatedText from "../components/TruncatedText";
-import { extractCollection, sortByRecency } from "../utils/collections";
+import { extractCollection, sortByDateAsc } from "../utils/collections";
 import {
   formatDate,
   getDayName,
@@ -48,13 +48,14 @@ function Holidays() {
         },
       });
 
-      const formatted = sortByRecency(
+      const formatted = sortByDateAsc(
         extractCollection(res.data).filter(
           (item) =>
             item.holiday_Name &&
             item.holiday_Name.trim() !== "" &&
             item.holiday_Date !== "0001-01-01T00:00:00"
-        )
+        ),
+        (item) => item.holiday_Date
       ).map((item) => ({
         id: item.id,
         name: item.holiday_Name,
@@ -236,17 +237,18 @@ function Holidays() {
   };
 
   return (
-    <div className="holiday-page">
+    <div className="holiday-page holiday-page--admin">
       <ToastContainer position="top-right" autoClose={2400} />
 
       <div className="holiday-header">
-        <div>
+        <div className="holiday-header-copy">
           <h2>Company Holidays</h2>
           <p>{holidays.length} Holidays This Year</p>
         </div>
 
         <button
           className="holiday-add-btn"
+          type="button"
           onClick={() => {
             closeModal();
             setShowHolidayModal(true);
@@ -256,51 +258,73 @@ function Holidays() {
         </button>
       </div>
 
-      <div className="holiday-table-wrapper">
-        <table className="holiday-table">
+      <div className="holiday-table-wrapper app-table-scroll">
+        <table className="holiday-table holiday-table--admin">
+          <colgroup>
+            <col className="holiday-width-sno" />
+            <col className="holiday-width-name" />
+            <col className="holiday-width-date" />
+            <col className="holiday-width-day" />
+            <col className="holiday-width-type" />
+            <col className="holiday-width-actions" />
+          </colgroup>
           <thead>
             <tr>
-              <th>S.No</th>
-              <th>Holiday Name</th>
-              <th>Date</th>
-              <th>Day</th>
-              <th>Type</th>
-              <th>Actions</th>
+              <th className="holiday-col-sno">S.No</th>
+              <th className="holiday-col-name">Holiday Name</th>
+              <th className="holiday-col-date">Date</th>
+              <th className="holiday-col-day">Day</th>
+              <th className="holiday-col-type">Type</th>
+              <th className="holiday-col-actions">Actions</th>
             </tr>
           </thead>
 
           <tbody>
-            {holidays.map((holiday, index) => (
-              <tr key={holiday.id}>
-                <td>{index + 1}</td>
-
-                <td>
-                  <div className="holiday-name-cell" title={holiday.name}>
-                    <FaCalendarAlt className="holiday-icon" />
-                    <TruncatedText className="holiday-name-text" value={holiday.name} />
-                  </div>
-                </td>
-
-                <td>{formatDate(holiday.date)}</td>
-                <td>{holiday.day}</td>
-                <td>{holiday.type}</td>
-                <td>
-                  <button
-                    className="edit-btn"
-                    onClick={() => handleEdit(holiday)}
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    className="delete-btn"
-                    onClick={() => setHolidayToDelete(holiday)}
-                  >
-                    Delete
-                  </button>
+            {holidays.length === 0 ? (
+              <tr>
+                <td colSpan="6" className="app-table-empty-cell">
+                  No holidays available.
                 </td>
               </tr>
-            ))}
+            ) : (
+              holidays.map((holiday, index) => (
+                <tr key={holiday.id}>
+                  <td className="holiday-col-sno">{index + 1}</td>
+
+                  <td className="holiday-col-name">
+                    <div className="holiday-name-cell" title={holiday.name}>
+                      <FaCalendarAlt className="holiday-icon" />
+                      <TruncatedText className="holiday-name-text" value={holiday.name} />
+                    </div>
+                  </td>
+
+                  <td className="holiday-col-date">{formatDate(holiday.date)}</td>
+                  <td className="holiday-col-day">{holiday.day}</td>
+                  <td className="holiday-col-type">{holiday.type}</td>
+                  <td className="holiday-col-actions">
+                    <div className="holiday-action-cell">
+                      <button
+                        className="edit-btn app-action-button app-action-button--edit"
+                        type="button"
+                        aria-label={`Edit ${holiday.name}`}
+                        onClick={() => handleEdit(holiday)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        className="delete-btn app-action-button app-action-button--delete"
+                        type="button"
+                        aria-label={`Delete ${holiday.name}`}
+                        onClick={() => setHolidayToDelete(holiday)}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -367,12 +391,18 @@ function Holidays() {
             </div>
 
             <div className="holiday-modal-btns">
-              <button className="holiday-cancel-btn" onClick={closeModal} disabled={saving}>
+              <button
+                className="holiday-cancel-btn"
+                type="button"
+                onClick={closeModal}
+                disabled={saving}
+              >
                 Cancel
               </button>
 
               <button
                 className="holiday-save-btn"
+                type="button"
                 onClick={handleSaveHoliday}
                 disabled={saving}
               >
@@ -392,12 +422,13 @@ function Holidays() {
             <div className="holiday-modal-btns">
               <button
                 className="holiday-cancel-btn"
+                type="button"
                 onClick={() => setHolidayToDelete(null)}
               >
                 Cancel
               </button>
 
-              <button className="holiday-delete-btn" onClick={handleDelete}>
+              <button className="holiday-delete-btn" type="button" onClick={handleDelete}>
                 Yes Delete
               </button>
             </div>

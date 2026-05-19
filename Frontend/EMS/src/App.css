@@ -64,11 +64,17 @@
   .holiday-table-wrapper,
   .monthly-scroll,
   .attendance-table,
+  .assets-table-wrap,
+  .company-branch-table-wrap,
+  .leave-table,
+  .leave-history,
   .roles-table-wrap,
   .offer-table-wrapper,
+  .recent-table,
   .payslip-table-wrap,
   .reports-table-wrap,
   .task-table,
+  .ems-task-data-table-outer-wrapper,
   .table-scroll
 ) {
   width: 100%;
@@ -80,6 +86,10 @@
 .page-shell :is(
   .projects-form-grid,
   .attendance-form-grid,
+  .company-form-grid,
+  .form-grid,
+  .emp-modal-form-grid,
+  .ems-task-form-grid,
   .auth-button-row,
   .auth-rule-list
 ) {
@@ -488,6 +498,7 @@
   .emp-page-unique,
   .offer-container,
   .add-employee,
+  .add-employee-page,
   .notifications-container,
   .reports-container,
   .payslip-container,
@@ -500,6 +511,8 @@
   .projects-page,
   .holiday-page,
   .dept-page,
+  .permission-page,
+  .job-page-unique,
   .roles-page-container,
   .assets-page,
   .clients-page
@@ -511,6 +524,35 @@
   padding: 0 !important;
 }
 
+.page-shell > :is(
+  .emp-page-unique,
+  .offer-container,
+  .add-employee,
+  .add-employee-page,
+  .notifications-container,
+  .reports-container,
+  .payslip-container,
+  .attendance-page,
+  .leave-page,
+  .task-page,
+  .ems-task-page-wrapper,
+  .company-page,
+  .projects-page,
+  .holiday-page,
+  .dept-page,
+  .permission-page,
+  .job-page-unique,
+  .roles-page-container,
+  .assets-page,
+  .clients-page
+) {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 1.8vw, 18px);
+  min-width: 0;
+  overflow-x: hidden;
+}
+
 .page-shell :is(
   .card,
   .activity,
@@ -518,7 +560,26 @@
   .actions,
   .client-card,
   .dept-card,
+  .leave-summary-card,
+  .apply-card,
+  .leave-history,
+  .leave-balance,
+  .balance-card,
+  .offer-card,
+  .offer-list,
+  .permission-group,
+  .form-section,
+  .form-card,
+  .employee-panel,
+  .employee-header,
+  .recent-table,
+  .attendance-table,
   .task-table,
+  .projects-table-wrapper,
+  .holiday-table-wrapper,
+  .roles-table-wrap,
+  .assets-table-wrap,
+  .company-branch-table-wrap,
   .emp-table-container,
   .emp-modal-box,
   .emp-delete-modal,
@@ -528,11 +589,37 @@
   .client-view-modal,
   .client-drawer,
   .change-password-modal,
+  .company-modal-box,
+  .holiday-modal-box,
+  .projects-modal,
+  .projects-modal-small,
+  .roles-modal-container,
+  .modal-content,
+  .asset-delete-modal,
+  .job-modal-box,
+  .attendance-modal,
+  .apply-modal-box,
+  .leave-details-container,
+  .ems-task-create-popup,
+  .ems-task-view-popup,
+  .ems-task-delete-popup,
   .menu-dropdown,
   .dept-popup-menu
 ) {
+  background: #ffffff !important;
   border-color: var(--pirnav-border) !important;
+  border-radius: 18px !important;
   box-shadow: 0 8px 22px rgba(4, 28, 50, 0.04) !important;
+  min-width: 0;
+}
+
+.page-shell :is(
+  .clients-grid,
+  .leave-top-cards,
+  .balance-grid,
+  .employee-list
+) > * {
+  min-width: 0;
 }
 
 .page-shell :is(

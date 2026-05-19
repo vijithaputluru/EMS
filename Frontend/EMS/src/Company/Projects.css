@@ -59,7 +59,7 @@ body {
 
 .projects-table {
   width: 100%;
-  min-width: 1180px;
+  min-width: 1020px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -79,7 +79,7 @@ body {
 }
 
 .projects-table th {
-  color: #344054;
+  color: #111827;
   font-weight: 700;
   white-space: nowrap;
   font-size: 15px;
@@ -183,8 +183,8 @@ body {
 .projects-delete-btn,
 .projects-save-btn,
 .projects-secondary-btn {
-  border: none;
-  min-height: 30px;
+  border: 1px solid transparent;
+  min-height: 36px;
   padding: 10px 16px;
   border-radius: 10px;
   cursor: pointer;
@@ -193,23 +193,6 @@ body {
   transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 
-.projects-table-edit-btn {
-  background: #3b82f6;
-  color: #fff;
-}
-
-.projects-table-edit-btn:hover {
-  background: #2563eb;
-}
-
-.projects-delete-btn {
-  background: #ef4444;
-  color: #fff;
-}
-
-.projects-delete-btn:hover {
-  background: #dc2626;
-}
 
 .projects-empty-state {
   padding: 34px 18px;
@@ -567,3 +550,33 @@ body {
     width: 100%;
   }
 }
+.react-datepicker-popper {
+
+  z-index: 999999 !important;
+
+}
+ 
+.react-datepicker-wrapper {
+
+  width: 100%;
+
+}
+ 
+.react-datepicker__input-container {
+
+  width: 100%;
+
+}
+ 
+.projects-modal,
+
+.projects-form,
+
+.projects-form-grid,
+
+.projects-field {
+
+  overflow: visible !important;
+
+}
+ 

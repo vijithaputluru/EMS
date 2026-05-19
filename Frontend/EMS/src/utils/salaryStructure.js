@@ -1,3 +1,8 @@
+import {
+  formatCurrency as formatAppCurrency,
+  formatNumber as formatAppNumber,
+} from "./formatters";
+
 export const SALARY_MIN = 100000;
 export const SALARY_MAX = 5000000;
 export const DEFAULT_CONVEYANCE = 19200;
@@ -37,16 +42,6 @@ export const createManualSalaryFieldMap = () => ({
   conveyance: false,
   medicalAllowance: false,
   otherAllowance: false,
-});
- 
-const currencyFormatter = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 0,
-});
- 
-const numberFormatter = new Intl.NumberFormat("en-IN", {
-  maximumFractionDigits: 0,
 });
  
 const unwrapSalarySource = (source) =>
@@ -93,12 +88,15 @@ export const clampAnnualCtc = (value) => {
  
   return Math.min(Math.max(numericValue, SALARY_MIN), SALARY_MAX);
 };
- 
+
 export const formatCurrency = (value) =>
-  currencyFormatter.format(Number.isFinite(Number(value)) ? Number(value) : 0);
- 
+  formatAppCurrency(value, {
+    fallback: "\u20b90",
+    showZero: true,
+  });
+
 export const formatNumberInput = (value) =>
-  numberFormatter.format(Number.isFinite(Number(value)) ? Number(value) : 0);
+  formatAppNumber(value, "0");
  
 export const formatLpa = (value) => {
   const lpaValue = Number(value || 0) / 100000;

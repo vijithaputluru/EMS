@@ -6,7 +6,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import AppDatePicker from "../components/AppDatePicker";
 import { extractCollection } from "../utils/collections";
-import { formatDate, getTodayInputValue, toIsoDateString } from "../utils/date";
+import { formatDate, toIsoDateString } from "../utils/date";
 
 const PROJECT_STATUSES = [
   "Yet to Start",
@@ -30,6 +30,7 @@ const normalizeProjects = (response) =>
   extractCollection(response).map((project) => ({
     name: project.project_Name ?? project.name ?? "",
     id: project.project_Id ?? project.id ?? "",
+    clientId: project.clientId ?? project.client_Id ?? project.clientID ?? "",
     client: project.client ?? "",
     startDate: project.start_Date ? String(project.start_Date).split("T")[0] : "",
     endDate: project.end_Date ? String(project.end_Date).split("T")[0] : "",
@@ -91,24 +92,6 @@ function Projects() {
   const [apiError, setApiError] = useState("");
 
   const projectNameInputRef = useRef(null);
-
-  const todayString = useMemo(() => {
-    return getTodayInputValue();
-  }, []);
-
-  const getMinimumStartDate = (draftForm = projectsForm) => {
-    if (!projectsEditMode) return todayString;
-
-    if (draftForm.startDate && draftForm.startDate < todayString) {
-      return draftForm.startDate;
-    }
-
-    return todayString;
-  };
-
-  const effectiveStartDateMin = useMemo(() => {
-    return getMinimumStartDate(projectsForm);
-  }, [projectsEditMode, projectsForm, todayString]);
 
   const fetchProjects = async () => {
     try {
@@ -269,9 +252,6 @@ function Projects() {
 
       case "startDate":
         if (!trimmedValue) return "Start Date is required";
-        if (trimmedValue < getMinimumStartDate(draftForm)) {
-          return "Start Date cannot be in the past";
-        }
         return "";
 
       case "endDate":
@@ -385,24 +365,19 @@ function Projects() {
     if (!validateProjectForm(trimmedForm)) return;
 
     const selectedClient = clients.find(
-      (client) => String(client.name) === String(trimmedForm.client)
+      (client) => String(client.id) === String(trimmedForm.client)
     );
 
     const payload = {
       project_Name: trimmedForm.name,
       project_Id: trimmedForm.id,
-      client: clients.find(
-        (item) => String(item.id) === String(trimmedForm.client)
-      )?.name || "",
-
+      client: selectedClient?.name || "",
       clientId: Number(trimmedForm.client),
       start_Date: toIsoDateString(trimmedForm.startDate),
       end_Date: toIsoDateString(trimmedForm.endDate),
       team_Members: String(trimmedForm.team),
       status: trimmedForm.status,
     };
-
-    console.log("FINAL PROJECT PAYLOAD 👉", payload);
 
     try {
       setIsSubmitting(true);
@@ -455,11 +430,17 @@ function Projects() {
   };
 
   const handleProjectsEdit = (project) => {
+    const matchedClient = clients.find(
+      (client) =>
+        String(client.id) === String(project.clientId) ||
+        String(client.name).toLowerCase() === String(project.client).toLowerCase()
+    );
+
     setProjectsForm({
       name: project.name || "",
       id: project.id || "",
       originalId: project.id || "",
-      client: project.client || "",
+      client: matchedClient ? String(matchedClient.id) : "",
       startDate: project.startDate || "",
       endDate: project.endDate || "",
       team: project.team || "",
@@ -510,16 +491,16 @@ function Projects() {
         </button>
       </div>
 
-      <div className="projects-table-wrapper">
+      <div className="projects-table-wrapper app-table-scroll">
         <table className="projects-table">
           <colgroup>
-            <col style={{ width: "200px" }} />
-            <col style={{ width: "190px" }} />
-            <col style={{ width: "135px" }} />
-            <col style={{ width: "135px" }} />
-            <col style={{ width: "110px" }} />
+            <col style={{ width: "210px" }} />
+            <col style={{ width: "180px" }} />
+            <col style={{ width: "120px" }} />
+            <col style={{ width: "120px" }} />
+            <col style={{ width: "100px" }} />
             <col style={{ width: "140px" }} />
-            <col style={{ width: "160px" }} />
+            <col style={{ width: "150px" }} />
           </colgroup>
           <thead>
             <tr>
@@ -575,14 +556,18 @@ function Projects() {
                   <td>
                     <div className="projects-action-cell">
                       <button
-                        className="projects-table-edit-btn"
+                        className="projects-table-edit-btn app-action-button app-action-button--edit"
+                        type="button"
+                        aria-label={`Edit ${project.name || "project"}`}
                         onClick={() => handleProjectsEdit(project)}
                       >
                         Edit
                       </button>
 
                       <button
-                        className="projects-delete-btn"
+                        className="projects-delete-btn app-action-button app-action-button--delete"
+                        type="button"
+                        aria-label={`Delete ${project.name || "project"}`}
                         onClick={() => {
                           setProjectToDelete(project);
                           setIsClosingDeletePopup(false);
@@ -764,7 +749,6 @@ function Projects() {
                     id="project-start-date"
                     name="startDate"
                     value={projectsForm.startDate}
-                    minDate={effectiveStartDateMin}
                     onChange={handleProjectsChange}
                     aria-invalid={Boolean(formErrors.startDate)}
                     aria-describedby={
@@ -793,7 +777,7 @@ function Projects() {
                     id="project-end-date"
                     name="endDate"
                     value={projectsForm.endDate}
-                    minDate={projectsForm.startDate || effectiveStartDateMin}
+                    minDate={projectsForm.startDate || undefined}
                     onChange={handleProjectsChange}
                     aria-invalid={Boolean(formErrors.endDate)}
                     aria-describedby={
@@ -897,7 +881,10 @@ function Projects() {
                 <button className="projects-secondary-btn" onClick={closeDeletePopup}>
                   Cancel
                 </button>
-                <button className="projects-delete-btn" onClick={confirmDeleteProject}>
+                <button
+                  className="projects-delete-btn app-action-button app-action-button--delete"
+                  onClick={confirmDeleteProject}
+                >
                   Yes, Delete
                 </button>
               </div>

@@ -439,6 +439,11 @@ input[type="password"]::-webkit-credentials-auto-fill-button {
   box-shadow: 0 0 0 4px rgba(0, 209, 209, 0.15);
 }
 
+.auth-field-shell.has-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
 .auth-field-icon,
 .auth-field-action {
   width: 42px;

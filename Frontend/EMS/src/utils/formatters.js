@@ -20,6 +20,8 @@ const getNumericValue = (value) => {
   return Number.isFinite(parsedValue) ? parsedValue : null;
 };
 
+const normalizeCurrencyOutput = (value) => value.replace(/\s/g, "");
+
 export const formatCurrency = (
   value,
   { fallback = "-", decimals = 0, showZero = true } = {}
@@ -34,9 +36,11 @@ export const formatCurrency = (
     return fallback;
   }
 
-  return decimals > 0
-    ? decimalCurrencyFormatter.format(numericValue)
-    : integerCurrencyFormatter.format(numericValue);
+  return normalizeCurrencyOutput(
+    decimals > 0
+      ? decimalCurrencyFormatter.format(numericValue)
+      : integerCurrencyFormatter.format(numericValue)
+  );
 };
 
 export const formatNumber = (value, fallback = "-") => {

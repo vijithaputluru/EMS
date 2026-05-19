@@ -1,488 +1,379 @@
-/* ================= PAGE ================= */
-body {
-  background: #f5f7fa;
-  font-family: sans-serif;
-  overflow-x: hidden;
-}
- 
 .company-page {
-  padding: 20px;
-  background: #f5f7fa;
+  padding: 0;
+  background: transparent;
 }
- 
-/* ================= COMPANY CARD ================= */
- 
+
+.company-card,
+.company-branch-table-wrap {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.04);
+}
+
 .company-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
+  padding: 22px;
   margin-bottom: 20px;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
 }
- 
-.company-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
- 
-.company-header h2 {
-  margin: 0;
-  font-size: 21px;
-  margin-bottom: 6px;
- 
-}
- 
-.company-header p {
-  font-size: 13px;
-  color: #777;
-}
- 
-.edit-btn {
-  padding: 6px 14px;
-  border: none;
-  background: #e8f0fe;
-  border-radius: 6px;
-  cursor: pointer;
-}
- 
-.edit-btn:hover {
-  background: #dbeafe;
-}
- 
-/* ================= INFO GRID ================= */
- 
-.company-info {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
-  margin-top: 15px;
-}
- 
-.info-box {
-  background: #f0f2f5;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 14px;
-}
- 
-/* ================= BRANCH HEADER ================= */
- 
+
+.company-header,
 .branch-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
 }
- 
-.add-btn {
-  background: #00d1d1 !important;
-  color: #000 !important;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
- 
-.add-btn:hover {
-  background: #00d1d1;
-}
- 
-/* ================= BRANCH TABLE ================= */
- 
-.branch-table {
-  width: 100%;
-  margin-top: 15px;
-  border-collapse: collapse;
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
-  table-layout: fixed;
-}
- 
-.branch-table thead {
-  background: #f3f4f6;
-}
- 
-.branch-table th,
-.branch-table td {
-  padding: 14px;
-  border-bottom: 1px solid #eee;
-  text-align: left;
-  font-size: 14px;
- 
-  word-break: break-word;
-  overflow-wrap: anywhere;
-  max-width: 250px;
-}
- 
-.branch-table tr:hover {
-  background: #f9fafb;
-}
- 
-/* ================= STATUS BADGE ================= */
- 
-.badge {
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 12px;
-}
- 
-.active {
-  background: #d1fae5;
-  color: #065f46;
-}
- 
-.inactive {
-  background: #fee2e2;
-  color: #991b1b;
-}
- 
- 
-.save-btn {
-  background: #00d1d1;
-  color: #0000;
-  border: none;
-  padding: 7px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
- 
-.modal-btns button:first-child {
-  background: #e5e7eb;
-  border: none;
-  padding: 7px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
- 
-/* ================= RESPONSIVE ================= */
- 
-@media (max-width: 768px) {
-  .company-info {
-    grid-template-columns: repeat(2, 1fr);
-  }
- 
-  .modal {
-    width: 90%;
-  }
-}
- 
-/* ===== COMPANY ADD BUTTON ===== */
- 
-.company-add-btn {
-  background: #00d1d1 !important;
-  color: #000 !important;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-}
- 
-.company-add-btn:hover {
-  background: #00d1d1;
-}
- 
-/* ===== COMPANY MODAL ===== */
- 
-.company-modal-overlay {
-  position: fixed;
-  inset: 0;
- 
-  background: rgba(15, 23, 42, 0.35);
-  backdrop-filter: blur(3px);
- 
-  display: flex;
-  align-items: center;
-  justify-content: center;
- 
-  padding: 24px;
- 
-  z-index: 99999;
-}
- 
-.company-modal-box {
-  position: fixed;
- 
-  background: #fff;
-  padding: 25px;
-  border-radius: 14px;
-  width: 650px;
- 
+
+.company-header-copy,
+.branch-header > div:first-child {
   display: flex;
   flex-direction: column;
-  gap: 12px;
- 
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.15);
-  z-index: 100000;
+  justify-content: center;
 }
- 
-.company-modal-box input {
+
+.company-header h2,
+.branch-header h3 {
+  margin: 0;
+}
+
+.company-header p,
+.branch-header p {
+  margin: 6px 0 0;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.company-header-edit,
+.company-add-btn {
+  min-width: 132px;
+}
+
+.company-info {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.company-info-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e7eef5;
+  border-radius: 16px;
+  background: #f8fbfd;
+}
+
+.company-info-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(0, 209, 209, 0.12);
+  color: #0f766e;
+}
+
+.company-info-item p {
+  margin: 0 0 6px;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.company-info-item strong {
+  color: #0f172a;
+  font-size: 15px;
+  word-break: break-word;
+}
+
+.branch-header {
+  margin-bottom: 14px;
+}
+
+.company-branch-table-wrap {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.branch-table {
   width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
+  min-width: 820px;
+  border-collapse: separate;
+  border-spacing: 0;
 }
- 
-.company-modal-box input:focus {
-  border-color: #00d1d1;
-  box-shadow: 0 0 0 3px rgba(10, 168, 158, 0.1);
-  outline: none;
+
+.branch-table thead {
+  background: #f8fbfd;
 }
- 
-.company-modal-btns {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 15px;
-  flex-wrap: nowrap;
+
+.branch-table th,
+.branch-table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid #eef2f7;
+  font-size: 14px;
+  text-align: left;
+  vertical-align: middle;
 }
- 
-.company-modal-btns button {
-  width: auto;
-  min-width: 90px;
+
+.branch-table th {
+  color: #111827;
+  font-weight: 700;
+  white-space: nowrap;
 }
- 
-.company-modal-btns {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+
+.branch-table tbody tr:hover {
+  background: #fbfeff;
 }
- 
-.company-save-btn {
-  background: #00d1d1 !important;
-  color: #000 !important;
-  border: none;
-  padding: 7px 16px;
-  border-radius: 6px;
-  cursor: pointer;
+
+.branch-table tbody tr:last-child td {
+  border-bottom: none;
 }
- 
+
 .branch-row-click {
   cursor: pointer;
 }
- 
-.company-modal-box.small {
-  width: 420px;
-  max-width: 460px;
-  max-height: 70vh;
-  overflow-y: auto;
+
+.branch-action-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
 }
- 
-.branch-details p {
-  margin: 8px 0;
-  word-break: break-word;
-}
- 
+
+.company-edit-btn,
 .company-delete-btn {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 6px 14px;
-  border-radius: 6px;
-  cursor: pointer;
 }
- 
-/* ================= BRANCH POPUP ================= */
- 
-.company-modal-box.small {
-  width: 460px;
-  max-height: 70vh;
+
+.company-modal-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 28, 50, 0.38);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+}
+
+.company-modal-box {
+  width: min(760px, 100%);
+  max-height: calc(100vh - 32px);
   overflow-y: auto;
-  border-radius: 14px;
-  padding: 25px 30px;
-}
- 
-/* TITLE */
-.company-modal-box.small h3 {
-  margin-bottom: 18px;
-  font-size: 20px;
-}
- 
-/* DETAILS GRID */
-.branch-details {
+  padding: 24px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  box-shadow: 0 24px 50px rgba(4, 28, 50, 0.12);
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 18px;
 }
- 
-/* EACH ROW */
-.branch-details p {
-  background: #f4f6f8;
-  padding: 10px 14px;
-  border-radius: 8px;
-  margin: 0;
+
+.company-modal-box-small {
+  width: min(480px, 100%);
+}
+
+.company-modal-head {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  word-break: break-word;
+  justify-content: space-between;
+  gap: 16px;
 }
- 
-/* LABEL */
-.branch-details p strong {
-  min-width: 120px;
-  color: #333;
+
+.company-modal-head h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 22px;
 }
- 
-/* VALUE */
-.branch-details p span {
-  flex: 1;
-  text-align: right;
-}
- 
-/* CLOSE BUTTON */
-.company-delete-btn {
-  background: #e74c3c;
-  color: white;
-  border: none;
-  padding: 6px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-}
- 
-.company-delete-btn:hover {
-  background: #c0392b;
-}
- 
-.company-edit-btn {
-  background: #3498db;
-  color: white;
-  border: none;
-  padding: 7px 16px;
-  border-radius: 6px;
-  cursor: pointer;
+
+.company-modal-head p {
+  margin: 8px 0 0;
+  color: #64748b;
   font-size: 14px;
+  line-height: 1.55;
 }
- 
-.company-edit-btn:hover {
-  background: #2980b9;
-}
- 
-.company-cancel-btn {
-  background: #e5e7eb !important;
-  color: #111827;
-  border: none;
-  padding: 7px 16px;
-  border-radius: 6px;
+
+.company-modal-close {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #dbe5ef;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #334155;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
-  font-size: 14px;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
 }
- 
-.company-cancel-btn:hover {
-  background: #d1d5db !important;
+
+.company-modal-close:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: rgba(0, 209, 209, 0.26);
 }
- 
-.form-grid {
+
+.company-form-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  /* left + right */
-  gap: 12px 20px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 16px;
 }
- 
+
+.company-form-grid-single {
+  grid-template-columns: 1fr;
+}
+
+.company-form-full {
+  grid-column: 1 / -1;
+}
+
 .form-group {
   display: flex;
   flex-direction: column;
+  gap: 8px;
 }
- 
+
 .form-group label {
+  color: #334155;
   font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 4px;
+  font-weight: 700;
 }
- 
-/* ================= COMPANY FORM TWO COLUMN ================= */
- 
-.form-two-column {
-  display: flex;
-  gap: 25px;
-  margin-top: 10px;
-}
- 
-/* LEFT + RIGHT COLUMN */
-.form-column {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
- 
-/* EACH INPUT GROUP */
-.form-group {
-  display: flex;
-  flex-direction: column;
-}
- 
-/* LABEL STYLE */
-.form-group label {
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 4px;
-  color: #333;
-}
- 
-/* INPUT STYLE */
+
 .form-group input {
   width: 100%;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #ddd;
+  min-height: 48px;
+  padding: 12px 14px;
+  border: 1px solid #d7e1ea;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 14px;
 }
- 
+
+.form-group input:focus {
+  outline: none;
+  border-color: #00d1d1;
+  box-shadow: 0 0 0 4px rgba(0, 209, 209, 0.12);
+}
+
 .input-error {
   border-color: #ef4444 !important;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08);
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
- 
+
 .error {
   color: #dc2626;
   font-size: 12px;
-  margin-top: 6px;
+  line-height: 1.45;
 }
- 
-.branch-table td button {
-  padding: 4px 10px;
-  font-size: 13px;
-}
- 
-/* ACTION COLUMN ALIGNMENT */
- 
-.branch-table td:last-child {
-  width: 160px;
-}
- 
-.branch-table .action-buttons {
+
+.company-modal-btns {
   display: flex;
-  gap: 8px;
   align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px solid #edf2f7;
 }
- 
-/* BUTTON SIZE */
- 
-.branch-table .action-buttons button {
-  padding: 5px 12px;
+
+.branch-details {
+  display: grid;
+  gap: 10px;
+}
+
+.branch-detail-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #f8fbfd;
+  border: 1px solid #e8eef5;
+}
+
+.branch-detail-row span {
+  color: #64748b;
   font-size: 13px;
-  border-radius: 6px;
+  font-weight: 600;
 }
- 
-.company-delete-btn {
-  background: #e53935;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
+
+.branch-detail-row strong {
+  color: #0f172a;
+  text-align: right;
+  word-break: break-word;
 }
- 
-.company-delete-btn:hover {
-  background: #c62828;
+
+@media (max-width: 900px) {
+  .company-info {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
- 
-.company-delete-btn {
-  background: #e53935;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
+
+@media (max-width: 720px) {
+  .company-modal-overlay {
+    padding: 12px;
+    align-items: flex-end;
+  }
+
+  .company-modal-box {
+    width: 100%;
+    max-height: calc(100vh - 12px);
+    padding: 20px;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .company-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .company-form-full {
+    grid-column: auto;
+  }
+
+  .company-modal-btns {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .company-modal-btns > button {
+    width: 100%;
+  }
 }
- 
+
+@media (max-width: 640px) {
+  .company-info {
+    grid-template-columns: 1fr;
+  }
+
+  .branch-header {
+    align-items: stretch;
+  }
+
+  .company-header-edit,
+  .company-add-btn {
+    width: 100%;
+  }
+
+  .branch-detail-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .branch-detail-row strong {
+    text-align: left;
+  }
+}

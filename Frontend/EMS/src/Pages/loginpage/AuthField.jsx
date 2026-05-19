@@ -23,7 +23,11 @@ function AuthField({
         {label}
       </label>
 
-      <div className={`auth-field-shell ${action ? "has-action" : ""}`}>
+      <div
+        className={`auth-field-shell ${action ? "has-action" : ""} ${
+          error ? "has-error" : ""
+        }`.trim()}
+      >
         {Icon ? (
           <span className="auth-field-icon" aria-hidden="true">
             <Icon />
@@ -42,10 +46,10 @@ function AuthField({
           autoComplete={autoComplete}
           inputMode={inputMode}
           maxLength={maxLength}
+          aria-invalid={Boolean(error)}
           required={required}
           {...rest}
         />
-
         {action ? (
           <button
             type="button"

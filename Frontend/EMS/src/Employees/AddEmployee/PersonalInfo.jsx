@@ -6,7 +6,17 @@ import AppDatePicker from "../../components/AppDatePicker";
 import { extractCollection } from "../../utils/collections";
 import { formatEmployeeCode } from "../../utils/formatters";
 import { toIsoDateString } from "../../utils/date";
-import { isValidEmail } from "../../utils/validation";
+import {
+  normalizeWhitespace,
+  sanitizeAlphaNumericInput,
+  sanitizeEmailInput,
+  sanitizeLettersAndSpaces,
+  sanitizePhoneInput,
+  validateEmailAddress,
+  validateEmployeeId,
+  validateEmployeeName,
+  validatePhoneNumber,
+} from "../../utils/validation";
 
 function PersonalInfo({ onNext, viewMode, data }) {
   const initialFormData = {
@@ -96,8 +106,16 @@ function PersonalInfo({ onNext, viewMode, data }) {
     const { name, value } = e.target;
     let newValue = value;
 
+    if (["firstName", "middleName", "lastName"].includes(name)) {
+      newValue = sanitizeLettersAndSpaces(value, 30);
+    }
+
     if (name === "phone") {
-      newValue = value.replace(/\D/g, "").slice(0, 10);
+      newValue = sanitizePhoneInput(value, 10);
+    }
+
+    if (name === "email") {
+      newValue = sanitizeEmailInput(value, 60);
     }
 
     if (name === "aadhaar") {
@@ -109,7 +127,7 @@ function PersonalInfo({ onNext, viewMode, data }) {
     }
 
     if (name === "employeeId") {
-      newValue = formatEmployeeCode(value);
+      newValue = sanitizeAlphaNumericInput(formatEmployeeCode(value), 10);
     }
 
     if (name === "houseNo") {
@@ -143,14 +161,35 @@ function PersonalInfo({ onNext, viewMode, data }) {
   const validate = () => {
     let newErrors = {};
 
-    if (!formData.employeeId.trim())
-      newErrors.employeeId = "Employee ID is required";
+    const employeeIdError = validateEmployeeId(formData.employeeId, {
+      label: "Employee ID",
+      min: 3,
+      max: 10,
+    });
+    if (employeeIdError) newErrors.employeeId = employeeIdError;
 
-    if (!formData.firstName.trim())
-      newErrors.firstName = "First name is required";
+    const firstNameError = validateEmployeeName(formData.firstName, {
+      label: "First Name",
+      min: 2,
+      max: 30,
+    });
+    if (firstNameError) newErrors.firstName = firstNameError;
 
-    if (!formData.lastName.trim())
-      newErrors.lastName = "Last name is required";
+    if (normalizeWhitespace(formData.middleName)) {
+      const middleNameError = validateEmployeeName(formData.middleName, {
+        label: "Middle Name",
+        min: 1,
+        max: 30,
+      });
+      if (middleNameError) newErrors.middleName = middleNameError;
+    }
+
+    const lastNameError = validateEmployeeName(formData.lastName, {
+      label: "Last Name",
+      min: 2,
+      max: 30,
+    });
+    if (lastNameError) newErrors.lastName = lastNameError;
 
     if (!formData.gender) newErrors.gender = "Gender is required";
 
@@ -159,11 +198,14 @@ function PersonalInfo({ onNext, viewMode, data }) {
 
     if (!formData.dob) newErrors.dob = "Date of birth is required";
 
-    if (!/^[0-9]{10}$/.test(formData.phone))
-      newErrors.phone = "Enter valid 10-digit phone number";
+    const phoneError = validatePhoneNumber(formData.phone);
+    if (phoneError) newErrors.phone = phoneError;
 
-    if (!isValidEmail(formData.email))
-      newErrors.email = "Enter valid email";
+    const emailError = validateEmailAddress(formData.email, {
+      label: "Email",
+      max: 60,
+    });
+    if (emailError) newErrors.email = emailError;
 
     if (!/^[0-9]{12}$/.test(formData.aadhaar))
       newErrors.aadhaar = "Aadhaar must be 12 digits";
@@ -233,13 +275,13 @@ function PersonalInfo({ onNext, viewMode, data }) {
     setSaving(true);
 
     const payload = {
-      employee_Id: formData.employeeId,
-      firstName: formData.firstName,
-      middleName: formData.middleName,
-      lastName: formData.lastName,
+      employee_Id: formData.employeeId.trim().toUpperCase(),
+      firstName: normalizeWhitespace(formData.firstName),
+      middleName: normalizeWhitespace(formData.middleName),
+      lastName: normalizeWhitespace(formData.lastName),
       dateOfBirth: toIsoDateString(formData.dob),
       phoneNumber: formData.phone,
-      email: formData.email,
+      email: sanitizeEmailInput(formData.email, 60),
       aadhaarNumber: formData.aadhaar,
       panNumber: formData.pan,
       bloodGroup: formData.bloodGroup,
@@ -348,6 +390,7 @@ function PersonalInfo({ onNext, viewMode, data }) {
           <div className="form-group">
             <label>Middle Name</label>
             <input type="text" name="middleName" value={formData.middleName} onChange={handleChange} disabled={viewMode} />
+            {renderError("middleName")}
           </div>
 
           <div className="form-group">

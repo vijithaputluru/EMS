@@ -7,6 +7,14 @@ import "react-toastify/dist/ReactToastify.css";
 import api from "../api/axiosInstance";
 import { API_ENDPOINTS } from "../api/endpoints";
 import { extractCollection, sortByNewestIdFirst } from "../utils/collections";
+import {
+  normalizeWhitespace,
+  sanitizeRoleNameInput,
+  validateRoleName,
+} from "../utils/validation";
+
+const normalizeRoleStatus = (value) =>
+  String(value || "").trim().toLowerCase() === "inactive" ? "Inactive" : "Active";
 
 function Roles() {
   const [roles, setRoles] = useState([]);
@@ -39,7 +47,7 @@ function Roles() {
         extractCollection(res.data).map((role) => ({
           roleId: role.id ?? role.roleId ?? role.role_Id,
           roleName: role.name ?? role.roleName ?? "No Name",
-          status: role.status ?? role.Status ?? "Active",
+          status: normalizeRoleStatus(role.status ?? role.Status ?? "Active"),
           users: role.usersCount ?? role.users ?? 0,
         })),
         (role) => role.roleId
@@ -60,13 +68,12 @@ function Roles() {
 
     let nextValue = value;
 
-    // ROLE NAME VALIDATION
     if (name === "roleName") {
-      nextValue = value
-        .replace(/[^A-Za-z0-9\s]/g, "") // allow alphabets + optional numbers
-        .replace(/\s+/g, " ")
-        .replace(/^\s+/g, "")
-        .slice(0, 15);
+      nextValue = sanitizeRoleNameInput(value, 30);
+    }
+
+    if (name === "status") {
+      nextValue = normalizeRoleStatus(value);
     }
 
     const nextForm = {
@@ -88,21 +95,18 @@ function Roles() {
   };
 
   const validateRoleForm = () => {
-    const trimmedRoleName = rolesForm.roleName
-      .trim()
-      .replace(/\s+/g, " ");
+    const trimmedRoleName = normalizeWhitespace(rolesForm.roleName);
+    const normalizedStatus = normalizeRoleStatus(rolesForm.status);
 
     const nextErrors = {};
 
-    // ROLE NAME
     const roleNameError = validateRoleName(trimmedRoleName);
 
     if (roleNameError) {
       nextErrors.roleName = roleNameError;
     }
 
-    // STATUS
-    if (!rolesForm.status) {
+    if (!normalizedStatus) {
       nextErrors.status = "Status is required";
     }
 
@@ -111,6 +115,7 @@ function Roles() {
     setRolesForm((prev) => ({
       ...prev,
       roleName: trimmedRoleName,
+      status: normalizedStatus,
     }));
 
     return Object.keys(nextErrors).length === 0;
@@ -121,7 +126,7 @@ function Roles() {
 
     const payload = {
       name: rolesForm.roleName.trim(),
-      status: rolesForm.status
+      status: normalizeRoleStatus(rolesForm.status),
     };
 
     setSaving(true);
@@ -184,7 +189,7 @@ function Roles() {
 
     setRolesForm({
       roleName: role.roleName,
-      status: role.status
+      status: normalizeRoleStatus(role.status),
     });
 
     setRolesShowModal(true);
@@ -266,7 +271,7 @@ function Roles() {
                   <div className="roles-action-group">
                     <button
                       type="button"
-                      className="roles-action-btn edit"
+                      className="roles-action-btn app-icon-action-button app-icon-action-button--edit"
                       aria-label={`Edit ${r.roleName}`}
                       onClick={() => handleEditClick(r)}
                     >
@@ -275,8 +280,9 @@ function Roles() {
 
                     <button
                       type="button"
-                      className={`roles-action-btn delete ${r.users > 0 ? "is-disabled" : ""
-                        }`}
+                      className={`roles-action-btn app-icon-action-button app-icon-action-button--delete ${
+                        r.users > 0 ? "is-disabled" : ""
+                      }`}
                       aria-label={`Delete ${r.roleName}`}
                       onClick={() => {
                         if (r.users > 0) {

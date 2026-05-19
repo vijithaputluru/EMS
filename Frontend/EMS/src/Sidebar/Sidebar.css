@@ -303,12 +303,12 @@
   min-width: 0;
   white-space: nowrap;
   overflow: hidden !important;
-  text-overflow: clip !important;
+  text-overflow: ellipsis !important;
   text-rendering: geometricPrecision;
   font-size: 13px !important;
   letter-spacing: -0.2px;
   opacity: 1;
-  max-width: 160px;
+  max-width: none;
   transform: translateX(0);
   transition:
     opacity 0.18s ease,

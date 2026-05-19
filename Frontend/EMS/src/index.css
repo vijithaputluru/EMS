@@ -47,6 +47,18 @@
   --line-height-tight: 1.2;
   --line-height-normal: 1.5;
   --line-height-relaxed: 1.6;
+  --control-height: 44px;
+  --control-padding-block: 0.72rem;
+  --control-padding-inline: 0.875rem;
+  --table-head-bg: #f8fafc;
+  --table-row-hover: #fbfdff;
+  --table-cell-py: 0.825rem;
+  --table-cell-px: 1rem;
+  --table-text-size: 0.875rem;
+  --modal-radius-xl: 20px;
+  --modal-padding: clamp(18px, 2.1vw, 26px);
+  --modal-gap: 18px;
+  --modal-shadow: 0 24px 54px rgba(4, 28, 50, 0.14);
   --app-modal-overlay-z: 12000;
   --app-modal-surface-z: 12010;
   --app-select-chevron-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23041c32' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
@@ -142,15 +154,18 @@ textarea {
   -webkit-appearance: none;
 }
 
-select:not([multiple]):not([size]):not([size="1"]),
-select:not([multiple])[size="1"],
+select:not([multiple]),
 .react-datepicker__month-select,
 .react-datepicker__year-select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
   padding-right: 2.75rem !important;
-  background-image: var(--app-select-chevron-icon);
-  background-repeat: no-repeat;
-  background-position: right 0.9rem center;
-  background-size: 1rem;
+  background-image: var(--app-select-chevron-icon) !important;
+  background-repeat: no-repeat !important;
+  background-position: right 0.9rem center !important;
+  background-size: 1rem !important;
+  cursor: pointer;
 }
 
 select::-ms-expand {
@@ -363,6 +378,65 @@ button:disabled {
   transform: none;
 }
 
+.app-action-button,
+.app-icon-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.app-action-button {
+  min-height: 36px;
+  padding: 0.5rem 0.875rem;
+  white-space: nowrap;
+}
+
+.app-icon-action-button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+
+.app-action-button--edit,
+.app-icon-action-button--edit {
+  background: rgba(0, 209, 209, 0.08);
+  border-color: rgba(0, 209, 209, 0.18);
+  color: #06283d;
+}
+
+.app-action-button--edit:hover:not(:disabled),
+.app-icon-action-button--edit:hover:not(:disabled) {
+  background: rgba(0, 209, 209, 0.14);
+  border-color: rgba(0, 209, 209, 0.28);
+  transform: translateY(-1px);
+}
+
+.app-action-button--delete,
+.app-icon-action-button--delete {
+  background: #fff5f5;
+  border-color: #fecaca;
+  color: #c62828;
+}
+
+.app-action-button--delete:hover:not(:disabled),
+.app-icon-action-button--delete:hover:not(:disabled) {
+  background: #ffe8e8;
+  border-color: #fca5a5;
+  transform: translateY(-1px);
+}
+
 .app-input,
 .app-select,
 .app-textarea,
@@ -393,6 +467,19 @@ button:disabled {
 .app-date-input:focus {
   border-color: #00d1d1;
   box-shadow: 0 0 0 3px rgba(0, 209, 209, 0.12);
+}
+
+.app-readonly-field,
+.app-input:disabled,
+.app-select:disabled,
+.app-textarea:disabled,
+.app-date-input:disabled {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  border-color: #dbe4ee !important;
+  box-shadow: none !important;
+  cursor: not-allowed !important;
+  opacity: 1 !important;
 }
 
 .app-truncate {
@@ -426,9 +513,26 @@ button:disabled {
 
 .app-table-scroll {
   width: 100%;
+  padding-bottom: 4px;
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.55) rgba(226, 232, 240, 0.72);
+}
+
+.app-table-scroll::-webkit-scrollbar {
+  height: 10px;
+}
+
+.app-table-scroll::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.72);
+  border-radius: 999px;
+}
+
+.app-table-scroll::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.55);
+  border-radius: 999px;
 }
 
 .app-table-actions {
@@ -436,7 +540,436 @@ button:disabled {
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+
+.page-shell :is(
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  p,
+  span,
+  strong,
+  a,
+  td,
+  th,
+  label
+) {
+  overflow-wrap: anywhere;
+}
+
+.page-shell :is(
+  .attendance-header,
+  .holiday-header,
+  .company-header,
+  .branch-header,
+  .job-header-unique,
+  .projects-header,
+  .dept-header,
+  .leave-header,
+  .emp-header-unique,
+  .notifications-header,
+  .assets-header,
+  .roles-header-bar,
+  .task-header,
+  .clients-header,
+  .ems-task-header-wrapper,
+  .offer-header,
+  .reports-header,
+  .payroll-header,
+  .permission-top,
+  .payslip-header,
+  .page-header-row
+) {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  flex-wrap: wrap !important;
+  margin-bottom: clamp(12px, 1.8vw, 18px) !important;
+}
+
+.page-shell :is(
+  .attendance-header,
+  .holiday-header,
+  .company-header,
+  .branch-header,
+  .job-header-unique,
+  .projects-header,
+  .dept-header,
+  .leave-header,
+  .emp-header-unique,
+  .notifications-header,
+  .assets-header,
+  .roles-header-bar,
+  .task-header,
+  .clients-header,
+  .ems-task-header-wrapper,
+  .offer-header,
+  .reports-header,
+  .payroll-header,
+  .permission-top,
+  .payslip-header,
+  .page-header-row
+) > :first-child {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.page-shell :is(
+  .attendance-header,
+  .holiday-header,
+  .company-header,
+  .branch-header,
+  .job-header-unique,
+  .projects-header,
+  .dept-header,
+  .leave-header,
+  .emp-header-unique,
+  .notifications-header,
+  .assets-header,
+  .roles-header-bar,
+  .task-header,
+  .clients-header,
+  .ems-task-header-wrapper,
+  .offer-header,
+  .reports-header,
+  .payroll-header,
+  .permission-top,
+  .payslip-header,
+  .page-header-row
+) :is(h1, h2, h3) {
+  margin-bottom: 0 !important;
+  text-align: left !important;
+}
+
+.page-shell :is(
+  .attendance-header,
+  .holiday-header,
+  .company-header,
+  .branch-header,
+  .job-header-unique,
+  .projects-header,
+  .dept-header,
+  .leave-header,
+  .emp-header-unique,
+  .notifications-header,
+  .assets-header,
+  .roles-header-bar,
+  .task-header,
+  .clients-header,
+  .ems-task-header-wrapper,
+  .offer-header,
+  .reports-header,
+  .payroll-header,
+  .payslip-header,
+  .page-header-row
+) p {
+  margin: 6px 0 0 !important;
+  max-width: min(760px, 100%);
+  text-align: left !important;
+}
+
+.page-shell :is(
+  .attendance-header,
+  .holiday-header,
+  .company-header,
+  .branch-header,
+  .job-header-unique,
+  .projects-header,
+  .dept-header,
+  .leave-header,
+  .emp-header-unique,
+  .notifications-header,
+  .assets-header,
+  .roles-header-bar,
+  .task-header,
+  .clients-header,
+  .ems-task-header-wrapper,
+  .offer-header,
+  .reports-header,
+  .payroll-header,
+  .permission-top,
+  .payslip-header,
+  .page-header-row
+) > button {
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+.page-shell :is(
+  .form-group,
+  .dept-field-group,
+  .holiday-field-group,
+  .roles-field-group,
+  .job-field-group,
+  .clients-field-group,
+  .ems-task-field-group,
+  .emp-field-group,
+  .emp-form-group
+) {
+  min-width: 0;
+}
+
+.page-shell :is(
+  .form-group,
+  .dept-field-group,
+  .holiday-field-group,
+  .roles-field-group,
+  .job-field-group,
+  .clients-field-group,
+  .ems-task-field-group,
+  .emp-field-group,
+  .emp-form-group
+) > label {
+  margin: 0;
+  color: #334155;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.page-shell :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+  select,
+  textarea
+) {
+  width: 100%;
+  min-height: var(--control-height);
+  padding: var(--control-padding-block) var(--control-padding-inline);
+  border: 1px solid #d7e1ea;
+  border-radius: 12px;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+.page-shell textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.page-shell :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+  select,
+  textarea
+):focus {
+  border-color: #00d1d1;
+  box-shadow: 0 0 0 3px rgba(0, 209, 209, 0.12);
+  outline: none;
+}
+
+.page-shell :is(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+  select,
+  textarea
+):disabled {
+  background: #f1f5f9;
+  color: #64748b;
+  border-color: #dbe4ee;
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+.page-shell :is(input.has-error, select.has-error, textarea.has-error, .input-error) {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.08) !important;
+}
+
+.page-shell :is(
+  .projects-add-btn,
+  .holiday-add-btn,
+  .company-add-btn,
+  .add-client-btn,
+  .roles-add-btn,
+  .emp-add-btn,
+  .job-add-btn,
+  .mark-read-btn,
+  .select-all-btn,
+  .submit-btn,
+  .btn-primary,
+  .btn-secondary,
+  .add-education-btn,
+  .apply-submit-btn,
+  .apply-cancel-btn,
+  .clients-add-cancel-btn-unique,
+  .clients-add-save-btn-unique,
+  .holiday-cancel-btn,
+  .holiday-save-btn,
+  .holiday-delete-btn,
+  .emp-save-btn,
+  .emp-close-btn,
+  .company-header-edit,
+  .emp-delete-cancel-btn,
+  .emp-delete-btn,
+  .dept-save-btn,
+  .cancel-btn,
+  .confirm-delete-btn,
+  .ems-task-submit-btn,
+  .ems-task-cancel-btn,
+  .projects-secondary-btn,
+  .projects-save-btn
+) {
+  min-height: 42px;
+  padding: 0.625rem 1rem;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.page-shell :is(
+  .emp-table,
+  .projects-table,
+  .holiday-table,
+  .branch-table,
+  .roles-table-main,
+  .assets-table,
+  .ems-task-data-main-table,
+  .task-table table,
+  .leave-table table,
+  .leave-history table,
+  .offer-list table,
+  .recent-table table
+) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.page-shell :is(
+  .emp-table,
+  .projects-table,
+  .holiday-table,
+  .branch-table,
+  .roles-table-main,
+  .assets-table,
+  .ems-task-data-main-table,
+  .task-table table,
+  .leave-table table,
+  .leave-history table,
+  .offer-list table,
+  .recent-table table
+) thead {
+  background: var(--table-head-bg);
+}
+
+.page-shell :is(
+  .emp-table,
+  .projects-table,
+  .holiday-table,
+  .branch-table,
+  .roles-table-main,
+  .assets-table,
+  .ems-task-data-main-table,
+  .task-table table,
+  .leave-table table,
+  .leave-history table,
+  .offer-list table,
+  .recent-table table
+) :is(th, td) {
+  padding: var(--table-cell-py) var(--table-cell-px);
+  border-bottom: 1px solid #e8eef5;
+  font-size: var(--table-text-size);
+  line-height: 1.45;
+  vertical-align: middle;
+}
+
+.page-shell :is(
+  .emp-table,
+  .projects-table,
+  .holiday-table,
+  .branch-table,
+  .roles-table-main,
+  .assets-table,
+  .ems-task-data-main-table,
+  .task-table table,
+  .leave-table table,
+  .leave-history table,
+  .offer-list table,
+  .recent-table table
+) th {
+  color: #0f172a;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.page-shell :is(
+  .emp-table,
+  .projects-table,
+  .holiday-table,
+  .branch-table,
+  .roles-table-main,
+  .assets-table,
+  .ems-task-data-main-table,
+  .task-table table,
+  .leave-table table,
+  .leave-history table,
+  .offer-list table,
+  .recent-table table
+) tbody tr:hover {
+  background: var(--table-row-hover);
+}
+
+.page-shell :is(
+  .emp-table,
+  .projects-table,
+  .holiday-table,
+  .branch-table,
+  .roles-table-main,
+  .assets-table,
+  .ems-task-data-main-table,
+  .task-table table,
+  .leave-table table,
+  .leave-history table,
+  .offer-list table,
+  .recent-table table
+) tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.page-shell :is(
+  .app-table-actions,
+  .projects-action-cell,
+  .roles-action-group,
+  .action-btns,
+  .assets-action-buttons
+) {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-shell :is(
+  .projects-status,
+  .task-status,
+  .ems-task-priority-pill,
+  .ems-task-state-pill
+) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .app-date-input-wrapper {
@@ -851,6 +1384,153 @@ body.app-modal-open .sidebar-backdrop {
   max-height: min(calc(100vh - 32px), 100%) !important;
 }
 
+:is(
+  .attendance-modal,
+  .apply-modal-box,
+  .asset-delete-modal,
+  .change-password-modal,
+  .clients-add-modal-box-unique,
+  .client-view-modal,
+  .company-modal-box,
+  .delete-modal,
+  .dept-members-modal,
+  .dept-modal-box,
+  .emp-delete-modal,
+  .emp-modal-box,
+  .ems-task-create-popup,
+  .ems-task-delete-popup,
+  .ems-task-view-popup,
+  .holiday-modal-box,
+  .image-modal,
+  .job-modal-box,
+  .leave-details-container,
+  .modal-content,
+  .projects-modal,
+  .projects-modal-small,
+  .roles-modal-container
+) {
+  border-radius: var(--modal-radius-xl) !important;
+  border: 1px solid var(--border-soft) !important;
+  background: var(--bg-page) !important;
+  box-shadow: var(--modal-shadow) !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain;
+}
+
+:is(
+  .company-modal-head,
+  .projects-modal-header,
+  .ems-task-create-header,
+  .attendance-modal-header,
+  .dept-members-modal-header,
+  .emp-modal-header,
+  .view-header
+) {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+:is(
+  .company-modal-head,
+  .projects-modal-header,
+  .ems-task-create-header,
+  .attendance-modal-header,
+  .dept-members-modal-header,
+  .emp-modal-header,
+  .view-header
+) :is(h2, h3) {
+  margin: 0;
+}
+
+:is(
+  .company-modal-head,
+  .projects-modal-header,
+  .ems-task-create-header,
+  .attendance-modal-header,
+  .dept-members-modal-header,
+  .emp-modal-header,
+  .view-header
+) p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  line-height: 1.55;
+}
+
+:is(
+  .company-modal-close,
+  .projects-modal-close,
+  .attendance-modal-close,
+  .emp-modal-close-icon,
+  .view-close,
+  .ems-task-modal-close
+) {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+}
+
+:is(
+  .holiday-modal-btns,
+  .dept-modal-btns,
+  .company-modal-btns,
+  .clients-add-actions-unique,
+  .roles-modal-actions,
+  .asset-modal-actions,
+  .asset-delete-actions,
+  .apply-modal-actions,
+  .projects-modal-btns,
+  .projects-delete-actions,
+  .ems-task-create-buttons,
+  .attendance-modal-footer,
+  .emp-modal-btns,
+  .emp-delete-actions,
+  .delete-actions,
+  .offer-buttons,
+  .permission-actions
+) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  flex-wrap: wrap !important;
+}
+
+:is(
+  .holiday-modal-btns,
+  .dept-modal-btns,
+  .company-modal-btns,
+  .clients-add-actions-unique,
+  .roles-modal-actions,
+  .asset-modal-actions,
+  .asset-delete-actions,
+  .apply-modal-actions,
+  .projects-modal-btns,
+  .projects-delete-actions,
+  .ems-task-create-buttons,
+  .attendance-modal-footer,
+  .emp-modal-btns,
+  .emp-delete-actions,
+  .delete-actions,
+  .offer-buttons,
+  .permission-actions
+) > button {
+  min-height: 42px;
+  padding: 0.625rem 1rem;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
 .app-month-picker {
   display: flex;
   align-items: center;
@@ -897,6 +1577,105 @@ body.app-modal-open .sidebar-backdrop {
   .app-month-picker-select {
     min-width: 0;
     flex: 1 1 0;
+  }
+
+  .page-shell :is(
+    .attendance-header,
+    .holiday-header,
+    .company-header,
+    .branch-header,
+    .job-header-unique,
+    .projects-header,
+    .dept-header,
+    .leave-header,
+    .emp-header-unique,
+    .notifications-header,
+    .assets-header,
+    .roles-header-bar,
+    .task-header,
+    .clients-header,
+    .ems-task-header-wrapper,
+    .offer-header,
+    .reports-header,
+    .payroll-header,
+    .permission-top,
+    .payslip-header,
+    .page-header-row
+  ) > button {
+    width: 100%;
+  }
+
+  :is(
+    .holiday-modal-btns,
+    .dept-modal-btns,
+    .company-modal-btns,
+    .clients-add-actions-unique,
+    .roles-modal-actions,
+    .asset-modal-actions,
+    .asset-delete-actions,
+    .apply-modal-actions,
+    .projects-modal-btns,
+    .projects-delete-actions,
+    .ems-task-create-buttons,
+    .attendance-modal-footer,
+    .emp-modal-btns,
+    .emp-delete-actions,
+    .delete-actions,
+    .offer-buttons,
+    .permission-actions
+  ) {
+    align-items: stretch !important;
+  }
+
+  :is(
+    .holiday-modal-btns,
+    .dept-modal-btns,
+    .company-modal-btns,
+    .clients-add-actions-unique,
+    .roles-modal-actions,
+    .asset-modal-actions,
+    .asset-delete-actions,
+    .apply-modal-actions,
+    .projects-modal-btns,
+    .projects-delete-actions,
+    .ems-task-create-buttons,
+    .attendance-modal-footer,
+    .emp-modal-btns,
+    .emp-delete-actions,
+    .delete-actions,
+    .offer-buttons,
+    .permission-actions
+  ) > button {
+    width: 100%;
+  }
+
+  :is(
+    .attendance-modal,
+    .apply-modal-box,
+    .asset-delete-modal,
+    .change-password-modal,
+    .clients-add-modal-box-unique,
+    .client-view-modal,
+    .company-modal-box,
+    .delete-modal,
+    .dept-members-modal,
+    .dept-modal-box,
+    .emp-delete-modal,
+    .emp-modal-box,
+    .ems-task-create-popup,
+    .ems-task-delete-popup,
+    .ems-task-view-popup,
+    .holiday-modal-box,
+    .image-modal,
+    .job-modal-box,
+    .leave-details-container,
+    .modal-content,
+    .projects-modal,
+    .projects-modal-small,
+    .roles-modal-container
+  ) {
+    width: min(100%, calc(100vw - 20px)) !important;
+    max-height: calc(100vh - 20px) !important;
   }
 }
 

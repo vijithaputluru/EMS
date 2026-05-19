@@ -5,7 +5,7 @@ import "react-toastify/dist/ReactToastify.css";
 import api from "../api/axiosInstance";
 import { API_ENDPOINTS, buildServerUrl } from "../api/endpoints";
 import { extractCollection, sortByNewestIdFirst } from "../utils/collections";
-import { formatEmployeeCode } from "../utils/formatters";
+import { formatEmployeeCode, normalizeText } from "../utils/formatters";
 
 const EMPTY_ASSET = {
   name: "",
@@ -14,6 +14,9 @@ const EMPTY_ASSET = {
   status: "Assigned",
   images: [],
 };
+
+const ASSET_STATUS_OPTIONS = ["Assigned", "Available", "Under Repair"];
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
 const ALLOWED_IMAGE_TYPES = new Set([
   "image/png",
@@ -58,11 +61,169 @@ const normalizeImagePaths = (value) => {
     });
 };
 
+const getAssetEmployeeName = (item) =>
+  normalizeText(
+    item.employeeName ??
+    item.EmployeeName ??
+    item.employeeFullName ??
+    item.EmployeeFullName ??
+    item.assignedEmployeeName ??
+    item.AssignedEmployeeName ??
+    item.assignedToName ??
+    item.AssignedToName ??
+    item.empName ??
+    item.EmpName ??
+    ""
+  );
+
+const formatAssetAssigneeLabel = (name, code) => {
+  if (name && code) {
+    return `${name} (${code})`;
+  }
+
+  return name || code || "-";
+};
+
+const getEmployeeCodeFromRecord = (employee) =>
+  formatEmployeeCode(
+    employee.employee_Id ??
+      employee.employee_id ??
+      employee.employeeId ??
+      employee.EmployeeId ??
+      employee.Employee_Id ??
+      employee.id ??
+      employee.Id ??
+      ""
+  );
+
+const getEmployeeNameFromRecord = (employee) =>
+  normalizeText(
+    employee.name ??
+      employee.employeeName ??
+      employee.employee_Name ??
+      employee.EmployeeName ??
+      employee.employeeFullName ??
+      employee.EmployeeFullName ??
+      `${employee.firstName ?? employee.FirstName ?? ""} ${
+        employee.lastName ?? employee.LastName ?? ""
+      }`
+  );
+
+const flattenErrorMessages = (value) => {
+  if (value === null || value === undefined) {
+    return [];
+  }
+
+  if (typeof value === "string") {
+    const trimmedValue = value.trim();
+    return trimmedValue ? [trimmedValue] : [];
+  }
+
+  if (Array.isArray(value)) {
+    return value.flatMap((item) => flattenErrorMessages(item));
+  }
+
+  if (typeof value === "object") {
+    return Object.values(value).flatMap((item) => flattenErrorMessages(item));
+  }
+
+  return [String(value)];
+};
+
+const extractApiErrorDetails = (error) => {
+  const data = error?.response?.data;
+  const validationMessages = flattenErrorMessages(data?.errors);
+  const candidateMessages = [
+    data?.message,
+    data?.error,
+    data?.title,
+    ...validationMessages,
+    typeof data === "string" ? data : "",
+    error?.message,
+  ]
+    .flatMap((item) => flattenErrorMessages(item))
+    .filter(Boolean);
+
+  return {
+    status: error?.response?.status ?? null,
+    data,
+    validationMessages,
+    message:
+      candidateMessages[0] || "Something went wrong while saving the asset.",
+  };
+};
+
+const mapApiFieldKeyToAssetField = (key = "") => {
+  const normalizedKey = String(key).trim().toLowerCase();
+
+  if (/(assetname|asset_name|name)/.test(normalizedKey)) {
+    return "name";
+  }
+
+  if (/(serialno|serial_no|serial)/.test(normalizedKey)) {
+    return "serial";
+  }
+
+  if (/(assignedto|employeecode|employeeid|employee_id|assigned)/.test(normalizedKey)) {
+    return "assigned";
+  }
+
+  if (/status/.test(normalizedKey)) {
+    return "status";
+  }
+
+  return "";
+};
+
+const getAssetFieldErrorsFromApiError = (error) => {
+  const apiErrors = error?.response?.data?.errors;
+  const mappedErrors = {};
+
+  if (apiErrors && typeof apiErrors === "object" && !Array.isArray(apiErrors)) {
+    Object.entries(apiErrors).forEach(([key, value]) => {
+      const mappedField = mapApiFieldKeyToAssetField(key);
+      const message = flattenErrorMessages(value)[0];
+
+      if (mappedField && message && !mappedErrors[mappedField]) {
+        mappedErrors[mappedField] = message;
+      }
+    });
+  }
+
+  const fallbackMessages = flattenErrorMessages(error?.response?.data);
+
+  fallbackMessages.forEach((message) => {
+    const normalizedMessage = String(message).toLowerCase();
+
+    if (!mappedErrors.serial && /serial|duplicate|already exists/.test(normalizedMessage)) {
+      mappedErrors.serial = String(message);
+    }
+
+    if (!mappedErrors.assigned && /employee|assigned/.test(normalizedMessage)) {
+      mappedErrors.assigned = String(message);
+    }
+
+    if (!mappedErrors.name && /asset name|name/.test(normalizedMessage)) {
+      mappedErrors.name = String(message);
+    }
+
+    if (!mappedErrors.status && /status/.test(normalizedMessage)) {
+      mappedErrors.status = String(message);
+    }
+  });
+
+  return mappedErrors;
+};
+
 export default function Assets() {
   const [assets, setAssets] = useState([]);
+  const [employees, setEmployees] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [employeesLoaded, setEmployeesLoaded] = useState(false);
+  const [employeeLoadError, setEmployeeLoadError] = useState("");
+  const [apiError, setApiError] = useState("");
 
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [assetToDelete, setAssetToDelete] = useState(null);
@@ -79,87 +240,218 @@ export default function Assets() {
 
   const fetchAssets = async () => {
     try {
+      console.log("Fetching assets API...");
+
       const res = await api.get(API_ENDPOINTS.masters.assets.list);
+
+      console.log("Full API Response:", res);
+      console.log("Response Data:", res.data);
+
+      const extractedData = extractCollection(res.data);
+
+      console.log("Extracted Collection:", extractedData);
+
       const formatted = sortByNewestIdFirst(
-        extractCollection(res.data).map((item) => ({
-          assetId:
-            item.assetId ??
-            item.AssetId ??
-            item.assetID ??
-            item.id ??
-            item.Id ??
-            null,
-          assetName: item.assetName ?? item.AssetName ?? "",
-          serialNo: item.serialNo ?? item.SerialNo ?? "",
-          assignedTo: formatEmployeeCode(
+        extractedData.map((item, index) => {
+          console.log(`Processing Asset ${index + 1}:`, item);
+
+          const employeeCode = formatEmployeeCode(
             item.employeeCode ??
-              item.EmployeeCode ??
-              item.employeeId ??
-              item.EmployeeId ??
-              item.assignedTo ??
-              item.AssignedTo ??
-              ""
-          ),
-          status: item.status ?? item.Status ?? "",
-          images: normalizeImagePaths(
-            item.imagePaths ??
+            item.EmployeeCode ??
+            item.employeeId ??
+            item.EmployeeId ??
+            item.assignedTo ??
+            item.AssignedTo ??
+            ""
+          );
+
+          const employeeName = getAssetEmployeeName(item);
+
+          const formattedAsset = {
+            assetId:
+              item.assetId ??
+              item.AssetId ??
+              item.assetID ??
+              item.id ??
+              item.Id ??
+              null,
+
+            assetName: normalizeText(item.assetName ?? item.AssetName ?? ""),
+
+            serialNo: normalizeText(item.serialNo ?? item.SerialNo ?? ""),
+
+            assignedTo: employeeCode,
+
+            employeeName,
+
+            employeeDisplay: formatAssetAssigneeLabel(
+              employeeName,
+              employeeCode
+            ),
+
+            status: normalizeText(item.status ?? item.Status ?? ""),
+
+            images: normalizeImagePaths(
+              item.imagePaths ??
               item.ImagePaths ??
               item.imagePath ??
               item.ImagePath ??
               item.images ??
               item.Images
-          ),
-        })),
+            ),
+          };
+
+          console.log("Formatted Asset:", formattedAsset);
+
+          return formattedAsset;
+        }),
         (item) => item.assetId
       );
+
+      console.log("Final Formatted Assets:", formatted);
 
       setAssets(formatted);
     } catch (err) {
       console.error("Error fetching assets:", err);
+
+      if (err.response) {
+        console.error("Error Response Data:", err.response.data);
+        console.error("Error Response Status:", err.response.status);
+        console.error("Error Response Headers:", err.response.headers);
+      }
+
       toast.error("Failed to load assets.");
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      setEmployeeLoadError("");
+
+      const res = await api.get(API_ENDPOINTS.employees.list);
+      const employeeList = extractCollection(res.data);
+
+      setEmployees(employeeList);
+    } catch (error) {
+      console.error("Error fetching employees for asset assignment:", error);
+      setEmployeeLoadError(
+        "Unable to load employee codes. Refresh the page and try again."
+      );
+      toast.error("Failed to load employee codes for asset assignment.");
+    } finally {
+      setEmployeesLoaded(true);
     }
   };
 
   useEffect(() => {
     fetchAssets();
+    fetchEmployees();
   }, []);
 
-  const validateField = (name, draft = newAsset) => {
-    const value = String(draft[name] ?? "").trim();
+  const employeeOptions = useMemo(() => {
+    const uniqueEmployees = new Map();
 
-    if (name === "name") {
-      if (!value) return "Asset Name is required";
-      if (value.length < 2) return "Asset Name must be at least 2 characters";
-      return "";
-    }
+    employees.forEach((employee) => {
+      const code = getEmployeeCodeFromRecord(employee);
+      const name = getEmployeeNameFromRecord(employee);
 
-    if (name === "serial") {
-      if (!value) return "Serial Number is required";
-      if (value.length < 5) return "Serial Number must be at least 5 characters";
-
-      const duplicate = assets.find(
-        (asset) =>
-          asset.serialNo?.toLowerCase() === value.toLowerCase() &&
-          asset.assetId !== editId
-      );
-
-      if (duplicate) return "Serial Number already exists";
-      return "";
-    }
-
-    if (name === "assigned") {
-      if (draft.status === "Assigned" && !value) {
-        return "Employee Code is required when status is Assigned";
+      if (!code) {
+        return;
       }
-      return "";
+
+      uniqueEmployees.set(code.toLowerCase(), {
+        code,
+        name,
+        label: formatAssetAssigneeLabel(name, code),
+      });
+    });
+
+    return Array.from(uniqueEmployees.values()).sort((left, right) =>
+      left.code.localeCompare(right.code, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      })
+    );
+  }, [employees]);
+
+  const employeeCodeLookup = useMemo(
+    () =>
+      new Map(
+        employeeOptions.map((employee) => [employee.code.toLowerCase(), employee])
+      ),
+    [employeeOptions]
+  );
+
+  const matchedAssignedEmployee = useMemo(() => {
+    const normalizedCode = formatEmployeeCode(newAsset.assigned).toLowerCase();
+    return normalizedCode ? employeeCodeLookup.get(normalizedCode) ?? null : null;
+  }, [employeeCodeLookup, newAsset.assigned]);
+
+const validateField = (name, draft = newAsset) => {
+  const value = String(draft[name] ?? "").trim();
+
+  if (name === "name") {
+    if (!value) return "Asset Name is required";
+
+    if (value.length > 25) {
+      return "Asset Name must not exceed 25 characters";
     }
 
-    if (name === "status") {
-      return value ? "" : "Status is required";
+    if (!/^[A-Za-z0-9 ]+$/.test(value)) {
+      return "Special characters are not allowed";
     }
 
     return "";
-  };
+  }
+
+  if (name === "serial") {
+    if (!value) return "Serial Number is required";
+
+    if (value.length > 20) {
+      return "Serial Number must not exceed 20 characters";
+    }
+
+    if (!/^[A-Za-z0-9 ]+$/.test(value)) {
+      return "Special characters are not allowed";
+    }
+
+    const duplicate = assets.find(
+      (asset) =>
+        asset.serialNo?.toLowerCase() === value.toLowerCase() &&
+        asset.assetId !== editId
+    );
+
+    if (duplicate) return "Serial Number already exists";
+
+    return "";
+  }
+
+  if (name === "assigned") {
+    if (draft.status === "Assigned" && !value) {
+      return "Employee Code is required";
+    }
+
+    if (value.length > 10) {
+      return "Employee Code must not exceed 10 characters";
+    }
+
+    if (!/^[A-Za-z0-9 ]+$/.test(value)) {
+      return "Special characters are not allowed";
+    }
+
+    return "";
+  }
+
+  if (name === "status") {
+    if (!value) return "Status is required";
+
+    return ASSET_STATUS_OPTIONS.includes(value)
+      ? ""
+      : "Select a valid status";
+  }
+
+  return "";
+};
 
   const validateForm = (draft = newAsset) => {
     const nextErrors = {
@@ -177,43 +469,107 @@ export default function Assets() {
     return Object.keys(cleanedErrors).length === 0;
   };
 
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    const draft = {
-      ...newAsset,
-      [name]:
-        name === "assigned"
-          ? formatEmployeeCode(value)
-          : value.replace(/^\s+/g, ""),
-    };
-
-    if (name === "status" && value !== "Assigned") {
-      draft.assigned = "";
+  useEffect(() => {
+    if (newAsset.status !== "Assigned") {
+      return;
     }
 
-    setNewAsset(draft);
-    setErrors((prev) => {
-      const nextErrors = {
-        ...prev,
-        [name]: validateField(name, draft),
-      };
+    const assignedError = validateField("assigned", newAsset);
 
-      if (name === "status") {
-        nextErrors.assigned = validateField("assigned", draft);
+    setErrors((prev) => {
+      if (!assignedError && !prev.assigned) {
+        return prev;
       }
 
-      return Object.fromEntries(
-        Object.entries(nextErrors).filter(([, error]) => error)
-      );
+      if (!assignedError) {
+        const { assigned, ...rest } = prev;
+        return rest;
+      }
+
+      return {
+        ...prev,
+        assigned: assignedError,
+      };
     });
+  }, [
+    employeeCodeLookup,
+    employeeLoadError,
+    employeeOptions.length,
+    employeesLoaded,
+    newAsset,
+  ]);
+
+const handleChange = (event) => {
+  const { name, value } = event.target;
+
+  let sanitizedValue = value.replace(/^\s+/g, "");
+
+  // remove special characters
+  sanitizedValue = sanitizedValue.replace(/[^A-Za-z0-9 ]/g, "");
+
+  // max lengths
+  if (name === "name") {
+    sanitizedValue = sanitizedValue.slice(0, 25);
+  }
+
+  if (name === "serial") {
+    sanitizedValue = sanitizedValue.slice(0, 20);
+  }
+
+  if (name === "assigned") {
+    sanitizedValue = sanitizedValue.slice(0, 10);
+  }
+
+  const draft = {
+    ...newAsset,
+    [name]:
+      name === "assigned"
+        ? formatEmployeeCode(sanitizedValue)
+        : sanitizedValue,
   };
+
+  if (name === "status" && value !== "Assigned") {
+    draft.assigned = "";
+  }
+
+  setNewAsset(draft);
+  setApiError("");
+
+  setErrors((prev) => {
+    const nextErrors = {
+      ...prev,
+      [name]: validateField(name, draft),
+    };
+
+    if (name === "status") {
+      nextErrors.assigned = validateField("assigned", draft);
+    }
+
+    return Object.fromEntries(
+      Object.entries(nextErrors).filter(([, error]) => error)
+    );
+  });
+};
 
   const handleImageChange = (event) => {
     const files = Array.from(event.target.files || []);
+    if (files.length === 0) {
+      return;
+    }
+
     const invalidFile = files.find((file) => !ALLOWED_IMAGE_TYPES.has(file.type));
+    const oversizedFile = files.find((file) => file.size > MAX_IMAGE_SIZE_BYTES);
 
     if (invalidFile) {
       toast.error("Upload valid image files only: PNG, JPG, WEBP, GIF or SVG.");
+      event.target.value = "";
+      return;
+    }
+
+    if (oversizedFile) {
+      toast.error(
+        `"${oversizedFile.name}" is larger than 5 MB. Upload a smaller image.`
+      );
       event.target.value = "";
       return;
     }
@@ -228,36 +584,109 @@ export default function Assets() {
       ...prev,
       images: files,
     }));
+    setApiError("");
 
     const previews = files.map((file) => URL.createObjectURL(file));
     setPreviewImages(previews);
   };
 
   const handleSubmit = async () => {
+    if (saving) {
+      return;
+    }
+
     const trimmedAsset = {
       ...newAsset,
       name: newAsset.name.trim().replace(/\s+/g, " "),
       serial: newAsset.serial.trim(),
-      assigned: newAsset.assigned.trim(),
+      assigned: formatEmployeeCode(newAsset.assigned),
       status: newAsset.status.trim(),
     };
 
     setNewAsset(trimmedAsset);
+    setApiError("");
 
-    if (!validateForm(trimmedAsset)) return;
+    if (!validateForm(trimmedAsset)) {
+      toast.error("Please correct the highlighted asset fields.");
+      return;
+    }
 
     try {
       setSaving(true);
 
+      const normalizedAssignedCode =
+        trimmedAsset.status === "Assigned"
+          ? matchedAssignedEmployee?.code || trimmedAsset.assigned
+          : "";
+
+      if (
+        trimmedAsset.status === "Assigned" &&
+        (!normalizedAssignedCode ||
+          !employeeCodeLookup.has(normalizedAssignedCode.toLowerCase()))
+      ) {
+        const employeeError =
+          validateField("assigned", {
+            ...trimmedAsset,
+            assigned: normalizedAssignedCode,
+          }) || "Enter a valid employee code from the employee list";
+
+        setErrors((prev) => ({
+          ...prev,
+          assigned: employeeError,
+        }));
+        toast.error(employeeError);
+        return;
+      }
+
       const formData = new FormData();
+      if (editId !== null && editId !== undefined) {
+        formData.append("AssetId", String(editId));
+        formData.append("Id", String(editId));
+      }
+
       formData.append("AssetName", trimmedAsset.name);
       formData.append("SerialNo", trimmedAsset.serial);
-      formData.append("AssignedTo", trimmedAsset.assigned);
       formData.append("Status", trimmedAsset.status);
 
-      trimmedAsset.images.filter(Boolean).forEach((image) => {
-        formData.append("Images", image);
+      if (trimmedAsset.status === "Assigned") {
+        formData.append("AssignedTo", normalizedAssignedCode);
+        formData.append("EmployeeCode", normalizedAssignedCode);
+
+        if (matchedAssignedEmployee?.name) {
+          formData.append("EmployeeName", matchedAssignedEmployee.name);
+        }
+      }
+
+      const existingImagePaths = previewImages.filter(
+        (image) => typeof image === "string" && image && !image.startsWith("blob:")
+      );
+
+      existingImagePaths.forEach((imagePath) => {
+        formData.append("ExistingImagePaths", imagePath);
       });
+
+      if (existingImagePaths.length > 0) {
+        formData.append("ExistingImagePathsJson", JSON.stringify(existingImagePaths));
+      }
+
+      trimmedAsset.images
+        .filter((image) => image instanceof File)
+        .forEach((image) => {
+          formData.append("Images", image, image.name);
+        });
+
+      const requestEntries = Array.from(formData.entries()).map(([key, value]) => [
+        key,
+        value instanceof File
+          ? {
+              name: value.name,
+              type: value.type,
+              size: value.size,
+            }
+          : value,
+      ]);
+
+      console.log("Asset save request payload:", requestEntries);
 
       if (editId) {
         await api.put(API_ENDPOINTS.masters.assets.byId(editId), formData);
@@ -270,7 +699,23 @@ export default function Assets() {
       await fetchAssets();
     } catch (error) {
       console.error("Error saving asset:", error);
-      toast.error("Unable to save asset.");
+      console.error("Asset save error response:", error?.response?.data);
+      console.error("Asset save error status:", error?.response?.status);
+      console.error("Asset save error headers:", error?.response?.headers);
+
+      const backendDetails = extractApiErrorDetails(error);
+      const fieldErrors = getAssetFieldErrorsFromApiError(error);
+      const backendMessage = backendDetails.message;
+
+      if (Object.keys(fieldErrors).length > 0) {
+        setErrors((prev) => ({
+          ...prev,
+          ...fieldErrors,
+        }));
+      }
+
+      setApiError(backendMessage);
+      toast.error(backendMessage || "Unable to save asset.");
     } finally {
       setSaving(false);
     }
@@ -279,6 +724,7 @@ export default function Assets() {
   const handleEdit = (asset) => {
     setEditId(asset.assetId);
     setErrors({});
+    setApiError("");
     setNewAsset({
       name: asset.assetName,
       serial: asset.serialNo,
@@ -318,6 +764,7 @@ export default function Assets() {
     setShowForm(false);
     setEditId(null);
     setErrors({});
+    setApiError("");
     setPreviewImages([]);
     setNewAsset(EMPTY_ASSET);
   };
@@ -344,16 +791,20 @@ export default function Assets() {
       <ToastContainer position="top-right" autoClose={2400} />
 
       <div className="assets-header">
-        <div>
+        <div className="assets-header-copy">
           <h2>Asset Management</h2>
           <p>Track and manage company assets</p>
         </div>
 
         <button
-          className="add-btn"
+          className="assets-add-btn app-button-primary"
+          type="button"
           onClick={() => {
             setEditId(null);
             setErrors({});
+            setApiError("");
+            setPreviewImages([]);
+            setNewAsset(EMPTY_ASSET);
             setShowForm(true);
           }}
         >
@@ -361,85 +812,108 @@ export default function Assets() {
         </button>
       </div>
 
-      <div className="app-table-scroll">
-      <table className="assets-table">
-        <thead>
-          <tr>
-            <th>Image</th>
-            <th>Asset</th>
-            <th>Serial No</th>
-            <th>Employee Code</th>
-            <th>Status</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
+      <div className="assets-table-wrap app-table-scroll">
+        <table className="assets-table">
+          <thead>
+            <tr>
+              <th className="assets-col-employee">Employee Name (Code)</th>
+              <th className="assets-col-serial">Serial Number</th>
+              <th className="assets-col-asset">Asset Name</th>
+              <th className="assets-col-image">Image</th>
+              <th className="assets-col-status">Status</th>
+              <th className="assets-col-actions">Actions</th>
+            </tr>
+          </thead>
 
-        <tbody>
-          {currentAssets.length > 0 ? (
-            currentAssets.map((asset) => (
-              <tr key={asset.assetId ?? asset.serialNo}>
-                <td>
-                  {asset.images && asset.images.length > 0 ? (
-                    <button
-                      className="view-images-btn"
-                      onClick={() => {
-                        setSelectedImages(asset.images);
-                        setShowImageModal(true);
-                      }}
+          <tbody>
+            {currentAssets.length > 0 ? (
+              currentAssets.map((asset) => (
+                <tr key={asset.assetId ?? asset.serialNo}>
+                  <td className="assets-col-employee">
+                    <span
+                      className="asset-cell-text asset-employee-text"
+                      title={asset.employeeDisplay}
                     >
-                      View Images ({asset.images.length})
-                    </button>
-                  ) : (
-                    <span style={{ color: "#999" }}>No Image</span>
-                  )}
-                </td>
+                      {asset.employeeDisplay}
+                    </span>
+                  </td>
 
-                <td>{asset.assetName}</td>
-                <td>{asset.serialNo}</td>
-                <td>{asset.assignedTo}</td>
+                  <td className="assets-col-serial">
+                    <span className="asset-cell-text" title={asset.serialNo || "-"}>
+                      {asset.serialNo || "-"}
+                    </span>
+                  </td>
 
-                <td>
-                  <span
-                    className={
-                      asset.status === "Assigned"
-                        ? "badge assigned"
-                        : asset.status === "Available"
-                          ? "badge available"
-                          : "badge repair"
-                    }
-                  >
-                    {asset.status}
-                  </span>
-                </td>
+                  <td className="assets-col-asset">
+                    <span className="asset-cell-text asset-name-text" title={asset.assetName || "-"}>
+                      {asset.assetName || "-"}
+                    </span>
+                  </td>
 
-                <td className="action-cell">
-                  <div className="action-buttons">
-                    <button className="edit-btn" onClick={() => handleEdit(asset)}>
-                      Edit
-                    </button>
+                  <td className="assets-col-image">
+                    {asset.images && asset.images.length > 0 ? (
+                      <button
+                        className="assets-view-images-btn"
+                        type="button"
+                        onClick={() => {
+                          setSelectedImages(asset.images);
+                          setShowImageModal(true);
+                        }}
+                      >
+                        View Images ({asset.images.length})
+                      </button>
+                    ) : (
+                      <span className="asset-empty-image">No Image</span>
+                    )}
+                  </td>
 
-                    <button
-                      className="delete-btn"
-                      onClick={() => {
-                        setAssetToDelete(asset);
-                        setShowDeletePopup(true);
-                      }}
+                  <td className="assets-col-status">
+                    <span
+                      className={
+                        asset.status === "Assigned"
+                          ? "asset-status-badge asset-status-badge--assigned"
+                          : asset.status === "Available"
+                            ? "asset-status-badge asset-status-badge--available"
+                            : "asset-status-badge asset-status-badge--repair"
+                      }
                     >
-                      Delete
-                    </button>
-                  </div>
+                      {asset.status || "-"}
+                    </span>
+                  </td>
+
+                  <td className="assets-col-actions assets-action-cell">
+                    <div className="assets-action-buttons">
+                      <button
+                        className="assets-edit-btn app-action-button app-action-button--edit"
+                        type="button"
+                        onClick={() => handleEdit(asset)}
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        className="assets-delete-btn app-action-button app-action-button--delete"
+                        type="button"
+                        onClick={() => {
+                          setAssetToDelete(asset);
+                          setShowDeletePopup(true);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="6" className="app-table-empty-cell">
+                  No assets found
                 </td>
               </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="6" className="app-table-empty-cell">
-                No assets found
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            )}
+          </tbody>
+        </table>
       </div>
 
       <div className="assets-pagination">
@@ -472,6 +946,8 @@ export default function Assets() {
         <div className="modal">
           <div className="modal-content">
             <h3>{editId ? "Edit Asset" : "Add Asset"}</h3>
+
+            {apiError && <p className="asset-submit-error">{apiError}</p>}
 
             <div className="asset-field-group">
               <label htmlFor="asset-name-input">Asset Name</label>
@@ -509,7 +985,32 @@ export default function Assets() {
                 onChange={handleChange}
                 className={errors.assigned ? "has-error" : ""}
                 disabled={newAsset.status !== "Assigned"}
+                list="asset-employee-options"
               />
+              <datalist id="asset-employee-options">
+                {employeeOptions.map((employee) => (
+                  <option
+                    key={employee.code}
+                    value={employee.code}
+                    label={employee.name || employee.code}
+                  />
+                ))}
+              </datalist>
+
+              {newAsset.status === "Assigned" && matchedAssignedEmployee?.name && (
+                <p className="asset-helper">
+                  Assigning this asset to {matchedAssignedEmployee.name}.
+                </p>
+              )}
+
+              {newAsset.status === "Assigned" &&
+                !matchedAssignedEmployee &&
+                employeeLoadError && (
+                  <p className="asset-helper asset-helper--warning">
+                    {employeeLoadError}
+                  </p>
+                )}
+
               {errors.assigned && <p className="asset-error">{errors.assigned}</p>}
             </div>
 
@@ -521,10 +1022,13 @@ export default function Assets() {
                 value={newAsset.status}
                 onChange={handleChange}
               >
-                <option value="Assigned">Assigned</option>
-                <option value="Available">Available</option>
-                <option value="Under Repair">Under Repair</option>
+                {ASSET_STATUS_OPTIONS.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
               </select>
+              {errors.status && <p className="asset-error">{errors.status}</p>}
             </div>
 
             <div className="asset-field-group">
@@ -562,6 +1066,7 @@ export default function Assets() {
               </button>
 
               <button
+                type="button"
                 className="asset-update-btn"
                 onClick={handleSubmit}
                 disabled={saving}
@@ -586,11 +1091,12 @@ export default function Assets() {
               <button
                 onClick={() => setShowDeletePopup(false)}
                 className="asset-delete-cancel-btn"
+                type="button"
               >
                 Cancel
               </button>
 
-              <button className="asset-delete-btn" onClick={confirmDeleteAsset}>
+              <button className="asset-delete-btn" type="button" onClick={confirmDeleteAsset}>
                 Yes, Delete
               </button>
             </div>
@@ -622,6 +1128,7 @@ export default function Assets() {
 
             <button
               className="close-image-btn"
+              type="button"
               onClick={() => setShowImageModal(false)}
             >
               Close

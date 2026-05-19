@@ -104,9 +104,63 @@ function AttendanceTable({
   };
 
   const formatCheckTime = (value) => {
-    if (!value) return "-";
 
-    return formatTime(value, value);
+    if (!value) {
+      return "-";
+    }
+
+    try {
+
+      // If backend already sends HH:mm
+      if (
+        typeof value === "string" &&
+        /^\d{2}:\d{2}$/.test(value)
+      ) {
+
+        const [hours, minutes] = value.split(":");
+
+        const h = Number(hours);
+
+        const ampm =
+          h >= 12 ? "pm" : "am";
+
+        const formattedHour =
+          h % 12 || 12;
+
+        return `${formattedHour}:${minutes} ${ampm}`;
+      }
+
+      // ISO Date support
+      const date = new Date(value);
+
+      if (isNaN(date.getTime())) {
+        return "-";
+      }
+
+      let hours = date.getHours();
+
+      const minutes = String(
+        date.getMinutes()
+      ).padStart(2, "0");
+
+      const ampm =
+        hours >= 12 ? "pm" : "am";
+
+      hours =
+        hours % 12 || 12;
+
+      return `${hours}:${minutes} ${ampm}`;
+
+    }
+    catch (error) {
+
+      console.error(
+        "❌ Time Format Error:",
+        error
+      );
+
+      return "-";
+    }
   };
 
   const getProgressWidth = (emp) => {
@@ -245,10 +299,10 @@ function AttendanceTable({
   const getResolvedStatus = (employeeRecord) => {
     const normalizedStatus = normalizeStatus(
       employeeRecord?.status ??
-        employeeRecord?.attendanceStatus ??
-        employeeRecord?.markStatus ??
-        employeeRecord?.dayStatus ??
-        employeeRecord?.dailyStatus
+      employeeRecord?.attendanceStatus ??
+      employeeRecord?.markStatus ??
+      employeeRecord?.dayStatus ??
+      employeeRecord?.dailyStatus
     );
 
     if (normalizedStatus) {
@@ -474,35 +528,35 @@ function AttendanceTable({
   // =========================
   // FILTERED DATA
   // =========================
-const filteredDailyData = useMemo(() => {
+  const filteredDailyData = useMemo(() => {
 
-  if (viewMode !== "daily") return [];
+    if (viewMode !== "daily") return [];
 
-  return attendanceData.filter((item) => {
+    return attendanceData.filter((item) => {
 
-    const finalStatus = getResolvedStatus(item);
+      const finalStatus = getResolvedStatus(item);
 
-    // SEARCH MATCH
-    const searchMatch =
-      matchesSearch(item);
+      // SEARCH MATCH
+      const searchMatch =
+        matchesSearch(item);
 
-    // FILTER MATCH
-    const filterMatch =
-      filter === "All"
-      ||
-      finalStatus?.trim().toLowerCase() ===
-      filter?.trim().toLowerCase();
+      // FILTER MATCH
+      const filterMatch =
+        filter === "All"
+        ||
+        finalStatus?.trim().toLowerCase() ===
+        filter?.trim().toLowerCase();
 
-    return searchMatch && filterMatch;
+      return searchMatch && filterMatch;
 
-  });
+    });
 
-}, [
-  attendanceData,
-  filter,
-  matchesSearch,
-  viewMode
-]);
+  }, [
+    attendanceData,
+    filter,
+    matchesSearch,
+    viewMode
+  ]);
 
   const filteredMonthlyData = useMemo(() => {
     if (viewMode !== "monthly") return [];
@@ -771,6 +825,14 @@ const filteredDailyData = useMemo(() => {
               filteredDailyData.map((emp, i) => {
                 const progressWidth = getProgressWidth(emp);
                 const finalStatus = getResolvedStatus(emp);
+                console.log("📌 Employee Attendance:", {
+                  employee: getEmployeeName(emp),
+                  rawCheckIn: getCheckIn(emp),
+                  rawCheckOut: getCheckOut(emp),
+                  formattedCheckIn: formatCheckTime(getCheckIn(emp)),
+                  formattedCheckOut: formatCheckTime(getCheckOut(emp)),
+                  status: finalStatus
+                });
 
                 return (
                   <div
@@ -833,7 +895,7 @@ const filteredDailyData = useMemo(() => {
                   <div
                     className="monthly-grid"
                     style={{
-                      gridTemplateColumns: `320px repeat(${daysArray.length}, 42px) 50px 50px 55px 50px 50px 55px 50px 90px`
+                      gridTemplateColumns: `260px repeat(${daysArray.length}, 34px) 42px 42px 46px 42px 42px 46px 42px 76px`
                     }}
                   >
                     <div
@@ -844,8 +906,8 @@ const filteredDailyData = useMemo(() => {
                         left: 0,
                         zIndex: 9999,
                         background: "#f8fafc",
-                        height: "78px",
-                        minHeight: "78px",
+                        height: "56px",
+                        minHeight: "56px",
                         display: "flex",
                         alignItems: "center",
                         paddingLeft: "20px",
@@ -863,8 +925,8 @@ const filteredDailyData = useMemo(() => {
                           top: 0,
                           zIndex: 999,
                           background: "#f8fafc",
-                          height: "78px",
-                          minHeight: "78px",
+                          height: "56px",
+                          minHeight: "56px",
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -880,8 +942,8 @@ const filteredDailyData = useMemo(() => {
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "78px",
-                        minHeight: "78px",
+                        height: "56px",
+                        minHeight: "56px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -897,8 +959,8 @@ const filteredDailyData = useMemo(() => {
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "78px",
-                        minHeight: "78px",
+                        height: "56px",
+                        minHeight: "56px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -914,8 +976,8 @@ const filteredDailyData = useMemo(() => {
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "78px",
-                        minHeight: "78px",
+                        height: "56px",
+                        minHeight: "56px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -931,8 +993,8 @@ const filteredDailyData = useMemo(() => {
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "78px",
-                        minHeight: "78px",
+                        height: "56px",
+                        minHeight: "56px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -948,8 +1010,8 @@ const filteredDailyData = useMemo(() => {
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "78px",
-                        minHeight: "78px",
+                        height: "56px",
+                        minHeight: "56px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -965,8 +1027,8 @@ const filteredDailyData = useMemo(() => {
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "78px",
-                        minHeight: "78px",
+                        height: "56px",
+                        minHeight: "56px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -982,8 +1044,8 @@ const filteredDailyData = useMemo(() => {
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "78px",
-                        minHeight: "78px",
+                        height: "56px",
+                        minHeight: "56px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -999,8 +1061,8 @@ const filteredDailyData = useMemo(() => {
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "78px",
-                        minHeight: "78px",
+                        height: "56px",
+                        minHeight: "56px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1068,7 +1130,7 @@ const filteredDailyData = useMemo(() => {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              minHeight: "78px",
+                              minHeight: "58px",
                               background: "#fff",
                               borderBottom: "1px solid #eef2f7",
                               marginTop: "-1px",
@@ -1082,7 +1144,7 @@ const filteredDailyData = useMemo(() => {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              minHeight: "78px",
+                              minHeight: "58px",
                               background: "#fff",
                               borderBottom: "1px solid #eef2f7",
                               marginTop: "-1px",
@@ -1097,7 +1159,7 @@ const filteredDailyData = useMemo(() => {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              minHeight: "78px",
+                              minHeight: "58px",
                               background: "#fff",
                               borderBottom: "1px solid #eef2f7",
                               marginTop: "-1px",
@@ -1112,7 +1174,7 @@ const filteredDailyData = useMemo(() => {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              minHeight: "78px",
+                              minHeight: "58px",
                               background: "#fff",
                               borderBottom: "1px solid #eef2f7",
                               marginTop: "-1px",
@@ -1127,7 +1189,7 @@ const filteredDailyData = useMemo(() => {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              minHeight: "78px",
+                              minHeight: "58px",
                               background: "#fff",
                               borderBottom: "1px solid #eef2f7",
                               marginTop: "-1px",
@@ -1142,7 +1204,7 @@ const filteredDailyData = useMemo(() => {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              minHeight: "78px",
+                              minHeight: "58px",
                               background: "#fff",
                               borderBottom: "1px solid #eef2f7",
                               marginTop: "-1px",
@@ -1157,7 +1219,7 @@ const filteredDailyData = useMemo(() => {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              minHeight: "78px",
+                              minHeight: "58px",
                               background: "#fff",
                               borderBottom: "1px solid #eef2f7",
                               marginTop: "-1px",
@@ -1172,7 +1234,7 @@ const filteredDailyData = useMemo(() => {
                               display: "flex",
                               alignItems: "center",
                               justifyContent: "center",
-                              minHeight: "78px",
+                              minHeight: "58px",
                               background: "#fff",
                               borderBottom: "1px solid #eef2f7",
                               marginTop: "-1px",

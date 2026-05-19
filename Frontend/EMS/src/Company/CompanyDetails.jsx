@@ -1,4 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { X } from "lucide-react";
+import {
+  FaEnvelope,
+  FaPhoneAlt,
+  FaReceipt,
+  FaSitemap,
+} from "react-icons/fa";
 import "./CompanyDetails.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -7,7 +14,21 @@ import { API_ENDPOINTS } from "../api/endpoints";
 import AppDatePicker from "../components/AppDatePicker";
 import { extractCollection } from "../utils/collections";
 import { formatDate, toIsoDateString } from "../utils/date";
-import { isValidEmail } from "../utils/validation";
+import {
+  normalizeWhitespace,
+  sanitizeAlphaNumericInput,
+  sanitizeDigitsInput,
+  sanitizeEmailInput,
+  sanitizeLeadingWhitespace,
+  sanitizeLettersAndSpaces,
+  sanitizePhoneInput,
+  validateEmailAddress,
+  validateEmployeeName,
+  validateGstNumber,
+  validatePanNumber,
+  validatePhoneNumber,
+  validateTinNumber,
+} from "../utils/validation";
 
 const COMPANY_ID = 1;
 
@@ -18,34 +39,40 @@ const EMPTY_BRANCH = {
   email: "",
 };
 
-const formatDisplayDate = (value) => {
-  return formatDate(value);
+const createEmptyCompany = () => ({
+  name: "",
+  established: "",
+  phone: "",
+  email: "",
+  gst: "",
+  tin: "",
+  pan: "",
+});
+
+const isFutureDate = (value) => {
+  if (!value) {
+    return false;
+  }
+
+  const selectedDate = new Date(value);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return selectedDate > today;
 };
 
 function CompanyDetails() {
+  const [company, setCompany] = useState(createEmptyCompany);
+  const [branches, setBranches] = useState([]);
   const [modalType, setModalType] = useState(null);
-  const [showBranchPopup, setShowBranchPopup] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState(null);
-  const [branchEditIndex, setBranchEditIndex] = useState(null);
+  const [showBranchPopup, setShowBranchPopup] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [branchForm, setBranchForm] = useState(EMPTY_BRANCH);
+  const [editingBranchId, setEditingBranchId] = useState(null);
   const [branchErrors, setBranchErrors] = useState({});
   const [companyErrors, setCompanyErrors] = useState({});
   const [companySaving, setCompanySaving] = useState(false);
   const [branchSaving, setBranchSaving] = useState(false);
-
-  const [company, setCompany] = useState({
-    name: "",
-    established: "",
-    phone: "",
-    email: "",
-    gst: "",
-    tin: "",
-    pan: "",
-    branches: 0,
-  });
-
-  const [branches, setBranches] = useState([]);
-  const [branch, setBranch] = useState(EMPTY_BRANCH);
 
   const fetchCompany = async () => {
     try {
@@ -55,12 +82,11 @@ function CompanyDetails() {
       setCompany({
         name: data.companyName || "",
         established: data.establishedDate?.split("T")[0] || "",
-        phone: String(data.phoneNumber || "").replace(/\D/g, "").slice(0, 10),
+        phone: sanitizePhoneInput(data.phoneNumber, 10),
         email: data.emailAddress || "",
-        gst: data.gstNumber || "",
-        tin: data.tinNumber || "",
-        pan: data.panNumber || "",
-        branches: 0,
+        gst: sanitizeAlphaNumericInput(data.gstNumber, 15),
+        tin: sanitizeDigitsInput(data.tinNumber, 11),
+        pan: sanitizeAlphaNumericInput(data.panNumber, 10),
       });
     } catch (error) {
       console.error("Company fetch error:", error);
@@ -74,16 +100,14 @@ function CompanyDetails() {
       const mappedBranches = extractCollection(res.data).map((branchItem) => ({
         id: branchItem.id,
         name: branchItem.branchName || "",
-        established: branchItem.established ? branchItem.established.split("T")[0] : "",
-        phone: String(branchItem.phoneNumber || "").replace(/\D/g, "").slice(0, 10),
+        established: branchItem.established
+          ? branchItem.established.split("T")[0]
+          : "",
+        phone: sanitizePhoneInput(branchItem.phoneNumber, 10),
         email: branchItem.email || "",
       }));
 
       setBranches(mappedBranches);
-      setCompany((prev) => ({
-        ...prev,
-        branches: mappedBranches.length,
-      }));
     } catch (error) {
       console.error("Branches fetch error:", error);
       toast.error("Failed to load branches.");
@@ -95,77 +119,132 @@ function CompanyDetails() {
     fetchBranches();
   }, []);
 
-  const handleCompanyChange = (event) => {
-    const { name, value } = event.target;
+  const companyInfoItems = useMemo(
+    () => [
+      {
+        icon: <FaPhoneAlt />,
+        label: "Phone Number",
+        value: company.phone || "-",
+      },
+      {
+        icon: <FaEnvelope />,
+        label: "Email Address",
+        value: company.email || "-",
+      },
+      {
+        icon: <FaReceipt />,
+        label: "GST Number",
+        value: company.gst || "-",
+      },
+      {
+        icon: <FaReceipt />,
+        label: "TIN Number",
+        value: company.tin || "-",
+      },
+      {
+        icon: <FaReceipt />,
+        label: "PAN Number",
+        value: company.pan || "-",
+      },
+      {
+        icon: <FaSitemap />,
+        label: "Branches",
+        value: String(branches.length),
+      },
+    ],
+    [branches.length, company.email, company.gst, company.pan, company.phone, company.tin]
+  );
 
-    let nextValue = value;
-
-    switch (name) {
-      case "phone":
-        nextValue = value.replace(/\D/g, "").slice(0, 10);
-        break;
-
-      case "gst":
-        nextValue = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 15);
-        break;
-
-      case "pan":
-        nextValue = value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 10);
-        break;
-
-      case "tin":
-        nextValue = value.replace(/\D/g, "").slice(0, 11);
-        break;
-
-      case "name":
-        nextValue = value.replace(/\s{2,}/g, " ").slice(0, 80);
-        break;
-
-      default:
-        break;
-    }
-
-    setCompany((prev) => ({
-      ...prev,
-      [name]: nextValue,
-    }));
-
-    setCompanyErrors((prev) => ({
-      ...prev,
-      [name]: "",
-    }));
+  const resetBranchForm = () => {
+    setBranchForm(EMPTY_BRANCH);
+    setBranchErrors({});
+    setEditingBranchId(null);
   };
 
-const handleBranchChange = (event) => {
-  const { name, value } = event.target;
+  const closeModal = () => {
+    if (companySaving || branchSaving) {
+      return;
+    }
 
+    setModalType(null);
+    resetBranchForm();
+    setCompanyErrors({});
+  };
+
+  const closeBranchPopup = () => {
+    setSelectedBranch(null);
+    setShowBranchPopup(false);
+  };
+
+const handleCompanyChange = (event) => {
+  const { name, value } = event.target;
   let nextValue = value;
 
-  switch (name) {
-
-    // BRANCH NAME -> only alphabets + max 25 chars
-    case "name":
-      nextValue = value
-        .replace(/[^A-Za-z\s]/g, "")
-        .replace(/\s{2,}/g, " ")
-        .slice(0, 25);
-      break;
-
-    // PHONE -> only 10 digits
-    case "phone":
-      nextValue = value.replace(/\D/g, "").slice(0, 10);
-      break;
-
-    // EMAIL -> max 40 chars
-    case "email":
-      nextValue = value.slice(0, 40);
-      break;
-
-    default:
-      break;
+  if (name === "name") {
+    // Alphabets and spaces only - max 40 chars
+    nextValue = value
+      .replace(/[^A-Za-z\s]/g, "")
+      .replace(/\s{2,}/g, " ")
+      .replace(/^\s+/g, "")
+      .slice(0, 40);
+  } 
+  else if (name === "phone") {
+    // Exactly 10 digits only
+    nextValue = value.replace(/\D/g, "").slice(0, 10);
+  } 
+  else if (name === "email") {
+    // Max 35 chars
+    nextValue = value.trimStart().slice(0, 35);
+  } 
+  else if (name === "gst") {
+    // GSTIN2345666835 format
+    nextValue = value
+      .replace(/[^A-Za-z0-9]/g, "")
+      .toUpperCase()
+      .slice(0, 15);
+  } 
+  else if (name === "tin") {
+    // 10 digits only
+    nextValue = value.replace(/\D/g, "").slice(0, 10);
+  } 
+  else if (name === "pan") {
+    // CVFGH4567J format
+    nextValue = value
+      .replace(/[^A-Za-z0-9]/g, "")
+      .toUpperCase()
+      .slice(0, 10);
   }
 
-  setBranch((prev) => ({
+  setCompany((prev) => ({
+    ...prev,
+    [name]: nextValue,
+  }));
+
+  setCompanyErrors((prev) => ({
+    ...prev,
+    [name]: "",
+  }));
+};
+
+  const handleBranchChange = (event) => {
+  const { name, value } = event.target;
+  let nextValue = value;
+
+  if (name === "name") {
+    // only alphabets + spaces, max 30 chars
+    nextValue = value
+      .replace(/[^A-Za-z ]/g, "")
+      .replace(/\s{2,}/g, " ")
+      .slice(0, 30);
+  } else if (name === "phone") {
+    // only 10 digits
+    nextValue = value.replace(/\D/g, "").slice(0, 10);
+  } else if (name === "email") {
+    // max 35 chars
+    nextValue = value.slice(0, 35).trimStart();
+  }
+
+  setBranchForm((prev) => ({
     ...prev,
     [name]: nextValue,
   }));
@@ -176,228 +255,166 @@ const handleBranchChange = (event) => {
   }));
 };
 
-  const validateCompany = () => {
-    const errors = {};
+const validateCompany = () => {
+  const nextErrors = {};
+  const companyName = normalizeWhitespace(company.name);
 
-    // COMPANY NAME
-    if (!company.name.trim()) {
-      errors.name = "Company Name is required";
-    } else if (!/^[A-Za-z0-9\s&.,()-]{2,30}$/.test(company.name.trim())) {
-      errors.name =
-        "Company Name should contain valid characters only";
-    }
-
-    // ESTABLISHED DATE
-    if (!company.established.trim()) {
-      errors.established = "Established Date is required";
-    } else {
-      const selectedDate = new Date(company.established);
-      const today = new Date();
-
-      today.setHours(0, 0, 0, 0);
-
-      if (selectedDate > today) {
-        errors.established =
-          "Future dates are not allowed";
-      }
-    }
-
-    // PHONE
-    if (!company.phone.trim()) {
-      errors.phone = "Phone Number is required";
-    } else if (!/^[6-9]\d{9}$/.test(company.phone)) {
-      errors.phone =
-        "Enter valid 10-digit mobile number";
-    }
-
-    // EMAIL
-    if (!company.email.trim()) {
-      errors.email = "Email Address is required";
-    } else if (
-      !/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(
-        company.email
-      )
-    ) {
-      errors.email = "Enter valid email address";
-    } else if (company.email.length > 40) {
-      errors.email =
-        "Email Address should not exceed 40 characters";
-    }
-
-    // GST
-   if (!company.gst.trim()) {
-  errors.gst = "GST Number is required";
-} else if (
-  !/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[A-Z0-9]{1}Z[A-Z0-9]{1}$/.test(
-    company.gst
-  )
-) {
-  errors.gst =
-    "Enter valid GST Number (Example: 36ABCDE1234F1Z5)";
-}
-    // PAN
-    if (!company.pan.trim()) {
-      errors.pan = "PAN Number is required";
-    } else if (
-      !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(company.pan)
-    ) {
-      errors.pan = "Enter valid PAN Number";
-    }
-
-    // TIN
-    if (!company.tin.trim()) {
-      errors.tin = "TIN Number is required";
-    } else if (!/^\d{9,11}$/.test(company.tin)) {
-      errors.tin =
-        "TIN Number should be 9 to 11 digits";
-    }
-
-    setCompanyErrors(errors);
-
-    return Object.keys(errors).length === 0;
-  };
-
-const validateBranch = () => {
-  const errors = {};
-
-  // BRANCH NAME
-  if (!branch.name.trim()) {
-    errors.name = "Branch Name is required";
-  } else if (branch.name.trim().length > 25) {
-    errors.name = "Branch Name cannot exceed 25 characters";
-  } else if (!/^[A-Za-z\s]+$/.test(branch.name.trim())) {
-    errors.name = "Branch Name must contain only alphabets";
+  // Company Name
+  if (!companyName) {
+    nextErrors.name = "Company Name is required";
+  } 
+  else if (companyName.length > 40) {
+    nextErrors.name =
+      "Company Name cannot exceed 40 characters";
+  } 
+  else if (!/^[A-Za-z\s]+$/.test(companyName)) {
+    nextErrors.name =
+      "Company Name must contain only alphabets";
   }
 
-  // ESTABLISHED DATE
-  if (!branch.established.trim()) {
-    errors.established = "Established Date is required";
-  } else {
-    const selectedDate = new Date(branch.established);
-    const today = new Date();
-
-    today.setHours(0, 0, 0, 0);
-
-    if (selectedDate > today) {
-      errors.established = "Future dates are not allowed";
-    }
+  // Established Date
+  if (!company.established) {
+    nextErrors.established =
+      "Established Date is required";
+  } 
+  else if (isFutureDate(company.established)) {
+    nextErrors.established =
+      "Future dates are not allowed";
   }
 
-  // PHONE
-  if (!branch.phone.trim()) {
-    errors.phone = "Phone Number is required";
-  } else if (!/^\d{10}$/.test(branch.phone)) {
-    errors.phone = "Phone Number must contain exactly 10 digits";
+  // Phone Number
+  if (!company.phone) {
+    nextErrors.phone = "Phone Number is required";
+  } 
+  else if (!/^\d{10}$/.test(company.phone)) {
+    nextErrors.phone =
+      "Phone Number must contain exactly 10 digits";
   }
 
-  // EMAIL
-  if (!branch.email.trim()) {
-    errors.email = "Email Address is required";
-  } else if (branch.email.length > 40) {
-    errors.email = "Email should not exceed 40 characters";
-  } else if (!/^[A-Za-z0-9._%+-]+@gmail\.com$/.test(branch.email)) {
-    errors.email = "Email must end with @gmail.com";
+  // Email
+  if (!company.email) {
+    nextErrors.email = "Email Address is required";
+  } 
+  else if (company.email.length > 35) {
+    nextErrors.email =
+      "Email Address cannot exceed 35 characters";
+  } 
+  else if (
+    !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.com$/.test(
+      company.email
+    )
+  ) {
+    nextErrors.email =
+      "Email must end with @domain.com";
   }
 
-  setBranchErrors(errors);
+  // GST Number Format -> GSTIN2345666835
+  if (!company.gst) {
+    nextErrors.gst = "GST Number is required";
+  } 
+  else if (!/^GSTIN\d{10}$/.test(company.gst)) {
+    nextErrors.gst =
+      "GST Number format must be GSTIN2345666835";
+  }
 
-  return Object.keys(errors).length === 0;
+  // TIN Number -> 10 digits
+  if (!company.tin) {
+    nextErrors.tin = "TIN Number is required";
+  } 
+  else if (!/^\d{10}$/.test(company.tin)) {
+    nextErrors.tin =
+      "TIN Number must contain exactly 10 digits";
+  }
+
+  // PAN Number -> CVFGH4567J
+  if (!company.pan) {
+    nextErrors.pan = "PAN Number is required";
+  } 
+  else if (
+    !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(company.pan)
+  ) {
+    nextErrors.pan =
+      "PAN Number format must be like CVFGH4567J";
+  }
+
+  setCompanyErrors(nextErrors);
+
+  setCompany((prev) => ({
+    ...prev,
+    name: companyName,
+    email: company.email.trim(),
+  }));
+
+  return Object.keys(nextErrors).length === 0;
 };
 
-  const handleAddBranch = async () => {
-    if (!validateBranch()) return;
+const validateBranch = () => {
+  const nextErrors = {};
+  const branchName = normalizeWhitespace(branchForm.name);
 
-    try {
-      setBranchSaving(true);
+  // Branch Name Validation
+  if (!branchName) {
+    nextErrors.name = "Branch Name is required";
+  } else if (branchName.length > 30) {
+    nextErrors.name = "Branch Name must not exceed 30 characters";
+  } else if (!/^[A-Za-z ]+$/.test(branchName)) {
+    nextErrors.name =
+      "Branch Name must contain only alphabets";
+  }
 
-      const payload = {
-        branchName: branch.name.trim().replace(/\s+/g, " "),
-        established: toIsoDateString(branch.established),
-        phoneNumber: branch.phone.trim(),
-        email: branch.email.trim(),
-      };
+  // Established Date Validation
+  if (!branchForm.established) {
+    nextErrors.established = "Established Date is required";
+  } else if (isFutureDate(branchForm.established)) {
+    nextErrors.established = "Future dates are not allowed";
+  }
 
-      if (branchEditIndex !== null) {
-        await api.put(
-          API_ENDPOINTS.company.branches.byId(branches[branchEditIndex].id),
-          payload,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-      } else {
-        await api.post(API_ENDPOINTS.company.branches.list, payload, {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-      }
+  // Phone Validation
+  if (!branchForm.phone) {
+    nextErrors.phone = "Phone Number is required";
+  } else if (!/^\d{10}$/.test(branchForm.phone)) {
+    nextErrors.phone =
+      "Phone Number must contain exactly 10 digits";
+  }
 
-      toast.success(branchEditIndex !== null ? "Branch updated successfully." : "Branch added successfully.");
-      setBranch(EMPTY_BRANCH);
-      setBranchErrors({});
-      setBranchEditIndex(null);
-      setModalType(null);
-      await fetchBranches();
-    } catch (error) {
-      console.error("Branch Save Error:", error.response?.data || error.message);
-      toast.error("Unable to save branch.");
-    } finally {
-      setBranchSaving(false);
-    }
-  };
+  // Email Validation
+  if (!branchForm.email) {
+    nextErrors.email = "Email Address is required";
+  } else if (branchForm.email.length > 35) {
+    nextErrors.email =
+      "Email Address must not exceed 35 characters";
+  } else if (
+    !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.com$/.test(
+      branchForm.email
+    )
+  ) {
+    nextErrors.email =
+      "Email must end with @domain.com";
+  }
 
-  const openBranchPopup = (branchItem) => {
-    setSelectedBranch(branchItem);
-    setShowBranchPopup(true);
-  };
+  setBranchErrors(nextErrors);
 
-  const handleBranchEdit = () => {
-    if (!selectedBranch) return;
+  setBranchForm((prev) => ({
+    ...prev,
+    name: branchName,
+  }));
 
-    const index = branches.findIndex((branchItem) => branchItem.id === selectedBranch.id);
-    setBranch(selectedBranch);
-    setBranchEditIndex(index);
-    setBranchErrors({});
-    setShowBranchPopup(false);
-    setModalType("branch");
-  };
-
-  const handleDeleteBranch = async () => {
-    if (!selectedBranch) return;
-
-    try {
-      await api.delete(API_ENDPOINTS.company.branches.byId(selectedBranch.id));
-
-      const updatedBranches = branches.filter((branchItem) => branchItem.id !== selectedBranch.id);
-      setBranches(updatedBranches);
-      setCompany((prev) => ({
-        ...prev,
-        branches: updatedBranches.length,
-      }));
-
-      setShowDeleteModal(false);
-      setSelectedBranch(null);
-      toast.success("Branch deleted successfully.");
-    } catch (error) {
-      console.error("Delete Error:", error.response?.data || error.message);
-      toast.error("Unable to delete branch.");
-    }
-  };
+  return Object.keys(nextErrors).length === 0;
+};
 
   const updateCompany = async () => {
-    if (!validateCompany()) return;
+    if (!validateCompany()) {
+      return;
+    }
 
     try {
       setCompanySaving(true);
 
       const payload = {
-        companyName: company.name.trim().replace(/\s+/g, " "),
+        companyName: normalizeWhitespace(company.name),
         establishedDate: toIsoDateString(company.established),
         phoneNumber: company.phone.trim(),
-        emailAddress: company.email.trim(),
+        emailAddress: sanitizeEmailInput(company.email, 60),
         gstNumber: company.gst.trim(),
         tinNumber: company.tin.trim(),
         panNumber: company.pan.trim(),
@@ -406,8 +423,8 @@ const validateBranch = () => {
       };
 
       await api.put(API_ENDPOINTS.company.update(COMPANY_ID), payload);
-      setModalType(null);
       toast.success("Company details updated successfully.");
+      closeModal();
       await fetchCompany();
     } catch (error) {
       console.error("Update error:", error.response?.data || error.message);
@@ -417,155 +434,309 @@ const validateBranch = () => {
     }
   };
 
+  const handleSaveBranch = async () => {
+    if (!validateBranch()) {
+      return;
+    }
+
+    try {
+      setBranchSaving(true);
+
+      const payload = {
+        branchName: normalizeWhitespace(branchForm.name),
+        established: toIsoDateString(branchForm.established),
+        phoneNumber: branchForm.phone.trim(),
+        email: sanitizeEmailInput(branchForm.email, 60),
+      };
+
+      if (editingBranchId) {
+        await api.put(API_ENDPOINTS.company.branches.byId(editingBranchId), payload, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      } else {
+        await api.post(API_ENDPOINTS.company.branches.list, payload, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+      }
+
+      toast.success(editingBranchId ? "Branch updated successfully." : "Branch added successfully.");
+      closeModal();
+      await fetchBranches();
+    } catch (error) {
+      console.error("Branch save error:", error.response?.data || error.message);
+      toast.error("Unable to save branch.");
+    } finally {
+      setBranchSaving(false);
+    }
+  };
+
+  const openBranchForm = (branchItem = null) => {
+    if (branchItem) {
+      setBranchForm({
+        name: branchItem.name || "",
+        established: branchItem.established || "",
+        phone: branchItem.phone || "",
+        email: branchItem.email || "",
+      });
+      setEditingBranchId(branchItem.id);
+    } else {
+      resetBranchForm();
+    }
+
+    setBranchErrors({});
+    setModalType("branch");
+  };
+
+  const handleDeleteBranch = async () => {
+    if (!selectedBranch) {
+      return;
+    }
+
+    try {
+      await api.delete(API_ENDPOINTS.company.branches.byId(selectedBranch.id));
+      toast.success("Branch deleted successfully.");
+      setShowDeleteModal(false);
+      closeBranchPopup();
+      await fetchBranches();
+    } catch (error) {
+      console.error("Delete error:", error.response?.data || error.message);
+      toast.error("Unable to delete branch.");
+    }
+  };
+
   return (
     <div className="company-page">
       <ToastContainer position="top-right" autoClose={2400} />
 
       <div className="company-card">
         <div className="company-header">
-          <div>
+          <div className="company-header-copy">
             <h2>{company.name || "Company"}</h2>
-            <p>Established: {formatDisplayDate(company.established)}</p>
+            <p>Established: {formatDate(company.established)}</p>
           </div>
 
-          <button className="edit-btn" onClick={() => setModalType("company")}>
+          <button
+            className="company-header-edit app-button-secondary"
+            type="button"
+            onClick={() => setModalType("company")}
+          >
             Edit Details
           </button>
         </div>
 
         <div className="company-info">
-          <div className="info-box">📞 {company.phone || "-"}</div>
-          <div className="info-box">✉️ {company.email || "-"}</div>
-          <div className="info-box">GST: {company.gst || "-"}</div>
-          <div className="info-box">TIN: {company.tin || "-"}</div>
-          <div className="info-box">PAN: {company.pan || "-"}</div>
-          <div className="info-box">Branches: {branches.length}</div>
+          {companyInfoItems.map((item) => (
+            <div key={item.label} className="company-info-item">
+              <span className="company-info-icon" aria-hidden="true">
+                {item.icon}
+              </span>
+              <div>
+                <p>{item.label}</p>
+                <strong>{item.value}</strong>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
       <div className="branch-header">
-        <h3>Branches</h3>
+        <div>
+          <h3>Branches</h3>
+          <p>{branches.length} branches registered</p>
+        </div>
+
         <button
-          className="company-add-btn"
-          onClick={() => {
-            setBranch(EMPTY_BRANCH);
-            setBranchErrors({});
-            setBranchEditIndex(null);
-            setModalType("branch");
-          }}
+          className="company-add-btn app-button-primary"
+          type="button"
+          onClick={() => openBranchForm()}
         >
           + Add Branch
         </button>
       </div>
 
-      <table className="branch-table">
-        <thead>
-          <tr>
-            <th>Branch Name</th>
-            <th>Established</th>
-            <th>Phone</th>
-            <th>Email</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {branches.map((branchItem, index) => (
-            <tr key={index} className="branch-row-click" onClick={() => openBranchPopup(branchItem)}>
-              <td>{branchItem.name}</td>
-              <td>{formatDisplayDate(branchItem.established)}</td>
-              <td>{branchItem.phone}</td>
-              <td>{branchItem.email}</td>
-
-              <td>
-                <div style={{ display: "flex", gap: "8px" }}>
-                  <button
-                    className="company-edit-btn"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setSelectedBranch(branchItem);
-                      setBranch(branchItem);
-                      setBranchEditIndex(index);
-                      setModalType("branch");
-                    }}
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    className="company-delete-btn"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      setSelectedBranch(branchItem);
-                      setShowDeleteModal(true);
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              </td>
+      <div className="company-branch-table-wrap app-table-scroll">
+        <table className="branch-table">
+          <thead>
+            <tr>
+              <th>Branch Name</th>
+              <th>Established</th>
+              <th>Phone</th>
+              <th>Email</th>
+              <th>Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
 
-      {showDeleteModal && (
-        <div
-          className="company-modal-overlay"
-          style={{
-            position: "fixed",
-            inset: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "24px",
-            background: "rgba(15,23,42,0.35)",
-            backdropFilter: "blur(3px)",
-            zIndex: 99999
-          }}
-        >
-          <div className="company-modal-box small">
-            <h3>Confirm Delete</h3>
+          <tbody>
+            {branches.length === 0 ? (
+              <tr>
+                <td colSpan="5" className="app-table-empty-cell">
+                  No branches available.
+                </td>
+              </tr>
+            ) : (
+              branches.map((branchItem) => (
+                <tr
+                  key={branchItem.id}
+                  className="branch-row-click"
+                  onClick={() => {
+                    setSelectedBranch(branchItem);
+                    setShowBranchPopup(true);
+                  }}
+                >
+                  <td>{branchItem.name}</td>
+                  <td>{formatDate(branchItem.established)}</td>
+                  <td>{branchItem.phone}</td>
+                  <td>{branchItem.email}</td>
+                  <td>
+                    <div className="branch-action-cell">
+                      <button
+                        className="company-edit-btn app-action-button app-action-button--edit"
+                        type="button"
+                        aria-label={`Edit ${branchItem.name}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openBranchForm(branchItem);
+                        }}
+                      >
+                        Edit
+                      </button>
 
-            <p style={{ marginTop: "10px" }}>
-              Are you sure you want to delete this branch?
-            </p>
+                      <button
+                        className="company-delete-btn app-action-button app-action-button--delete"
+                        type="button"
+                        aria-label={`Delete ${branchItem.name}`}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedBranch(branchItem);
+                          setShowDeleteModal(true);
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {showBranchPopup && selectedBranch && (
+        <div className="company-modal-overlay" onClick={closeBranchPopup}>
+          <div
+            className="company-modal-box company-modal-box-small"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="company-modal-head">
+              <div>
+                <h3>Branch Details</h3>
+                <p>Review the selected branch information.</p>
+              </div>
+
+              <button
+                type="button"
+                className="company-modal-close"
+                onClick={closeBranchPopup}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="branch-details">
+              <div className="branch-detail-row">
+                <span>Name</span>
+                <strong>{selectedBranch.name}</strong>
+              </div>
+              <div className="branch-detail-row">
+                <span>Established</span>
+                <strong>{formatDate(selectedBranch.established)}</strong>
+              </div>
+              <div className="branch-detail-row">
+                <span>Phone</span>
+                <strong>{selectedBranch.phone}</strong>
+              </div>
+              <div className="branch-detail-row">
+                <span>Email</span>
+                <strong>{selectedBranch.email}</strong>
+              </div>
+            </div>
 
             <div className="company-modal-btns">
-              <button className="company-cancel-btn" onClick={() => setShowDeleteModal(false)}>
-                Cancel
+              <button
+                className="app-button-secondary"
+                type="button"
+                onClick={closeBranchPopup}
+              >
+                Close
               </button>
-
-              <button className="company-delete-btn" onClick={handleDeleteBranch}>
-                Yes, Delete
+              <button
+                className="app-action-button app-action-button--edit"
+                type="button"
+                onClick={() => {
+                  closeBranchPopup();
+                  openBranchForm(selectedBranch);
+                }}
+              >
+                Edit
+              </button>
+              <button
+                className="app-action-button app-action-button--delete"
+                type="button"
+                onClick={() => {
+                  setShowDeleteModal(true);
+                  setShowBranchPopup(false);
+                }}
+              >
+                Delete
               </button>
             </div>
           </div>
         </div>
       )}
-      {showBranchPopup && selectedBranch && (
-        <div className="company-modal-overlay">
-          <div className="company-modal-box small">
-            <h3>Branch Details</h3>
 
-            <div className="branch-details">
-              <p><strong>Name :</strong> {selectedBranch.name}</p>
-              <p><strong>Established :</strong> {formatDisplayDate(selectedBranch.established)}</p>
-              <p><strong>Phone :</strong> {selectedBranch.phone}</p>
-              <p><strong>Email :</strong> {selectedBranch.email}</p>
+      {showDeleteModal && (
+        <div
+          className="company-modal-overlay"
+          onClick={() => setShowDeleteModal(false)}
+        >
+          <div
+            className="company-modal-box company-modal-box-small"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="company-modal-head">
+              <div>
+                <h3>Confirm Delete</h3>
+                <p>Are you sure you want to delete this branch?</p>
+              </div>
+
+              <button
+                type="button"
+                className="company-modal-close"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                <X size={20} />
+              </button>
             </div>
 
             <div className="company-modal-btns">
-              <button className="company-edit-btn" onClick={handleBranchEdit}>
-                Edit
+              <button
+                className="app-button-secondary"
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                Cancel
               </button>
-
-              <button className="company-delete-btn" onClick={() => setShowDeleteModal(true)}>
-                Delete
-              </button>
-
-              <button className="company-cancel-btn" onClick={() => setShowBranchPopup(false)}>
-                Close
+              <button
+                className="app-action-button app-action-button--delete"
+                type="button"
+                onClick={handleDeleteBranch}
+              >
+                Yes, Delete
               </button>
             </div>
           </div>
@@ -573,70 +744,124 @@ const validateBranch = () => {
       )}
 
       {modalType === "company" && (
-        <div className="company-modal-overlay">
+        <div className="company-modal-overlay" onClick={closeModal}>
           <div
             className="company-modal-box"
-            style={{
-              position: "relative",
-              margin: "auto"
-            }}
+            onClick={(event) => event.stopPropagation()}
           >
-            <h3>Edit Company Details</h3>
-
-            <div className="form-two-column">
-              <div className="form-column">
-                <div className="form-group">
-                  <label>Company Name</label>
-                  <input name="name" value={company.name} onChange={handleCompanyChange} className={companyErrors.name ? "input-error" : ""} />
-                  {companyErrors.name && <span className="error">{companyErrors.name}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label>Phone Number</label>
-                  <input name="phone" value={company.phone} onChange={handleCompanyChange} className={companyErrors.phone ? "input-error" : ""} />
-                  {companyErrors.phone && <span className="error">{companyErrors.phone}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label>GST Number</label>
-                  <input name="gst" value={company.gst} onChange={handleCompanyChange} className={companyErrors.gst ? "input-error" : ""} />
-                  {companyErrors.gst && <span className="error">{companyErrors.gst}</span>}
-                </div>
-
-                <div className="form-group">
-                  <label>PAN Number</label>
-                  <input name="pan" value={company.pan} onChange={handleCompanyChange} className={companyErrors.pan ? "input-error" : ""} />
-                  {companyErrors.pan && <span className="error">{companyErrors.pan}</span>}
-                </div>
+            <div className="company-modal-head">
+              <div>
+                <h3>Edit Company Details</h3>
+                <p>Update company information with validated business details.</p>
               </div>
 
-              <div className="form-column">
-                <div className="form-group">
-                  <label>Established Date</label>
-                  <AppDatePicker name="established" value={company.established} onChange={handleCompanyChange} className={companyErrors.established ? "input-error" : ""} />
-                  {companyErrors.established && <span className="error">{companyErrors.established}</span>}
-                </div>
+              <button
+                type="button"
+                className="company-modal-close"
+                onClick={closeModal}
+                disabled={companySaving}
+              >
+                <X size={20} />
+              </button>
+            </div>
 
-                <div className="form-group">
-                  <label>Email Address</label>
-                  <input name="email" value={company.email} onChange={handleCompanyChange} className={companyErrors.email ? "input-error" : ""} />
-                  {companyErrors.email && <span className="error">{companyErrors.email}</span>}
-                </div>
+            <div className="company-form-grid">
+              <div className="form-group">
+                <label>Company Name</label>
+                <input
+                  name="name"
+                  value={company.name}
+                  onChange={handleCompanyChange}
+                  className={companyErrors.name ? "input-error" : ""}
+                />
+                {companyErrors.name && <span className="error">{companyErrors.name}</span>}
+              </div>
 
-                <div className="form-group">
-                  <label>TIN Number</label>
-                  <input name="tin" value={company.tin} onChange={handleCompanyChange} className={companyErrors.tin ? "input-error" : ""} />
-                  {companyErrors.tin && <span className="error">{companyErrors.tin}</span>}
-                </div>
+              <div className="form-group">
+                <label>Established Date</label>
+                <AppDatePicker
+                  name="established"
+                  value={company.established}
+                  onChange={handleCompanyChange}
+                  className={companyErrors.established ? "input-error" : ""}
+                />
+                {companyErrors.established && (
+                  <span className="error">{companyErrors.established}</span>
+                )}
+              </div>
+
+              <div className="form-group">
+                <label>Phone Number</label>
+                <input
+                  name="phone"
+                  value={company.phone}
+                  onChange={handleCompanyChange}
+                  className={companyErrors.phone ? "input-error" : ""}
+                />
+                {companyErrors.phone && <span className="error">{companyErrors.phone}</span>}
+              </div>
+
+              <div className="form-group">
+                <label>Email Address</label>
+                <input
+                  name="email"
+                  value={company.email}
+                  onChange={handleCompanyChange}
+                  className={companyErrors.email ? "input-error" : ""}
+                />
+                {companyErrors.email && <span className="error">{companyErrors.email}</span>}
+              </div>
+
+              <div className="form-group">
+                <label>GST Number</label>
+                <input
+                  name="gst"
+                  value={company.gst}
+                  onChange={handleCompanyChange}
+                  className={companyErrors.gst ? "input-error" : ""}
+                />
+                {companyErrors.gst && <span className="error">{companyErrors.gst}</span>}
+              </div>
+
+              <div className="form-group">
+                <label>TIN Number</label>
+                <input
+                  name="tin"
+                  value={company.tin}
+                  onChange={handleCompanyChange}
+                  className={companyErrors.tin ? "input-error" : ""}
+                />
+                {companyErrors.tin && <span className="error">{companyErrors.tin}</span>}
+              </div>
+
+              <div className="form-group company-form-full">
+                <label>PAN Number</label>
+                <input
+                  name="pan"
+                  value={company.pan}
+                  onChange={handleCompanyChange}
+                  className={companyErrors.pan ? "input-error" : ""}
+                />
+                {companyErrors.pan && <span className="error">{companyErrors.pan}</span>}
               </div>
             </div>
 
             <div className="company-modal-btns">
-              <button className="company-cancel-btn" onClick={() => setModalType(null)} disabled={companySaving}>
+              <button
+                className="app-button-secondary"
+                type="button"
+                onClick={closeModal}
+                disabled={companySaving}
+              >
                 Cancel
               </button>
 
-              <button className="company-save-btn" onClick={updateCompany} disabled={companySaving}>
+              <button
+                className="app-button-primary"
+                type="button"
+                onClick={updateCompany}
+                disabled={companySaving}
+              >
                 {companySaving ? "Updating..." : "Save"}
               </button>
             </div>
@@ -645,44 +870,95 @@ const validateBranch = () => {
       )}
 
       {modalType === "branch" && (
-        <div className="company-modal-overlay">
-          <div className="company-modal-box">
-            <h3>{branchEditIndex !== null ? "Edit Branch Details" : "Add Branch Details"}</h3>
+        <div className="company-modal-overlay" onClick={closeModal}>
+          <div
+            className="company-modal-box company-modal-box-small"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="company-modal-head">
+              <div>
+                <h3>{editingBranchId ? "Edit Branch" : "Add Branch"}</h3>
+                <p>Capture branch contact and establishment details.</p>
+              </div>
 
-            <div className="form-group">
-              <label>Branch Name</label>
-              <input name="name" value={branch.name} onChange={handleBranchChange} className={branchErrors.name ? "input-error" : ""} />
-              {branchErrors.name && <span className="error">{branchErrors.name}</span>}
+              <button
+                type="button"
+                className="company-modal-close"
+                onClick={closeModal}
+                disabled={branchSaving}
+              >
+                <X size={20} />
+              </button>
             </div>
 
-            <div className="form-group">
-              <label>Established Date</label>
-              <AppDatePicker name="established" value={branch.established} onChange={handleBranchChange} className={branchErrors.established ? "input-error" : ""} />
-              {branchErrors.established && <span className="error">{branchErrors.established}</span>}
-            </div>
+            <div className="company-form-grid company-form-grid-single">
+              <div className="form-group">
+                <label>Branch Name</label>
+                <input
+                  name="name"
+                  value={branchForm.name}
+                  onChange={handleBranchChange}
+                  className={branchErrors.name ? "input-error" : ""}
+                />
+                {branchErrors.name && <span className="error">{branchErrors.name}</span>}
+              </div>
 
-            <div className="form-group">
-              <label>Phone Number</label>
-              <input name="phone" value={branch.phone} onChange={handleBranchChange} className={branchErrors.phone ? "input-error" : ""} />
-              {branchErrors.phone && <span className="error">{branchErrors.phone}</span>}
-            </div>
+              <div className="form-group">
+                <label>Established Date</label>
+                <AppDatePicker
+                  name="established"
+                  value={branchForm.established}
+                  onChange={handleBranchChange}
+                  className={branchErrors.established ? "input-error" : ""}
+                />
+                {branchErrors.established && (
+                  <span className="error">{branchErrors.established}</span>
+                )}
+              </div>
 
-            <div className="form-group">
-              <label>Email Address</label>
-              <input name="email" value={branch.email} onChange={handleBranchChange} className={branchErrors.email ? "input-error" : ""} />
-              {branchErrors.email && <span className="error">{branchErrors.email}</span>}
+              <div className="form-group">
+                <label>Phone Number</label>
+                <input
+                  name="phone"
+                  value={branchForm.phone}
+                  onChange={handleBranchChange}
+                  className={branchErrors.phone ? "input-error" : ""}
+                />
+                {branchErrors.phone && <span className="error">{branchErrors.phone}</span>}
+              </div>
+
+              <div className="form-group">
+                <label>Email Address</label>
+                <input
+                  name="email"
+                  value={branchForm.email}
+                  onChange={handleBranchChange}
+                  className={branchErrors.email ? "input-error" : ""}
+                />
+                {branchErrors.email && <span className="error">{branchErrors.email}</span>}
+              </div>
             </div>
 
             <div className="company-modal-btns">
-              <button className="company-cancel-btn" onClick={() => setModalType(null)} disabled={branchSaving}>
+              <button
+                className="app-button-secondary"
+                type="button"
+                onClick={closeModal}
+                disabled={branchSaving}
+              >
                 Cancel
               </button>
-              <button className="company-save-btn" onClick={handleAddBranch} disabled={branchSaving}>
+              <button
+                className="app-button-primary"
+                type="button"
+                onClick={handleSaveBranch}
+                disabled={branchSaving}
+              >
                 {branchSaving
-                  ? branchEditIndex !== null
+                  ? editingBranchId
                     ? "Updating..."
                     : "Saving..."
-                  : branchEditIndex !== null
+                  : editingBranchId
                     ? "Update"
                     : "Save"}
               </button>
@@ -695,4 +971,3 @@ const validateBranch = () => {
 }
 
 export default CompanyDetails;
-

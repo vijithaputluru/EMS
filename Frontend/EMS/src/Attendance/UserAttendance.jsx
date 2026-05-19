@@ -157,7 +157,7 @@ function UserAttendance() {
           Authorization: `Bearer ${getToken()}`,
         }
       });
-
+ 
       const data = res.data;
       const mapped = mapApiData(data);
       updateTopStats(mapped);
@@ -184,7 +184,7 @@ function UserAttendance() {
           Authorization: `Bearer ${getToken()}`,
         }
       });
-
+ 
       const data = res.data;
       const mapped = mapApiData(data);
       setAttendanceData(mapped);
@@ -406,4 +406,3 @@ function UserAttendance() {
 }
  
 export default UserAttendance;
- 

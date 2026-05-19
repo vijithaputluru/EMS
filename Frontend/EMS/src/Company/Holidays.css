@@ -1,6 +1,9 @@
 /* ================= PAGE ================= */
 
 .holiday-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   padding: 0;
   background: transparent;
   min-height: 100%;
@@ -11,108 +14,243 @@
 .holiday-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.holiday-header-copy {
+  min-width: 0;
 }
 
 .holiday-header h2 {
   margin: 0;
-  font-size: 21px;
 }
 
 .holiday-header p {
-  color: #6b7280;
-  font-size: 14px;
-  margin-top: 4px;
+  margin: 4px 0 0;
 }
 
 /* ================= ADD BUTTON ================= */
 
 .holiday-add-btn {
+  flex: 0 0 auto;
+  min-height: 40px;
   background: #00d1d1 !important;
-  color: #000 !important;
-  border: none;
-  padding: 8px 18px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: 0.2s ease;
+  color: #041c32 !important;
+  border: 1px solid #00d1d1;
+  padding: 0 16px;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 209, 209, 0.14);
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .holiday-add-btn:hover {
-  background: #00d1d1;
+  background: #12dbdb !important;
+  transform: translateY(-1px);
 }
 
 /* ================= TABLE WRAPPER ================= */
 
 .holiday-table-wrapper {
   width: 100%;
-  overflow-x: auto;
   background: #fff;
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e6ebf2;
+  border-radius: 16px;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.04);
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 /* ================= TABLE ================= */
 
-.holiday-table {
-  width: 100%;
-  min-width: 900px;
-  border-collapse: collapse;
+.holiday-table-wrapper .holiday-table {
+  width: max-content;
+  min-width: 0;
+  border-collapse: separate;
+  border-spacing: 0;
+  table-layout: fixed;
+  background: #fff;
 }
 
-.holiday-table thead {
-  background: #f3f4f6;
+.holiday-table--admin {
+  min-width: 818px;
+}
+
+.holiday-table--user {
+  width: 100% !important;
+  min-width: 620px;
+  table-layout: fixed;
+  --user-holiday-sno-width: 52px;
 }
 
 .holiday-table th,
 .holiday-table td {
-  padding: 16px 18px;
-  text-align: center;
+  padding: 11px 12px;
+  border-bottom: 1px solid #eef2f7;
   font-size: 14px;
-  white-space: nowrap;
+  line-height: 1.35;
+  vertical-align: middle;
 }
 
 .holiday-table th {
+  background: #f8fafc;
+  text-align: left;
   font-weight: 700;
-  color: #374151;
+  font-size: 13px;
+  color: #475467;
+  white-space: nowrap;
 }
 
-/* Row Divider */
-
-.holiday-table tbody tr {
-  border-bottom: 1px solid #e5e7eb;
+.holiday-table thead th:first-child {
+  border-top-left-radius: 16px;
 }
 
-.holiday-table tbody tr:last-child {
+.holiday-table thead th:last-child {
+  border-top-right-radius: 16px;
+}
+
+.holiday-table tbody tr:last-child td {
   border-bottom: none;
 }
 
 .holiday-table tbody tr:hover {
-  background: #f9fafb;
+  background: #fbfdff;
 }
 
 /* Column Widths */
 
-.holiday-table th:nth-child(1),
-.holiday-table td:nth-child(1) {
-  width: 60px;
+.holiday-width-sno {
+  width: 58px;
 }
 
-.holiday-table th:last-child,
-.holiday-table td:last-child {
-  padding-right: 24px;
+.holiday-width-name {
+  width: 294px;
+}
+
+.holiday-width-date {
+  width: 116px;
+}
+
+.holiday-width-day {
+  width: 92px;
+}
+
+.holiday-width-type {
+  width: 96px;
+}
+
+.holiday-width-actions {
+  width: 162px;
+}
+
+.holiday-table--user .holiday-width-sno {
+  width: var(--user-holiday-sno-width);
+}
+
+.holiday-table--user .holiday-width-name {
+  width: calc((100% - var(--user-holiday-sno-width)) * 0.5);
+}
+
+.holiday-table--user .holiday-width-date {
+  width: calc((100% - var(--user-holiday-sno-width)) * 0.21);
+}
+
+.holiday-table--user .holiday-width-day {
+  width: calc((100% - var(--user-holiday-sno-width)) * 0.15);
+}
+
+.holiday-table--user .holiday-width-type {
+  width: calc((100% - var(--user-holiday-sno-width)) * 0.14);
+}
+
+.holiday-col-sno {
+  width: 58px;
+  text-align: center !important;
+}
+
+.holiday-col-name {
+  width: 294px;
+  text-align: left !important;
+}
+
+.holiday-col-date {
+  width: 116px;
+}
+
+.holiday-col-day {
+  width: 92px;
+}
+
+.holiday-col-type {
+  width: 96px;
+}
+
+.holiday-col-actions {
+  width: 162px;
+  text-align: center !important;
+}
+
+.holiday-table--user .holiday-col-sno {
+  width: var(--user-holiday-sno-width);
+}
+
+.holiday-table--user .holiday-col-name {
+  width: calc((100% - var(--user-holiday-sno-width)) * 0.5);
+}
+
+.holiday-table--user .holiday-col-date {
+  width: calc((100% - var(--user-holiday-sno-width)) * 0.21);
+}
+
+.holiday-table--user .holiday-col-day {
+  width: calc((100% - var(--user-holiday-sno-width)) * 0.15);
+}
+
+.holiday-table--user .holiday-col-type {
+  width: calc((100% - var(--user-holiday-sno-width)) * 0.14);
+}
+
+.holiday-col-date,
+.holiday-col-day,
+.holiday-col-type,
+.holiday-col-actions {
+  white-space: nowrap;
+}
+
+.holiday-table--user th,
+.holiday-table--user td {
+  padding-inline: 10px;
+}
+
+.holiday-table--user .holiday-col-name,
+.holiday-table--user .holiday-col-date,
+.holiday-table--user .holiday-col-day,
+.holiday-table--user .holiday-col-type {
+  padding-right: 10px;
+  padding-left: 10px;
+}
+
+.holiday-table--user .holiday-name-cell {
+  gap: 6px;
+}
+
+.holiday-table--user .holiday-name-text {
+  width: 100%;
+  max-width: none;
 }
 
 /* ================= HOLIDAY NAME CELL ================= */
 
 .holiday-name-cell {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 8px;
-  overflow: hidden;
-  max-width: 250px;
-  white-space: nowrap;
-  vertical-align: middle;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
 }
 
 .holiday-icon {
@@ -122,45 +260,11 @@
 }
 
 .holiday-name-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  width: 100%;
-  cursor: pointer;
+  flex: 1 1 auto;
+  min-width: 0;
   color: #041c32;
   font-weight: 500;
   text-align: left;
-}
-
-/* ================= BUTTONS ================= */
-
-.edit-btn {
-  background: #3b82f6;
-  color: #fff;
-  border: none;
-  padding: 6px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  margin-right: 6px;
-  transition: 0.2s;
-}
-
-.edit-btn:hover {
-  background: #2563eb;
-}
-
-.delete-btn {
-  background: #ef4444;
-  color: #fff;
-  border: none;
-  padding: 6px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.delete-btn:hover {
-  background: #dc2626;
 }
 
 /* ================= MODAL ================= */
@@ -252,6 +356,21 @@
   color: #64748b;
 }
 
+.holiday-action-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.holiday-table .app-action-button {
+  min-width: 72px;
+  min-height: 34px;
+  padding: 0.45rem 0.7rem;
+  border-radius: 9px;
+}
+
 /* Modal Buttons */
 
 .holiday-modal-btns {
@@ -338,8 +457,21 @@
 
 @media (max-width: 767px) {
   .holiday-header {
-    gap: 14px;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .holiday-header-copy {
+    width: 100%;
+  }
+
+  .holiday-add-btn {
+    width: 100%;
+  }
+
+  .holiday-table th,
+  .holiday-table td {
+    padding: 10px 11px;
   }
 
   .holiday-modal-btns {

@@ -8,7 +8,7 @@ import { extractCollection, sortByRecency } from "../utils/collections";
 import { formatDate } from "../utils/date";
 import { getStoredToken } from "../utils/authStorage";
 
-function Holidays() {
+function UserHolidays() {
   const token = getStoredToken();
 
   const [holidays, setHolidays] = useState([]);
@@ -60,227 +60,63 @@ function Holidays() {
   /* ================= UI ================= */
 
   return (
-    <div className="holiday-page">
-
+    <div className="holiday-page holiday-page--user">
       <div className="holiday-header">
-        <div>
+        <div className="holiday-header-copy">
           <h2>Company Holidays</h2>
           <p>{holidays.length} Holidays This Year</p>
         </div>
       </div>
 
-      <div className="holiday-table-wrapper">
-
-        <table
-          className="holiday-table"
-          style={{
-            width: "100%",
-            borderCollapse: "collapse",
-            tableLayout: "fixed",
-          }}
-        >
-
+      <div className="holiday-table-wrapper app-table-scroll">
+        <table className="holiday-table holiday-table--user">
+          <colgroup>
+            <col className="holiday-width-sno" />
+            <col className="holiday-width-name" />
+            <col className="holiday-width-date" />
+            <col className="holiday-width-day" />
+            <col className="holiday-width-type" />
+          </colgroup>
           <thead>
             <tr>
-
-              <th
-                style={{
-                  width: "70px",
-                  textAlign: "center",
-                  padding: "18px 16px",
-                }}
-              >
-                S.No
-              </th>
-
-              <th
-                style={{
-                  width: "42%",
-                  textAlign: "center",
-                  padding: "18px 16px",
-                }}
-              >
-                Holiday Name
-              </th>
-
-              <th
-                style={{
-                  width: "160px",
-                  textAlign: "center",
-                  padding: "18px 16px",
-                }}
-              >
-                Date
-              </th>
-
-              <th
-                style={{
-                  width: "140px",
-                  textAlign: "center",
-                  padding: "18px 16px",
-                }}
-              >
-                Day
-              </th>
-
-              <th
-                style={{
-                  width: "140px",
-                  textAlign: "center",
-                  padding: "18px 16px",
-                }}
-              >
-                Type
-              </th>
-
+              <th className="holiday-col-sno">S.No</th>
+              <th className="holiday-col-name">Holiday Name</th>
+              <th className="holiday-col-date">Date</th>
+              <th className="holiday-col-day">Day</th>
+              <th className="holiday-col-type">Type</th>
             </tr>
           </thead>
 
           <tbody>
-
             {holidays.length === 0 ? (
-
               <tr>
-                <td
-                  colSpan="5"
-                  style={{
-                    textAlign: "center",
-                    padding: "24px",
-                  }}
-                >
+                <td colSpan="5" className="app-table-empty-cell">
                   No Holidays Found
                 </td>
               </tr>
-
             ) : (
-
               holidays.map((h, i) => (
+                <tr key={h.id}>
+                  <td className="holiday-col-sno">{i + 1}</td>
 
-                <tr
-                  key={h.id}
-                  style={{
-                    height: "90px",
-                    borderBottom: "1px solid #e5e7eb",
-                  }}
-                >
-
-                  {/* SERIAL NUMBER */}
-
-                  <td
-                    style={{
-                      textAlign: "center",
-                      verticalAlign: "middle",
-                      padding: "16px",
-                    }}
-                  >
-                    {i + 1}
-                  </td>
-
-                  {/* HOLIDAY NAME */}
-
-                  <td
-                    style={{
-                      textAlign: "center",
-                      verticalAlign: "middle",
-                      padding: "16px 24px",
-                    }}
-                  >
-                    <div
-                      title={h.name}
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: "12px",
-
-                        maxWidth: "340px",
-                        margin: "0 auto",
-
-                        verticalAlign: "middle",
-                      }}
-                    >
-
-                      <FaCalendarAlt
-                        style={{
-                          flexShrink: 0,
-                          fontSize: "16px",
-                          color: "#0f172a",
-                        }}
-                      />
-
-                      <div
-                        style={{
-                          whiteSpace: "normal",
-                          overflowWrap: "break-word",
-                          wordBreak: "break-word",
-                          lineHeight: "1.5",
-                          textAlign: "left",
-
-                          display: "-webkit-box",
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: "vertical",
-                          overflow: "hidden",
-                        }}
-                      >
-                        <TruncatedText value={h.name} />
-                      </div>
-
+                  <td className="holiday-col-name">
+                    <div className="holiday-name-cell" title={h.name}>
+                      <FaCalendarAlt className="holiday-icon" />
+                      <TruncatedText className="holiday-name-text" value={h.name} />
                     </div>
                   </td>
 
-                  {/* DATE */}
-
-                  <td
-                    style={{
-                      textAlign: "center",
-                      verticalAlign: "middle",
-                      whiteSpace: "nowrap",
-                      padding: "16px",
-                    }}
-                  >
-                    {formatDate(h.date)}
-                  </td>
-
-                  {/* DAY */}
-
-                  <td
-                    style={{
-                      textAlign: "center",
-                      verticalAlign: "middle",
-                      whiteSpace: "nowrap",
-                      padding: "16px",
-                    }}
-                  >
-                    {h.day}
-                  </td>
-
-                  {/* TYPE */}
-
-                  <td
-                    style={{
-                      textAlign: "center",
-                      verticalAlign: "middle",
-                      whiteSpace: "nowrap",
-                      padding: "16px",
-                    }}
-                  >
-                    {h.type}
-                  </td>
-
+                  <td className="holiday-col-date">{formatDate(h.date)}</td>
+                  <td className="holiday-col-day">{h.day}</td>
+                  <td className="holiday-col-type">{h.type}</td>
                 </tr>
-
               ))
-
             )}
-
           </tbody>
-
         </table>
-
       </div>
-
     </div>
   );
 }
 
-export default Holidays;
+export default UserHolidays;
