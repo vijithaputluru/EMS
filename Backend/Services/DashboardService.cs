@@ -49,7 +49,7 @@ namespace EmployeeManagementSystem.Services
 
             var activityLogs = await _context.ActivityLogs
                 .Where(a => a.CreatedAt >= activityExpiry)
-                .OrderBy(a => a.CreatedAt)
+                .OrderByDescending(a => a.CreatedAt)
                 .Take(5)
                 .Select(a => new
                 {

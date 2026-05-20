@@ -70,7 +70,7 @@ namespace EmployeeManagementSystem.Services
 
                     .Where(n => n.Employee_Id == employee.Employee_Id) // ✅ removed unread filter
 
-                    .OrderBy(n => n.CreatedAt)
+                    .OrderByDescending(n => n.CreatedAt)
 
                     .ToListAsync();
 
@@ -130,7 +130,7 @@ namespace EmployeeManagementSystem.Services
 
                     .Where(n => n.Employee_Id == employeeId) // ✅ removed unread filter
 
-                    .OrderBy(n => n.CreatedAt)
+                    .OrderByDescending(n => n.CreatedAt)
 
                     .ToListAsync();
 

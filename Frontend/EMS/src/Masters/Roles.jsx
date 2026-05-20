@@ -47,7 +47,7 @@ function Roles() {
         extractCollection(res.data).map((role) => ({
           roleId: role.id ?? role.roleId ?? role.role_Id,
           roleName: role.name ?? role.roleName ?? "No Name",
-          status: normalizeRoleStatus(role.status ?? role.Status ?? "Active"),
+          status: role.isActive ?? role.IsActive ? "Active" : "Inactive",
           users: role.usersCount ?? role.users ?? 0,
         })),
         (role) => role.roleId
@@ -69,7 +69,11 @@ function Roles() {
     let nextValue = value;
 
     if (name === "roleName") {
-      nextValue = sanitizeRoleNameInput(value, 30);
+      // allow only letters and single space
+      nextValue = value
+        .replace(/[^A-Za-z ]/g, "") // remove special chars & numbers
+        .replace(/\s+/g, " ") // only one space
+        .replace(/^ /, ""); // no starting space
     }
 
     if (name === "status") {
@@ -126,7 +130,7 @@ function Roles() {
 
     const payload = {
       name: rolesForm.roleName.trim(),
-      status: normalizeRoleStatus(rolesForm.status),
+      isActive: normalizeRoleStatus(rolesForm.status) === "Active",
     };
 
     setSaving(true);
@@ -280,9 +284,8 @@ function Roles() {
 
                     <button
                       type="button"
-                      className={`roles-action-btn app-icon-action-button app-icon-action-button--delete ${
-                        r.users > 0 ? "is-disabled" : ""
-                      }`}
+                      className={`roles-action-btn app-icon-action-button app-icon-action-button--delete ${r.users > 0 ? "is-disabled" : ""
+                        }`}
                       aria-label={`Delete ${r.roleName}`}
                       onClick={() => {
                         if (r.users > 0) {

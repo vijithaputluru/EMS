@@ -100,6 +100,151 @@ function OfferLetters() {
       const numericValue = value.replace(/\D/g, "");
       const annualCTC = Number(numericValue);
 
+      const handleChange = async (e) => {
+        const { name, value } = e.target;
+
+        // remove error while typing
+        setErrors((prev) => ({
+          ...prev,
+          [name]: "",
+        }));
+
+        /* ================= CTC AUTO CALCULATION ================= */
+        if (name === "ctc_Annual") {
+
+          // existing ctc code here
+
+          return;
+        }
+
+        /* ================= FORMAT SALARY INPUTS ================= */
+        if (
+          [
+            "basic",
+            "hra",
+            "conveyance",
+            "medicalAllowance",
+            "otherAllowance",
+          ].includes(name)
+        ) {
+
+          // existing salary code here
+
+          return;
+        }
+
+        /* ================= ADD VALIDATIONS HERE ================= */
+
+        /* ================= CANDIDATE NAME ================= */
+        if (name === "candidate_Name") {
+
+          let filteredValue = value.replace(/^\s+/g, "");
+
+          filteredValue = filteredValue.replace(
+            /[^A-Za-z0-9 ]/g,
+            ""
+          );
+
+          const numbers =
+            filteredValue.match(/\d/g);
+
+          if (numbers && numbers.length > 1) {
+            return;
+          }
+
+          filteredValue = filteredValue.replace(
+            /\s{2,}/g,
+            " "
+          );
+
+          if (filteredValue.length > 50) {
+            return;
+          }
+
+          setFormData((prev) => ({
+            ...prev,
+            [name]: filteredValue,
+          }));
+
+          return;
+        }
+
+        /* ================= EMAIL ================= */
+        if (name === "email") {
+
+          let filteredValue =
+            value.replace(/\s/g, "");
+
+          if (filteredValue.length > 100) {
+            return;
+          }
+
+          setFormData((prev) => ({
+            ...prev,
+            [name]: filteredValue,
+          }));
+
+          return;
+        }
+
+        /* ================= ADDRESS ================= */
+        if (name === "address") {
+
+          let filteredValue =
+            value.replace(/^\s+/g, "");
+
+          filteredValue = filteredValue.replace(
+            /\s{2,}/g,
+            " "
+          );
+
+          if (filteredValue.length > 250) {
+            return;
+          }
+
+          setFormData((prev) => ({
+            ...prev,
+            [name]: filteredValue,
+          }));
+
+          return;
+        }
+
+        /* ================= POSITION ================= */
+        if (name === "position") {
+
+          let filteredValue =
+            value.replace(/^\s+/g, "");
+
+          filteredValue = filteredValue.replace(
+            /[^A-Za-z ]/g,
+            ""
+          );
+
+          filteredValue = filteredValue.replace(
+            /\s{2,}/g,
+            " "
+          );
+
+          if (filteredValue.length > 50) {
+            return;
+          }
+
+          setFormData((prev) => ({
+            ...prev,
+            [name]: filteredValue,
+          }));
+
+          return;
+        }
+
+        /* ================= NORMAL INPUTS ================= */
+        setFormData((prev) => ({
+          ...prev,
+          [name]: value,
+        }));
+      };
+
       setFormData((prev) => ({
         ...prev,
         ctc_Annual: new Intl.NumberFormat("en-IN").format(annualCTC),
@@ -512,12 +657,42 @@ function OfferLetters() {
         autoClose={2500}
       />
 
-      <div className="offer-header">
-        <h2>
-          <FaFileAlt /> Offer Letter Generation
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "flex-start",
+          marginBottom: "8px",
+          paddingBottom: "0px",
+          marginTop: "-15px",
+        }}
+      >
+        <h2
+          style={{
+            margin: 0,
+            fontSize: "26px",
+            fontWeight: "650",
+            // color: "#141e35",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <FaFileAlt />
+          Offer Letter Generation
         </h2>
 
-        <p>Generate offer letters for new hires</p>
+        <p
+          style={{
+            marginTop: "0px",
+            marginLeft: "42px",
+            fontSize: "15px",
+            color: "#64748b",
+            fontWeight: "500",
+          }}
+        >
+          Generate offer letters for new hires
+        </p>
       </div>
 
       <div className="offer-card">
@@ -540,17 +715,16 @@ function OfferLetters() {
               placeholder="Enter candidate name"
             />
 
-            {errors.candidate_Name && (
-              <p
-                style={{
-                  color: "red",
-                  fontSize: "12px",
-                  marginTop: "3px",
-                }}
-              >
-                {errors.candidate_Name}
-              </p>
-            )}
+            <p
+              style={{
+                color: "red",
+                fontSize: "12px",
+                marginTop: "3px",
+                minHeight: "16px",
+              }}
+            >
+              {errors.candidate_Name || ""}
+            </p>
           </div>
 
           {/* Email */}
@@ -568,11 +742,16 @@ function OfferLetters() {
               placeholder="Enter email"
             />
 
-            {errors.email && (
-              <p className="error-text">
-                {errors.email}
-              </p>
-            )}
+            <p
+              style={{
+                color: "red",
+                fontSize: "12px",
+                marginTop: "3px",
+                minHeight: "16px",
+              }}
+            >
+              {errors.email || ""}
+            </p>
           </div>
 
           {/* Address */}
@@ -591,8 +770,15 @@ function OfferLetters() {
             />
 
             {errors.address && (
-              <p className="error-text">
-                {errors.address}
+              <p
+                style={{
+                  color: "red",
+                  fontSize: "12px",
+                  marginTop: "3px",
+                  minHeight: "16px",
+                }}
+              >
+                {errors.address || ""}
               </p>
             )}
           </div>
@@ -613,8 +799,15 @@ function OfferLetters() {
             />
 
             {errors.position && (
-              <p className="error-text">
-                {errors.position}
+              <p
+                style={{
+                  color: "red",
+                  fontSize: "12px",
+                  marginTop: "3px",
+                  minHeight: "16px",
+                }}
+              >
+                {errors.position || ""}
               </p>
             )}
           </div>
@@ -646,8 +839,15 @@ function OfferLetters() {
             />
 
             {errors.ctc_Annual && (
-              <p className="error-text">
-                {errors.ctc_Annual}
+              <p
+                style={{
+                  color: "red",
+                  fontSize: "12px",
+                  marginTop: "3px",
+                  minHeight: "16px",
+                }}
+              >
+                {errors.ctc_Annual || ""}
               </p>
             )}
           </div>
@@ -665,8 +865,15 @@ function OfferLetters() {
             />
 
             {errors.joining_Date && (
-              <p className="error-text">
-                {errors.joining_Date}
+              <p
+                style={{
+                  color: "red",
+                  fontSize: "12px",
+                  marginTop: "3px",
+                  minHeight: "16px",
+                }}
+              >
+                {errors.joining_Date || ""}
               </p>
             )}
           </div>
@@ -729,8 +936,15 @@ function OfferLetters() {
                   />
 
                   {errors.basic && (
-                    <p className="error-text">
-                      {errors.basic}
+                    <p
+                      style={{
+                        color: "red",
+                        fontSize: "12px",
+                        marginTop: "3px",
+                        minHeight: "16px",
+                      }}
+                    >
+                      {errors.basic || ""}
                     </p>
                   )}
                 </div>
@@ -754,8 +968,15 @@ function OfferLetters() {
                   />
 
                   {errors.hra && (
-                    <p className="error-text">
-                      {errors.hra}
+                    <p
+                      style={{
+                        color: "red",
+                        fontSize: "12px",
+                        marginTop: "3px",
+                        minHeight: "16px",
+                      }}
+                    >
+                      {errors.hra || ""}
                     </p>
                   )}
                 </div>
@@ -779,8 +1000,15 @@ function OfferLetters() {
                   />
 
                   {errors.conveyance && (
-                    <p className="error-text">
-                      {errors.conveyance}
+                    <p
+                      style={{
+                        color: "red",
+                        fontSize: "12px",
+                        marginTop: "3px",
+                        minHeight: "16px",
+                      }}
+                    >
+                      {errors.conveyance || ""}
                     </p>
                   )}
                 </div>
@@ -804,8 +1032,15 @@ function OfferLetters() {
                   />
 
                   {errors.medicalAllowance && (
-                    <p className="error-text">
-                      {errors.medicalAllowance}
+                    <p
+                      style={{
+                        color: "red",
+                        fontSize: "12px",
+                        marginTop: "3px",
+                        minHeight: "16px",
+                      }}
+                    >
+                      {errors.medicalAllowance || ""}
                     </p>
                   )}
                 </div>
@@ -829,8 +1064,15 @@ function OfferLetters() {
                   />
 
                   {errors.otherAllowance && (
-                    <p className="error-text">
-                      {errors.otherAllowance}
+                    <p
+                      style={{
+                        color: "red",
+                        fontSize: "12px",
+                        marginTop: "3px",
+                        minHeight: "16px",
+                      }}
+                    >
+                      {errors.otherAllowance || ""}
                     </p>
                   )}
                 </div>

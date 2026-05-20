@@ -196,7 +196,7 @@ function EmployeeList() {
               .replace(/[^A-Za-z\s]/g, "")
               .slice(0, 40)
             : name === "email"
-              ? value.slice(0, 40)
+              ? value.toLowerCase().slice(0, 40)
               : value,
     }));
 
@@ -622,107 +622,125 @@ function EmployeeList() {
 
       <div className="emp-table-wrapper">
 
-  <div className="emp-scroll-hint">
-    ← Scroll horizontally to view more employee details →
-  </div>
+        <div className="emp-scroll-hint">
+          ← Scroll horizontally to view more employee details →
+        </div>
 
-  <div className="emp-table-container">
-        <table className="emp-table">
-          <colgroup>
-            <col style={{ width: "270px" }} />  {/* Employee Name */}
-            <col style={{ width: "130px" }} />  {/* Employee ID */}
-            <col style={{ width: "240px" }} />  {/* Email */}
-            <col style={{ width: "150px" }} />  {/* Department */}
-            <col style={{ width: "130px" }} />  {/* CTC */}
-            <col style={{ width: "150px" }} />  {/* Role */}
-            <col style={{ width: "220px" }} />  {/* Status */}
-            <col style={{ width: "110px" }} />  {/* Joined */}
-            <col style={{ width: "140px" }} />  {/* Action */}
-          </colgroup>
-          <thead>
-            <tr>
-              <th>Employee Name</th>
-              <th>Employee ID</th>
-              <th style={{ textAlign: "center" }}>Email</th>
-              <th style={{ textAlign: "center" }}>Department</th>
-              <th>CTC</th>
-              <th style={{ textAlign: "center" }}>Role</th>
-              <th>Status</th>
-              <th>Joined</th>
-              <th className="emp-action-col">Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredEmployees.length === 0 ? (
+        <div className="emp-table-container">
+          <table className="emp-table">
+            <colgroup>
+              <col style={{ width: "270px" }} />  {/* Employee Name */}
+              <col style={{ width: "130px" }} />  {/* Employee ID */}
+              <col style={{ width: "240px" }} />  {/* Email */}
+              <col style={{ width: "150px" }} />  {/* Department */}
+              <col style={{ width: "130px" }} />  {/* CTC */}
+              <col style={{ width: "150px" }} />  {/* Role */}
+              <col style={{ width: "220px" }} />  {/* Status */}
+              <col style={{ width: "110px" }} />  {/* Joined */}
+              <col style={{ width: "155px" }} />  {/* Action */}
+            </colgroup>
+            <thead>
               <tr>
-                <td colSpan="9" className="emp-empty-state app-table-empty-cell">
-                  {emptyStateMessage}
-                </td>
+                <th>Employee Name</th>
+                <th>Employee ID</th>
+                <th style={{ textAlign: "center" }}>Email</th>
+                <th style={{ textAlign: "center" }}>Department</th>
+                <th>CTC</th>
+                <th style={{ textAlign: "center" }}>Role</th>
+                <th>Status</th>
+                <th>Joined</th>
+                <th className="emp-action-col">Action</th>
               </tr>
-            ) : (
-              filteredEmployees.map((emp) => (
-                <tr
-                  key={emp.id}
-                  className="emp-row-click"
-                  onClick={() => navigate(`/add-employee/${emp.id}`)}
-                >
-                  <td className="emp-name-col">
-                    <TruncatedText
-                      as="div"
-                      className="emp-name"
-                      value={emp.name}
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        navigate(`/add-employee/${emp.id}`);
-                      }}
-                    >
-                      {emp.name}
-                    </TruncatedText>
-                  </td>
-
-                  <td className="emp-id-col">
-                    <TruncatedText as="div" className="emp-id-code" value={emp.id} />
-                  </td>
-
-                  <td style={{ textAlign: "center" }}>
-                    <TruncatedText className="emp-cell-truncate" value={emp.email} />
-                  </td>
-
-                  <td style={{ textAlign: "center" }}>{emp.dept}</td>
-                  <td>{emp.ctc}</td>
-                  <td style={{ textAlign: "center" }}>{emp.role}</td>
-                  <td>{emp.status}</td>
-                  <td>{emp.joined}</td>
-
-                  <td className="emp-action-col">
-                    <div className="action-btns">
-                      <button
-                        className="edit-btn"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          openEditEmployeeModal(emp);
-                        }}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="delete-btn"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setEmployeeToDelete(emp.id);
-                          setShowDeletePopup(true);
-                        }}
-                      >
-                        Delete
-                      </button>
-                    </div>
+            </thead>
+            <tbody>
+              {filteredEmployees.length === 0 ? (
+                <tr>
+                  <td colSpan="9" className="emp-empty-state app-table-empty-cell">
+                    {emptyStateMessage}
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ) : (
+                filteredEmployees.map((emp) => (
+                  <tr
+                    key={emp.id}
+                    className="emp-row-click"
+                    onClick={() => navigate(`/add-employee/${emp.id}`)}
+                  >
+                    <td className="emp-name-col">
+                      <TruncatedText
+                        as="div"
+                        className="emp-name"
+                        value={emp.name}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          navigate(`/add-employee/${emp.id}`);
+                        }}
+                      >
+                        {emp.name}
+                      </TruncatedText>
+                    </td>
+
+                    <td className="emp-id-col">
+                      <TruncatedText as="div" className="emp-id-code" value={emp.id} />
+                    </td>
+
+                    <td style={{ textAlign: "center" }}>
+                      <TruncatedText className="emp-cell-truncate" value={emp.email} />
+                    </td>
+
+                    <td style={{ textAlign: "center" }}>{emp.dept}</td>
+                    <td>{emp.ctc}</td>
+                    <td style={{ textAlign: "center" }}>{emp.role}</td>
+                    <td>{emp.status}</td>
+                    <td>{emp.joined}</td>
+
+                    <td className="emp-action-col">
+                      <div
+                        className="action-btns"
+                        style={{
+                          display: "flex",
+                          gap: "10px",
+                          alignItems: "center",
+                        }}
+                      >
+                        <button
+                          className="edit-btn"
+                          style={{
+                            width: "59px",
+                            minWidth: "59px",
+                            height: "40px",
+                          }}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openEditEmployeeModal(emp);
+                          }}
+                        >
+                          Edit
+                        </button>
+
+                        <button
+                          className="delete-btn"
+                          style={{
+                            width: "59px",
+                            minWidth: "59px",
+                            height: "40px",
+                          }}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setEmployeeToDelete(emp.id);
+                            setShowDeletePopup(true);
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {empShowModal && (

@@ -204,48 +204,48 @@ function Projects() {
     const trimmedValue = value.trim();
 
     switch (fieldName) {
-    case "name": {
-  if (!trimmedValue) {
-    return "Project Name is required";
-  }
+      case "name": {
+        if (!trimmedValue) {
+          return "Project Name is required";
+        }
 
-  if (trimmedValue.length < 3) {
-    return "Project Name must be at least 3 characters";
-  }
+        if (trimmedValue.length < 3) {
+          return "Project Name must be at least 3 characters";
+        }
 
-  if (trimmedValue.length > 20) {
-    return "Project Name cannot exceed 20 characters";
-  }
+        if (trimmedValue.length > 20) {
+          return "Project Name cannot exceed 20 characters";
+        }
 
-  if (!/^[A-Za-z\s]+$/.test(trimmedValue)) {
-    return "Only alphabets are allowed";
-  }
+        if (!/^[A-Za-z\s]+$/.test(trimmedValue)) {
+          return "Only alphabets are allowed";
+        }
 
-  return "";
-}
+        return "";
+      }
 
-     case "id": {
-  if (!trimmedValue) {
-    return "Project ID is required";
-  }
+      case "id": {
+        if (!trimmedValue) {
+          return "Project ID is required";
+        }
 
-  if (!/^[A-Z]{3}[0-9]{3}$/.test(trimmedValue)) {
-    return "Project ID must be 3 alphabets and 3 numbers (Example: PRJ001)";
-  }
+        if (!/^[A-Z]{3}[0-9]{3}$/.test(trimmedValue)) {
+          return "Project ID must be 3 alphabets and 3 numbers (Example: PRJ001)";
+        }
 
-  const idExists = projectsList.some(
-    (project) =>
-      String(project.id).toLowerCase() === trimmedValue.toLowerCase() &&
-      String(project.id).toLowerCase() !==
-        String(draftForm.originalId).toLowerCase()
-  );
+        const idExists = projectsList.some(
+          (project) =>
+            String(project.id).toLowerCase() === trimmedValue.toLowerCase() &&
+            String(project.id).toLowerCase() !==
+            String(draftForm.originalId).toLowerCase()
+        );
 
-  if (idExists) {
-    return "Project ID already exists";
-  }
+        if (idExists) {
+          return "Project ID already exists";
+        }
 
-  return "";
-}
+        return "";
+      }
 
       case "client":
         return trimmedValue ? "" : "Client is required";
@@ -554,11 +554,22 @@ function Projects() {
                   </td>
 
                   <td>
-                    <div className="projects-action-cell">
+                    <div
+                      className="projects-action-cell"
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        alignItems: "center",
+                      }}
+                    >
                       <button
                         className="projects-table-edit-btn app-action-button app-action-button--edit"
                         type="button"
-                        aria-label={`Edit ${project.name || "project"}`}
+                        style={{
+                          width: "75px",
+                          minWidth: "75px",
+                          height: "40px",
+                        }}
                         onClick={() => handleProjectsEdit(project)}
                       >
                         Edit
@@ -567,7 +578,11 @@ function Projects() {
                       <button
                         className="projects-delete-btn app-action-button app-action-button--delete"
                         type="button"
-                        aria-label={`Delete ${project.name || "project"}`}
+                        style={{
+                          width: "75px",
+                          minWidth: "75px",
+                          height: "40px",
+                        }}
                         onClick={() => {
                           setProjectToDelete(project);
                           setIsClosingDeletePopup(false);

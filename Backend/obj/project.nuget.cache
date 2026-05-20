@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "oJvOCYScEgc=",
+  "dgSpecHash": "QuHzkp8X8EY=",
   "success": true,
-  "projectFilePath": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS New\\Backend\\EmployeeManagementSystem.csproj",
+  "projectFilePath": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS Pirnav\\Backend\\EmployeeManagementSystem.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\ADMIN\\.nuget\\packages\\azure.core\\1.38.0\\azure.core.1.38.0.nupkg.sha512",
     "C:\\Users\\ADMIN\\.nuget\\packages\\azure.identity\\1.11.4\\azure.identity.1.11.4.nupkg.sha512",
@@ -182,9 +182,9 @@
       "code": "NU1902",
       "level": "Warning",
       "message": "Package 'MailKit' 4.15.0 has a known moderate severity vulnerability, https://github.com/advisories/GHSA-9j88-vvj5-vhgr",
-      "projectPath": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS New\\Backend\\EmployeeManagementSystem.csproj",
+      "projectPath": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS Pirnav\\Backend\\EmployeeManagementSystem.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS New\\Backend\\EmployeeManagementSystem.csproj",
+      "filePath": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS Pirnav\\Backend\\EmployeeManagementSystem.csproj",
       "libraryId": "MailKit",
       "targetGraphs": [
         "net8.0"
@@ -194,9 +194,9 @@
       "code": "NU1701",
       "level": "Warning",
       "message": "Package 'Microsoft.Office.Interop.Word 12.0.0' was restored using '.NETFramework,Version=v4.6.1, .NETFramework,Version=v4.6.2, .NETFramework,Version=v4.7, .NETFramework,Version=v4.7.1, .NETFramework,Version=v4.7.2, .NETFramework,Version=v4.8, .NETFramework,Version=v4.8.1' instead of the project target framework 'net8.0'. This package may not be fully compatible with your project.",
-      "projectPath": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS New\\Backend\\EmployeeManagementSystem.csproj",
+      "projectPath": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS Pirnav\\Backend\\EmployeeManagementSystem.csproj",
       "warningLevel": 1,
-      "filePath": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS New\\Backend\\EmployeeManagementSystem.csproj",
+      "filePath": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS Pirnav\\Backend\\EmployeeManagementSystem.csproj",
       "libraryId": "Microsoft.Office.Interop.Word",
       "targetGraphs": [
         "net8.0"

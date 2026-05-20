@@ -84,7 +84,7 @@ namespace EmployeeManagementSystem.Services
 
             var activityData = await _context.UserNotifications
                 .Where(n => n.Employee_Id == employeeId)
-                .OrderBy(n => n.CreatedAt)
+                .OrderByDescending(n => n.CreatedAt)
                 .Take(5)
                 .ToListAsync();
 

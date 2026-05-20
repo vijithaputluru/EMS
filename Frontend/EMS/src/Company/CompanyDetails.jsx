@@ -176,231 +176,231 @@ function CompanyDetails() {
     setShowBranchPopup(false);
   };
 
-const handleCompanyChange = (event) => {
-  const { name, value } = event.target;
-  let nextValue = value;
+  const handleCompanyChange = (event) => {
+    const { name, value } = event.target;
+    let nextValue = value;
 
-  if (name === "name") {
-    // Alphabets and spaces only - max 40 chars
-    nextValue = value
-      .replace(/[^A-Za-z\s]/g, "")
-      .replace(/\s{2,}/g, " ")
-      .replace(/^\s+/g, "")
-      .slice(0, 40);
-  } 
-  else if (name === "phone") {
-    // Exactly 10 digits only
-    nextValue = value.replace(/\D/g, "").slice(0, 10);
-  } 
-  else if (name === "email") {
-    // Max 35 chars
-    nextValue = value.trimStart().slice(0, 35);
-  } 
-  else if (name === "gst") {
-    // GSTIN2345666835 format
-    nextValue = value
-      .replace(/[^A-Za-z0-9]/g, "")
-      .toUpperCase()
-      .slice(0, 15);
-  } 
-  else if (name === "tin") {
-    // 10 digits only
-    nextValue = value.replace(/\D/g, "").slice(0, 10);
-  } 
-  else if (name === "pan") {
-    // CVFGH4567J format
-    nextValue = value
-      .replace(/[^A-Za-z0-9]/g, "")
-      .toUpperCase()
-      .slice(0, 10);
-  }
+    if (name === "name") {
+      // Alphabets and spaces only - max 40 chars
+      nextValue = value
+        .replace(/[^A-Za-z\s]/g, "")
+        .replace(/\s{2,}/g, " ")
+        .replace(/^\s+/g, "")
+        .slice(0, 40);
+    }
+    else if (name === "phone") {
+      // Exactly 10 digits only
+      nextValue = value.replace(/\D/g, "").slice(0, 10);
+    }
+    else if (name === "email") {
+      // Max 35 chars
+      nextValue = value.trimStart().slice(0, 35);
+    }
+    else if (name === "gst") {
+      // GSTIN2345666835 format
+      nextValue = value
+        .replace(/[^A-Za-z0-9]/g, "")
+        .toUpperCase()
+        .slice(0, 15);
+    }
+    else if (name === "tin") {
+      // 10 digits only
+      nextValue = value.replace(/\D/g, "").slice(0, 10);
+    }
+    else if (name === "pan") {
+      // CVFGH4567J format
+      nextValue = value
+        .replace(/[^A-Za-z0-9]/g, "")
+        .toUpperCase()
+        .slice(0, 10);
+    }
 
-  setCompany((prev) => ({
-    ...prev,
-    [name]: nextValue,
-  }));
+    setCompany((prev) => ({
+      ...prev,
+      [name]: nextValue,
+    }));
 
-  setCompanyErrors((prev) => ({
-    ...prev,
-    [name]: "",
-  }));
-};
+    setCompanyErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
+  };
 
   const handleBranchChange = (event) => {
-  const { name, value } = event.target;
-  let nextValue = value;
+    const { name, value } = event.target;
+    let nextValue = value;
 
-  if (name === "name") {
-    // only alphabets + spaces, max 30 chars
-    nextValue = value
-      .replace(/[^A-Za-z ]/g, "")
-      .replace(/\s{2,}/g, " ")
-      .slice(0, 30);
-  } else if (name === "phone") {
-    // only 10 digits
-    nextValue = value.replace(/\D/g, "").slice(0, 10);
-  } else if (name === "email") {
-    // max 35 chars
-    nextValue = value.slice(0, 35).trimStart();
-  }
+    if (name === "name") {
+      // only alphabets + spaces, max 30 chars
+      nextValue = value
+        .replace(/[^A-Za-z ]/g, "")
+        .replace(/\s{2,}/g, " ")
+        .slice(0, 30);
+    } else if (name === "phone") {
+      // only 10 digits
+      nextValue = value.replace(/\D/g, "").slice(0, 10);
+    } else if (name === "email") {
+      // max 35 chars
+      nextValue = value.slice(0, 35).trimStart();
+    }
 
-  setBranchForm((prev) => ({
-    ...prev,
-    [name]: nextValue,
-  }));
+    setBranchForm((prev) => ({
+      ...prev,
+      [name]: nextValue,
+    }));
 
-  setBranchErrors((prev) => ({
-    ...prev,
-    [name]: "",
-  }));
-};
+    setBranchErrors((prev) => ({
+      ...prev,
+      [name]: "",
+    }));
+  };
 
-const validateCompany = () => {
-  const nextErrors = {};
-  const companyName = normalizeWhitespace(company.name);
+  const validateCompany = () => {
+    const nextErrors = {};
+    const companyName = normalizeWhitespace(company.name);
 
-  // Company Name
-  if (!companyName) {
-    nextErrors.name = "Company Name is required";
-  } 
-  else if (companyName.length > 40) {
-    nextErrors.name =
-      "Company Name cannot exceed 40 characters";
-  } 
-  else if (!/^[A-Za-z\s]+$/.test(companyName)) {
-    nextErrors.name =
-      "Company Name must contain only alphabets";
-  }
+    // Company Name
+    if (!companyName) {
+      nextErrors.name = "Company Name is required";
+    }
+    else if (companyName.length > 40) {
+      nextErrors.name =
+        "Company Name cannot exceed 40 characters";
+    }
+    else if (!/^[A-Za-z\s]+$/.test(companyName)) {
+      nextErrors.name =
+        "Company Name must contain only alphabets";
+    }
 
-  // Established Date
-  if (!company.established) {
-    nextErrors.established =
-      "Established Date is required";
-  } 
-  else if (isFutureDate(company.established)) {
-    nextErrors.established =
-      "Future dates are not allowed";
-  }
+    // Established Date
+    if (!company.established) {
+      nextErrors.established =
+        "Established Date is required";
+    }
+    else if (isFutureDate(company.established)) {
+      nextErrors.established =
+        "Future dates are not allowed";
+    }
 
-  // Phone Number
-  if (!company.phone) {
-    nextErrors.phone = "Phone Number is required";
-  } 
-  else if (!/^\d{10}$/.test(company.phone)) {
-    nextErrors.phone =
-      "Phone Number must contain exactly 10 digits";
-  }
+    // Phone Number
+    if (!company.phone) {
+      nextErrors.phone = "Phone Number is required";
+    }
+    else if (!/^\d{10}$/.test(company.phone)) {
+      nextErrors.phone =
+        "Phone Number must contain exactly 10 digits";
+    }
 
-  // Email
-  if (!company.email) {
-    nextErrors.email = "Email Address is required";
-  } 
-  else if (company.email.length > 35) {
-    nextErrors.email =
-      "Email Address cannot exceed 35 characters";
-  } 
-  else if (
-    !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.com$/.test(
-      company.email
-    )
-  ) {
-    nextErrors.email =
-      "Email must end with @domain.com";
-  }
+    // Email
+    if (!company.email) {
+      nextErrors.email = "Email Address is required";
+    }
+    else if (company.email.length > 35) {
+      nextErrors.email =
+        "Email Address cannot exceed 35 characters";
+    }
+    else if (
+      !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.com$/.test(
+        company.email
+      )
+    ) {
+      nextErrors.email =
+        "Email must end with @domain.com";
+    }
 
-  // GST Number Format -> GSTIN2345666835
-  if (!company.gst) {
-    nextErrors.gst = "GST Number is required";
-  } 
-  else if (!/^GSTIN\d{10}$/.test(company.gst)) {
-    nextErrors.gst =
-      "GST Number format must be GSTIN2345666835";
-  }
+    // GST Number Format -> GSTIN2345666835
+    if (!company.gst) {
+      nextErrors.gst = "GST Number is required";
+    }
+    else if (!/^GSTIN\d{10}$/.test(company.gst)) {
+      nextErrors.gst =
+        "GST Number format must be GSTIN2345666835";
+    }
 
-  // TIN Number -> 10 digits
-  if (!company.tin) {
-    nextErrors.tin = "TIN Number is required";
-  } 
-  else if (!/^\d{10}$/.test(company.tin)) {
-    nextErrors.tin =
-      "TIN Number must contain exactly 10 digits";
-  }
+    // TIN Number -> 10 digits
+    if (!company.tin) {
+      nextErrors.tin = "TIN Number is required";
+    }
+    else if (!/^\d{10}$/.test(company.tin)) {
+      nextErrors.tin =
+        "TIN Number must contain exactly 10 digits";
+    }
 
-  // PAN Number -> CVFGH4567J
-  if (!company.pan) {
-    nextErrors.pan = "PAN Number is required";
-  } 
-  else if (
-    !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(company.pan)
-  ) {
-    nextErrors.pan =
-      "PAN Number format must be like CVFGH4567J";
-  }
+    // PAN Number -> CVFGH4567J
+    if (!company.pan) {
+      nextErrors.pan = "PAN Number is required";
+    }
+    else if (
+      !/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(company.pan)
+    ) {
+      nextErrors.pan =
+        "PAN Number format must be like CVFGH4567J";
+    }
 
-  setCompanyErrors(nextErrors);
+    setCompanyErrors(nextErrors);
 
-  setCompany((prev) => ({
-    ...prev,
-    name: companyName,
-    email: company.email.trim(),
-  }));
+    setCompany((prev) => ({
+      ...prev,
+      name: companyName,
+      email: company.email.trim(),
+    }));
 
-  return Object.keys(nextErrors).length === 0;
-};
+    return Object.keys(nextErrors).length === 0;
+  };
 
-const validateBranch = () => {
-  const nextErrors = {};
-  const branchName = normalizeWhitespace(branchForm.name);
+  const validateBranch = () => {
+    const nextErrors = {};
+    const branchName = normalizeWhitespace(branchForm.name);
 
-  // Branch Name Validation
-  if (!branchName) {
-    nextErrors.name = "Branch Name is required";
-  } else if (branchName.length > 30) {
-    nextErrors.name = "Branch Name must not exceed 30 characters";
-  } else if (!/^[A-Za-z ]+$/.test(branchName)) {
-    nextErrors.name =
-      "Branch Name must contain only alphabets";
-  }
+    // Branch Name Validation
+    if (!branchName) {
+      nextErrors.name = "Branch Name is required";
+    } else if (branchName.length > 30) {
+      nextErrors.name = "Branch Name must not exceed 30 characters";
+    } else if (!/^[A-Za-z ]+$/.test(branchName)) {
+      nextErrors.name =
+        "Branch Name must contain only alphabets";
+    }
 
-  // Established Date Validation
-  if (!branchForm.established) {
-    nextErrors.established = "Established Date is required";
-  } else if (isFutureDate(branchForm.established)) {
-    nextErrors.established = "Future dates are not allowed";
-  }
+    // Established Date Validation
+    if (!branchForm.established) {
+      nextErrors.established = "Established Date is required";
+    } else if (isFutureDate(branchForm.established)) {
+      nextErrors.established = "Future dates are not allowed";
+    }
 
-  // Phone Validation
-  if (!branchForm.phone) {
-    nextErrors.phone = "Phone Number is required";
-  } else if (!/^\d{10}$/.test(branchForm.phone)) {
-    nextErrors.phone =
-      "Phone Number must contain exactly 10 digits";
-  }
+    // Phone Validation
+    if (!branchForm.phone) {
+      nextErrors.phone = "Phone Number is required";
+    } else if (!/^\d{10}$/.test(branchForm.phone)) {
+      nextErrors.phone =
+        "Phone Number must contain exactly 10 digits";
+    }
 
-  // Email Validation
-  if (!branchForm.email) {
-    nextErrors.email = "Email Address is required";
-  } else if (branchForm.email.length > 35) {
-    nextErrors.email =
-      "Email Address must not exceed 35 characters";
-  } else if (
-    !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.com$/.test(
-      branchForm.email
-    )
-  ) {
-    nextErrors.email =
-      "Email must end with @domain.com";
-  }
+    // Email Validation
+    if (!branchForm.email) {
+      nextErrors.email = "Email Address is required";
+    } else if (branchForm.email.length > 35) {
+      nextErrors.email =
+        "Email Address must not exceed 35 characters";
+    } else if (
+      !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.com$/.test(
+        branchForm.email
+      )
+    ) {
+      nextErrors.email =
+        "Email must end with @domain.com";
+    }
 
-  setBranchErrors(nextErrors);
+    setBranchErrors(nextErrors);
 
-  setBranchForm((prev) => ({
-    ...prev,
-    name: branchName,
-  }));
+    setBranchForm((prev) => ({
+      ...prev,
+      name: branchName,
+    }));
 
-  return Object.keys(nextErrors).length === 0;
-};
+    return Object.keys(nextErrors).length === 0;
+  };
 
   const updateCompany = async () => {
     if (!validateCompany()) {
@@ -563,10 +563,10 @@ const validateBranch = () => {
           <thead>
             <tr>
               <th>Branch Name</th>
-              <th>Established</th>
-              <th>Phone</th>
-              <th>Email</th>
-              <th>Actions</th>
+              <th style={{ textAlign: "center" }}>Established</th>
+              <th style={{ textAlign: "center" }}>Phone</th>
+              <th style={{ textAlign: "center" }}>Email</th>
+              <th style={{ textAlign: "center" }}>Actions</th>
             </tr>
           </thead>
 
@@ -588,15 +588,34 @@ const validateBranch = () => {
                   }}
                 >
                   <td>{branchItem.name}</td>
-                  <td>{formatDate(branchItem.established)}</td>
-                  <td>{branchItem.phone}</td>
-                  <td>{branchItem.email}</td>
+                  <td style={{ textAlign: "center" }}>
+                    {formatDate(branchItem.established)}
+                  </td>
+
+                  <td style={{ textAlign: "center" }}>
+                    {branchItem.phone}
+                  </td>
+
+                  <td style={{ textAlign: "center" }}>
+                    {branchItem.email}
+                  </td>
                   <td>
-                    <div className="branch-action-cell">
+                    <div
+                      className="branch-action-cell"
+                      style={{
+                        display: "flex",
+                        gap: "10px",
+                        alignItems: "center",
+                      }}
+                    >
                       <button
                         className="company-edit-btn app-action-button app-action-button--edit"
                         type="button"
-                        aria-label={`Edit ${branchItem.name}`}
+                        style={{
+                          width: "75px",
+                          minWidth: "75px",
+                          height: "40px",
+                        }}
                         onClick={(event) => {
                           event.stopPropagation();
                           openBranchForm(branchItem);
@@ -608,7 +627,11 @@ const validateBranch = () => {
                       <button
                         className="company-delete-btn app-action-button app-action-button--delete"
                         type="button"
-                        aria-label={`Delete ${branchItem.name}`}
+                        style={{
+                          width: "75px",
+                          minWidth: "75px",
+                          height: "40px",
+                        }}
                         onClick={(event) => {
                           event.stopPropagation();
                           setSelectedBranch(branchItem);

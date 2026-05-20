@@ -1104,75 +1104,109 @@ namespace EmployeeManagementSystem.Services
             return result;
         }
 
-        public async Task<IActionResult> AdminUpdateAttendance(string employeeId, DateTime date, DateTime? checkIn, DateTime? checkOut)
+        public async Task<IActionResult> AdminUpdateAttendance(
+        string employeeId,
+        DateTime date,
+        DateTime? checkIn,
+        DateTime? checkOut)
         {
             if (date.Date > DateTime.UtcNow.Date)
                 return new BadRequestObjectResult("Cannot mark future attendance");
 
-            if (checkIn == null && checkOut == null)
-                return new BadRequestObjectResult("Provide at least check-in or check-out");
+            if (date.DayOfWeek == DayOfWeek.Saturday ||
+                date.DayOfWeek == DayOfWeek.Sunday)
+            {
+                return new BadRequestObjectResult(
+                    "Weekend attendance cannot be updated");
+            }
 
-            if (checkIn != null && checkOut != null && checkOut < checkIn)
-                return new BadRequestObjectResult("Check-out cannot be before check-in");
             var utcDate = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
 
             var attendance = await _context.Attendance
                 .FirstOrDefaultAsync(a =>
                     a.Employee_Id == employeeId &&
-                    a.Attendance_Date.Date == utcDate);
+                    a.Attendance_Date.Date == utcDate.Date);
 
             var istZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
 
             DateTime? checkInUtc = null;
             DateTime? checkOutUtc = null;
 
+            if (checkIn != null && checkIn.Value.TimeOfDay == TimeSpan.Zero)
+                return new BadRequestObjectResult("Invalid check-in time");
+
+            if (checkOut != null && checkOut.Value.TimeOfDay == TimeSpan.Zero)
+                return new BadRequestObjectResult("Invalid check-out time");
+
             if (checkIn != null)
+            {
                 checkInUtc = TimeZoneInfo.ConvertTimeToUtc(
                     DateTime.SpecifyKind(checkIn.Value, DateTimeKind.Unspecified),
-                    istZone
-                );
+                    istZone);
+            }
+
+
+            if (checkIn != null)
+            {
+                checkInUtc = TimeZoneInfo.ConvertTimeToUtc(
+                    DateTime.SpecifyKind(checkIn.Value, DateTimeKind.Unspecified),
+                    istZone);
+            }
 
             if (checkOut != null)
+            {
                 checkOutUtc = TimeZoneInfo.ConvertTimeToUtc(
                     DateTime.SpecifyKind(checkOut.Value, DateTimeKind.Unspecified),
-                    istZone
-                );
+                    istZone);
+            }
 
-            // ✅ Create if not exists
+            if (checkInUtc != null && checkOutUtc != null && checkOutUtc < checkInUtc)
+                return new BadRequestObjectResult("Check-out cannot be before check-in");
+
             if (attendance == null)
             {
                 attendance = new Attendance
                 {
                     Employee_Id = employeeId,
-                    Attendance_Date = utcDate,
-                    Check_In = checkInUtc,
-                    Check_Out = checkOutUtc
+                    Attendance_Date = utcDate
                 };
 
                 _context.Attendance.Add(attendance);
             }
-            else
+
+            // Admin can update again and again
+            attendance.Check_In = checkInUtc;
+            attendance.Check_Out = checkOutUtc;
+
+            if (attendance.Check_In != null &&
+    attendance.Check_Out != null &&
+    attendance.Check_In.Value.TimeOfDay == TimeSpan.Zero &&
+    attendance.Check_Out.Value.TimeOfDay == TimeSpan.Zero)
             {
-                // ✅ Update existing
-                if (checkInUtc != null)
-                    attendance.Check_In = checkInUtc;
-
-                if (checkOutUtc != null)
-                    attendance.Check_Out = checkOutUtc;
+                attendance.Check_In = null;
+                attendance.Check_Out = null;
+                attendance.WorkingMinutes = 0;
+                attendance.Status = "Absent";
             }
-
-            // ✅ Calculate working hours
-            if (attendance.Check_In != null && attendance.Check_Out != null)
+            else if (attendance.Check_In != null && attendance.Check_Out != null)
             {
                 var minutes = (int)(attendance.Check_Out.Value - attendance.Check_In.Value).TotalMinutes;
+
                 attendance.WorkingMinutes = minutes;
 
                 var hours = minutes / 60.0;
 
-                if (hours < 4)
-                    attendance.Status = "Half Day";
-                else
-                    attendance.Status = "Present";
+                attendance.Status = hours < 4 ? "Half Day" : "Present";
+            }
+            else if (attendance.Check_In != null && attendance.Check_Out == null)
+            {
+                attendance.WorkingMinutes = 0;
+                attendance.Status = "Present";
+            }
+            else
+            {
+                attendance.WorkingMinutes = 0;
+                attendance.Status = "Absent";
             }
 
             await _context.SaveChangesAsync();
@@ -1257,5 +1291,5 @@ namespace EmployeeManagementSystem.Services
 
     }
 
-}
+    }
 

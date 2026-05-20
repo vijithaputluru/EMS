@@ -1183,4 +1183,3 @@ C:\Users\ADMIN\OneDrive\Desktop\EMS New\Backend\obj\Debug\net8.0\refint\Employee
 C:\Users\ADMIN\OneDrive\Desktop\EMS New\Backend\obj\Debug\net8.0\EmployeeManagementSystem.pdb
 C:\Users\ADMIN\OneDrive\Desktop\EMS New\Backend\obj\Debug\net8.0\EmployeeManagementSystem.genruntimeconfig.cache
 C:\Users\ADMIN\OneDrive\Desktop\EMS New\Backend\obj\Debug\net8.0\ref\EmployeeManagementSystem.dll
-C:\Users\ADMIN\OneDrive\Desktop\EMS New\Backend\obj\Debug\net8.0\staticwebassets.upToDateCheck.txt

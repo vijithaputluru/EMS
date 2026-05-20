@@ -112,47 +112,55 @@ function Departments() {
     );
   }, [selectedDept, normalizedEmployees]);
 
-const validateField = (name, draft = newDept) => {
-  const value = String(draft[name] ?? "").trim();
+  const validateField = (name, draft = newDept) => {
+    const value = String(draft[name] ?? "").trim();
 
-  if (name === "name") {
-    if (!value) return "Department Name is required";
+    if (name === "name") {
+      if (!value) return "Department Name is required";
 
-    if (value.length > 25) {
-      return "Department Name cannot exceed 25 characters";
+      if (value.length > 25) {
+        return "Department Name cannot exceed 25 characters";
+      }
+
+      if (!/^(?=.*[A-Za-z])[A-Za-z\s-]+$/.test(value)) {
+        return "Department Name must contain only alphabets and hyphen";
+      }
+
+      if ((value.match(/-/g) || []).length > 1) {
+        return "Only 1 hyphen (-) is allowed";
+      }
+
+      return "";
     }
 
-    if (!/^[A-Za-z\s]+$/.test(value)) {
-      return "Department Name must contain only alphabets";
+    if (name === "head") {
+      return value ? "" : "Department Head is required";
+    }
+
+    if (name === "building") {
+      if (!value) return "Building is required";
+
+      if (value.length > 25) {
+        return "Building cannot exceed 25 characters";
+      }
+
+      if (!/^(?=.*[A-Za-z])[A-Za-z\s-]+$/.test(value)) {
+        return "Building must contain only alphabets and hyphen";
+      }
+
+      if ((value.match(/-/g) || []).length > 1) {
+        return "Only 1 hyphens (-) are allowed";
+      }
+
+      return "";
+    }
+
+    if (name === "status") {
+      return value ? "" : "Status is required";
     }
 
     return "";
-  }
-
-  if (name === "head") {
-    return value ? "" : "Department Head is required";
-  }
-
-  if (name === "building") {
-    if (!value) return "Building is required";
-
-    if (value.length > 25) {
-      return "Building cannot exceed 25 characters";
-    }
-
-    if (!/^[A-Za-z\s]+$/.test(value)) {
-      return "Building must contain only alphabets";
-    }
-
-    return "";
-  }
-
-  if (name === "status") {
-    return value ? "" : "Status is required";
-  }
-
-  return "";
-};
+  };
 
   const validateForm = (draft = newDept) => {
     const nextErrors = {
@@ -409,33 +417,94 @@ const validateField = (name, draft = newDept) => {
                 onChange={(e) => setHeadSearch(e.target.value)}
               />
 
-              <select
-                id="dept-head-select"
-                name="head"
-                size="5"
-                value={newDept.head}
-                onChange={handleChange}
-                aria-invalid={Boolean(errors.head)}
+              {newDept.head && (
+                <div
+                  style={{
+                    marginTop: "10px",
+                    marginBottom: "10px",
+                    padding: "10px 12px",
+                    borderRadius: "10px",
+                    background: "#ECFEFF",
+                    border: "1px solid #22D3EE",
+                    color: "#0F172A",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                  }}
+                >
+                  Selected Head: {newDept.head}
+                </div>
+              )}
+
+              <div
                 className={`dept-head-dropdown ${errors.head ? "field-error" : ""
                   }`}
               >
-                <option value="">Select Head</option>
-
                 {employeeOptions
-                  .filter((employee) =>
-                    employee.label
-                      .toLowerCase()
-                      .includes(headSearch.toLowerCase())
-                  )
-                  .map((employee) => (
-                    <option
-                      key={employee.id}
-                      value={employee.label}
-                    >
-                      {employee.label}
-                    </option>
-                  ))}
-              </select>
+                  .filter((employee) => {
+                    const search = headSearch.toLowerCase();
+
+                    return (
+                      employee.label.toLowerCase().includes(search) ||
+                      String(employee.id || "")
+                        .toLowerCase()
+                        .includes(search)
+                    );
+                  })
+                  .map((employee) => {
+                    const isSelected = newDept.head === employee.label;
+
+                    return (
+                      <div
+                        key={employee.id}
+                        onClick={() => {
+                          setNewDept((prev) => ({
+                            ...prev,
+                            head: employee.label,
+                          }));
+
+                          setErrors((prev) => ({
+                            ...prev,
+                            head: "",
+                          }));
+                        }}
+                        style={{
+                          padding: "10px 12px",
+                          borderRadius: "8px",
+                          cursor: "pointer",
+                          marginBottom: "6px",
+                          background: isSelected
+                            ? "#2563EB"
+                            : "#FFFFFF",
+                          color: isSelected
+                            ? "#FFFFFF"
+                            : "#0F172A",
+                          border: isSelected
+                            ? "1px solid #2563EB"
+                            : "1px solid transparent",
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: "14px",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {employee.label}
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize: "12px",
+                            opacity: 0.8,
+                            marginTop: "2px",
+                          }}
+                        >
+                          Employee ID: {employee.id || "N/A"}
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
 
               {errors.head && (
                 <p className="dept-error">{errors.head}</p>

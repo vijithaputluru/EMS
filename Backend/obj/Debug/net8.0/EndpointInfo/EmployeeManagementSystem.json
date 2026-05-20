@@ -2259,6 +2259,71 @@
         }
       }
     },
+    "/api/Monitoring/settings": {
+      "get": {
+        "tags": [
+          "Monitoring"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Monitoring"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonitoringSettingsDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonitoringSettingsDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/MonitoringSettingsDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Monitoring/dashboard": {
+      "get": {
+        "tags": [
+          "Monitoring"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Monitoring/employees": {
+      "get": {
+        "tags": [
+          "Monitoring"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/OfferLetter/generate": {
       "post": {
         "tags": [
@@ -2786,6 +2851,160 @@
               "format": "int32"
             }
           }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Screenshot/upload": {
+      "post": {
+        "tags": [
+          "Screenshot"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScreenshotUploadDto"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScreenshotUploadDto"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScreenshotUploadDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Screenshot/history/{employeeId}": {
+      "get": {
+        "tags": [
+          "Screenshot"
+        ],
+        "parameters": [
+          {
+            "name": "employeeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Screenshot/{id}": {
+      "get": {
+        "tags": [
+          "Screenshot"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Screenshot"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Screenshot/employee/{employeeId}": {
+      "delete": {
+        "tags": [
+          "Screenshot"
+        ],
+        "parameters": [
+          {
+            "name": "employeeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Screenshot/cleanup/{days}": {
+      "delete": {
+        "tags": [
+          "Screenshot"
+        ],
+        "parameters": [
+          {
+            "name": "days",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Screenshot/statistics": {
+      "get": {
+        "tags": [
+          "Screenshot"
         ],
         "responses": {
           "200": {
@@ -3322,6 +3541,9 @@
           "name": {
             "type": "string",
             "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
           }
         },
         "additionalProperties": false
@@ -4130,6 +4352,31 @@
         },
         "additionalProperties": false
       },
+      "MonitoringSettingsDto": {
+        "type": "object",
+        "properties": {
+          "screenshotInterval": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enableScreenshotMonitoring": {
+            "type": "boolean"
+          },
+          "enableActiveWindowTracking": {
+            "type": "boolean"
+          },
+          "enableIdleDetection": {
+            "type": "boolean"
+          },
+          "enableAutoUpload": {
+            "type": "boolean"
+          },
+          "enableBackgroundMonitoring": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false
+      },
       "OfferLetterRequestDto": {
         "type": "object",
         "properties": {
@@ -4290,6 +4537,24 @@
             "items": {
               "$ref": "#/components/schemas/ModulePermissionDto"
             },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ScreenshotUploadDto": {
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "nullable": true
+          },
+          "image": {
+            "type": "string",
+            "nullable": true
+          },
+          "deviceName": {
+            "type": "string",
             "nullable": true
           }
         },

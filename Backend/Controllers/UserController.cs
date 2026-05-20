@@ -135,51 +135,74 @@ namespace EmployeeManagementSystem.Controllers
         }
 
         // ================= LOGIN =================
-
         [HttpPost("login")]
-
         public async Task<IActionResult> Login(LoginDto dto)
-
         {
-
             var user = await _context.Users
-
                 .FirstOrDefaultAsync(x => x.Email == dto.Email);
 
-            if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.Password))
-
+            if (user == null ||
+                !BCrypt.Net.BCrypt.Verify(dto.Password, user.Password))
+            {
                 return Unauthorized("Invalid credentials");
+            }
 
             if (user.RoleId == null)
-
+            {
                 return Unauthorized("Role not assigned");
+            }
 
             var role = await _context.Roles
-
                 .FirstOrDefaultAsync(r => r.RoleId == user.RoleId);
 
             if (role == null)
-
+            {
                 return Unauthorized("Role not found");
+            }
 
-            // ✅ FETCH EMPLOYEE USING EMAIL
+            // =========================================
+            // FETCH EMPLOYEE
+            // =========================================
 
             var employee = await _context.Employees
-
                 .FirstOrDefaultAsync(e => e.Email == user.Email);
 
             if (employee == null)
-
+            {
                 return Unauthorized("Employee not found");
+            }
 
-            // ✅ GENERATE TOKEN WITH EMPLOYEE ID
+            // =========================================
+            // GENERATE JWT TOKEN
+            // =========================================
 
-            var token = _jwtHelper.GenerateToken(user, role.Name, employee.Employee_Id);
+            var token = _jwtHelper.GenerateToken(
+                user,
+                role.Name,
+                employee.Employee_Id
+            );
+
+            // =========================================
+            // SAVE LOGIN ACTIVITY
+            // =========================================
+            var activityLog = new ActivityLog
+            {
+                Activity =
+        $"{employee.Name} logged in successfully",
+
+                CreatedAt = DateTime.Now
+            };
+
+            _context.ActivityLogs.Add(activityLog);
+
+            await _context.SaveChangesAsync();
+
+            // =========================================
+            // RETURN RESPONSE
+            // =========================================
 
             return Ok(new
-
             {
-
                 token,
 
                 email = user.Email,
@@ -191,10 +214,8 @@ namespace EmployeeManagementSystem.Controllers
                 roleId = user.RoleId,
 
                 roleName = role.Name
-
             });
-
-        }   // ================= FORGOT PASSWORD =================
+        } // ================= FORGOT PASSWORD =================
 
         [HttpPost("forgot-password")]
 

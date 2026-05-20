@@ -86,28 +86,63 @@ const formatAssetAssigneeLabel = (name, code) => {
 
 const getEmployeeCodeFromRecord = (employee) =>
   formatEmployeeCode(
+
     employee.employee_Id ??
-      employee.employee_id ??
-      employee.employeeId ??
-      employee.EmployeeId ??
-      employee.Employee_Id ??
-      employee.id ??
-      employee.Id ??
-      ""
+    employee.employee_id ??
+
+    employee.employeeId ??
+    employee.EmployeeId ??
+
+    employee.employeeCode ??
+    employee.EmployeeCode ??
+
+    employee.empCode ??
+    employee.EmpCode ??
+
+    employee.code ??
+    employee.Code ??
+
+    employee.Employee_Id ??
+
+    employee.id ??
+    employee.Id ??
+
+    ""
+
   );
 
-const getEmployeeNameFromRecord = (employee) =>
-  normalizeText(
+const getEmployeeNameFromRecord = (employee) => {
+
+  if (!employee) {
+    return "";
+  }
+
+  return normalizeText(
+
     employee.name ??
-      employee.employeeName ??
-      employee.employee_Name ??
-      employee.EmployeeName ??
-      employee.employeeFullName ??
-      employee.EmployeeFullName ??
-      `${employee.firstName ?? employee.FirstName ?? ""} ${
-        employee.lastName ?? employee.LastName ?? ""
-      }`
+    employee.Name ??
+
+    employee.employeeName ??
+    employee.EmployeeName ??
+    employee.employee_Name ??
+
+    employee.fullName ??
+    employee.FullName ??
+
+    employee.employeeFullName ??
+    employee.EmployeeFullName ??
+
+    employee.displayName ??
+    employee.DisplayName ??
+
+    employee.employeeDisplayName ??
+    employee.EmployeeDisplayName ??
+
+    `${employee.firstName ?? employee.FirstName ?? ""} ${employee.lastName ?? employee.LastName ?? ""
+    }`
+
   );
+};
 
 const flattenErrorMessages = (value) => {
   if (value === null || value === undefined) {
@@ -237,6 +272,9 @@ export default function Assets() {
 
   const [newAsset, setNewAsset] = useState(EMPTY_ASSET);
   const [errors, setErrors] = useState({});
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [assetFilter, setAssetFilter] = useState("");
 
   const fetchAssets = async () => {
     try {
@@ -265,7 +303,117 @@ export default function Assets() {
             ""
           );
 
-          const employeeName = getAssetEmployeeName(item);
+          const employeeNameFromApi =
+            getAssetEmployeeName(item);
+          const employeeFromList =
+            employees.find((emp) => {
+
+              const empCode =
+                formatEmployeeCode(
+
+                  emp.employee_Id ??
+                  emp.employee_id ??
+                  emp.employeeId ??
+                  emp.EmployeeId ??
+                  emp.employeeCode ??
+                  emp.EmployeeCode ??
+                  emp.empCode ??
+                  emp.EmpCode ??
+                  emp.code ??
+                  emp.Code ??
+                  ""
+
+                );
+
+              console.log(
+                "EMP CODE CHECK:",
+                empCode,
+                employeeCode
+              );
+
+              return (
+                empCode === employeeCode
+              );
+
+            });
+
+          console.log(
+            "Matched Employee:",
+            employeeCode,
+            employeeFromList
+          );
+
+          const employeeName =
+            employees.find((emp) => {
+
+              const empCode =
+                formatEmployeeCode(
+
+                  emp.employee_Id ??
+                  emp.employee_id ??
+                  emp.employeeId ??
+                  emp.EmployeeId ??
+                  emp.employeeCode ??
+                  emp.EmployeeCode ??
+                  emp.empCode ??
+                  emp.EmpCode ??
+                  emp.code ??
+                  emp.Code ??
+                  ""
+
+                );
+
+              return empCode === employeeCode;
+
+            })?.employeeName ||
+
+            employees.find((emp) => {
+
+              const empCode =
+                formatEmployeeCode(
+
+                  emp.employee_Id ??
+                  emp.employee_id ??
+                  emp.employeeId ??
+                  emp.EmployeeId ??
+                  emp.employeeCode ??
+                  emp.EmployeeCode ??
+                  emp.empCode ??
+                  emp.EmpCode ??
+                  emp.code ??
+                  emp.Code ??
+                  ""
+
+                );
+
+              return empCode === employeeCode;
+
+            })?.employee_Name ||
+
+            employees.find((emp) => {
+
+              const empCode =
+                formatEmployeeCode(
+
+                  emp.employee_Id ??
+                  emp.employee_id ??
+                  emp.employeeId ??
+                  emp.EmployeeId ??
+                  emp.employeeCode ??
+                  emp.EmployeeCode ??
+                  emp.empCode ??
+                  emp.EmpCode ??
+                  emp.code ??
+                  emp.Code ??
+                  ""
+
+                );
+
+              return empCode === employeeCode;
+
+            })?.name ||
+
+            "";
 
           const formattedAsset = {
             assetId:
@@ -331,7 +479,18 @@ export default function Assets() {
       const res = await api.get(API_ENDPOINTS.employees.list);
       const employeeList = extractCollection(res.data);
 
+      employeeList.forEach((emp, index) => {
+
+        console.log(
+          `Employee ${index + 1}:`,
+          emp
+        );
+
+      });
+
       setEmployees(employeeList);
+
+      return employeeList;
     } catch (error) {
       console.error("Error fetching employees for asset assignment:", error);
       setEmployeeLoadError(
@@ -344,9 +503,20 @@ export default function Assets() {
   };
 
   useEffect(() => {
-    fetchAssets();
+
     fetchEmployees();
+
   }, []);
+
+  useEffect(() => {
+
+    if (employees.length > 0) {
+
+      fetchAssets();
+
+    }
+
+  }, [employees]);
 
   const employeeOptions = useMemo(() => {
     const uniqueEmployees = new Map();
@@ -383,75 +553,99 @@ export default function Assets() {
   );
 
   const matchedAssignedEmployee = useMemo(() => {
-    const normalizedCode = formatEmployeeCode(newAsset.assigned).toLowerCase();
-    return normalizedCode ? employeeCodeLookup.get(normalizedCode) ?? null : null;
-  }, [employeeCodeLookup, newAsset.assigned]);
 
-const validateField = (name, draft = newAsset) => {
-  const value = String(draft[name] ?? "").trim();
+    const normalizedCode =
+      formatEmployeeCode(
+        String(newAsset.assigned || "")
+          .split("-")[0]
+          .trim()
+      ).toLowerCase();
 
-  if (name === "name") {
-    if (!value) return "Asset Name is required";
+    return normalizedCode
+      ? employeeCodeLookup.get(normalizedCode) ?? null
+      : null;
 
-    if (value.length > 25) {
-      return "Asset Name must not exceed 25 characters";
+  }, [
+    employeeCodeLookup,
+    newAsset.assigned
+  ]);
+
+  const validateField = (name, draft = newAsset) => {
+    const value = String(draft[name] ?? "").trim();
+
+    if (name === "name") {
+      if (!value) return "Asset Name is required";
+
+      if (value.length > 25) {
+        return "Asset Name must not exceed 25 characters";
+      }
+
+      if (!/^[A-Za-z0-9 ]+$/.test(value)) {
+        return "Special characters are not allowed";
+      }
+
+      return "";
     }
 
-    if (!/^[A-Za-z0-9 ]+$/.test(value)) {
-      return "Special characters are not allowed";
+    if (name === "serial") {
+      if (!value) return "Serial Number is required";
+
+      if (value.length > 20) {
+        return "Serial Number must not exceed 20 characters";
+      }
+
+      if (!/^[A-Za-z0-9 ]+$/.test(value)) {
+        return "Special characters are not allowed";
+      }
+
+      const duplicate = assets.find(
+        (asset) =>
+          asset.serialNo?.toLowerCase() === value.toLowerCase() &&
+          asset.assetId !== editId
+      );
+
+      if (duplicate) return "Serial Number already exists";
+
+      return "";
+    }
+
+    if (name === "assigned") {
+
+      // no validation for Available or Under Repair
+      if (
+        draft.status === "Available" ||
+        draft.status === "Under Repair"
+      ) {
+        return "";
+      }
+
+      // validation only for Assigned
+      if (draft.status === "Assigned" && !value) {
+        return "Employee Code is required";
+      }
+
+      if (value.length > 10) {
+        return "Employee Code must not exceed 10 characters";
+      }
+
+      if (!/^[A-Za-z0-9 ]+$/.test(value)) {
+        return "Special characters are not allowed";
+      }
+
+      return "";
+    }
+
+
+    if (name === "status") {
+      if (!value) return "Status is required";
+
+      return ASSET_STATUS_OPTIONS.includes(value)
+        ? ""
+        : "Select a valid status";
     }
 
     return "";
-  }
-
-  if (name === "serial") {
-    if (!value) return "Serial Number is required";
-
-    if (value.length > 20) {
-      return "Serial Number must not exceed 20 characters";
-    }
-
-    if (!/^[A-Za-z0-9 ]+$/.test(value)) {
-      return "Special characters are not allowed";
-    }
-
-    const duplicate = assets.find(
-      (asset) =>
-        asset.serialNo?.toLowerCase() === value.toLowerCase() &&
-        asset.assetId !== editId
-    );
-
-    if (duplicate) return "Serial Number already exists";
-
-    return "";
-  }
-
-  if (name === "assigned") {
-    if (draft.status === "Assigned" && !value) {
-      return "Employee Code is required";
-    }
-
-    if (value.length > 10) {
-      return "Employee Code must not exceed 10 characters";
-    }
-
-    if (!/^[A-Za-z0-9 ]+$/.test(value)) {
-      return "Special characters are not allowed";
-    }
-
-    return "";
-  }
-
-  if (name === "status") {
-    if (!value) return "Status is required";
-
-    return ASSET_STATUS_OPTIONS.includes(value)
-      ? ""
-      : "Select a valid status";
-  }
-
-  return "";
-};
+  };
 
   const validateForm = (draft = newAsset) => {
     const nextErrors = {
@@ -499,57 +693,57 @@ const validateField = (name, draft = newAsset) => {
     newAsset,
   ]);
 
-const handleChange = (event) => {
-  const { name, value } = event.target;
+  const handleChange = (event) => {
+    const { name, value } = event.target;
 
-  let sanitizedValue = value.replace(/^\s+/g, "");
+    let sanitizedValue = value.replace(/^\s+/g, "");
 
-  // remove special characters
-  sanitizedValue = sanitizedValue.replace(/[^A-Za-z0-9 ]/g, "");
+    // remove special characters
+    sanitizedValue = sanitizedValue.replace(/[^A-Za-z0-9 ]/g, "");
 
-  // max lengths
-  if (name === "name") {
-    sanitizedValue = sanitizedValue.slice(0, 25);
-  }
-
-  if (name === "serial") {
-    sanitizedValue = sanitizedValue.slice(0, 20);
-  }
-
-  if (name === "assigned") {
-    sanitizedValue = sanitizedValue.slice(0, 10);
-  }
-
-  const draft = {
-    ...newAsset,
-    [name]:
-      name === "assigned"
-        ? formatEmployeeCode(sanitizedValue)
-        : sanitizedValue,
-  };
-
-  if (name === "status" && value !== "Assigned") {
-    draft.assigned = "";
-  }
-
-  setNewAsset(draft);
-  setApiError("");
-
-  setErrors((prev) => {
-    const nextErrors = {
-      ...prev,
-      [name]: validateField(name, draft),
-    };
-
-    if (name === "status") {
-      nextErrors.assigned = validateField("assigned", draft);
+    // max lengths
+    if (name === "name") {
+      sanitizedValue = sanitizedValue.slice(0, 25);
     }
 
-    return Object.fromEntries(
-      Object.entries(nextErrors).filter(([, error]) => error)
-    );
-  });
-};
+    if (name === "serial") {
+      sanitizedValue = sanitizedValue.slice(0, 20);
+    }
+
+    if (name === "assigned") {
+      sanitizedValue = sanitizedValue.slice(0, 10);
+    }
+
+    const draft = {
+      ...newAsset,
+      [name]:
+        name === "assigned"
+          ? formatEmployeeCode(sanitizedValue)
+          : sanitizedValue,
+    };
+
+    if (name === "status" && value !== "Assigned") {
+      draft.assigned = "";
+    }
+
+    setNewAsset(draft);
+    setApiError("");
+
+    setErrors((prev) => {
+      const nextErrors = {
+        ...prev,
+        [name]: validateField(name, draft),
+      };
+
+      if (name === "status") {
+        nextErrors.assigned = validateField("assigned", draft);
+      }
+
+      return Object.fromEntries(
+        Object.entries(nextErrors).filter(([, error]) => error)
+      );
+    });
+  };
 
   const handleImageChange = (event) => {
     const files = Array.from(event.target.files || []);
@@ -679,10 +873,10 @@ const handleChange = (event) => {
         key,
         value instanceof File
           ? {
-              name: value.name,
-              type: value.type,
-              size: value.size,
-            }
+            name: value.name,
+            type: value.type,
+            size: value.size,
+          }
           : value,
       ]);
 
@@ -769,10 +963,42 @@ const handleChange = (event) => {
     setNewAsset(EMPTY_ASSET);
   };
 
+  const filteredAssets = assets.filter((asset) => {
+
+    const search =
+      searchTerm.toLowerCase();
+
+    const matchesSearch =
+      asset.employeeName?.toLowerCase().includes(search) ||
+      asset.assignedTo?.toLowerCase().includes(search);
+
+    const matchesStatus =
+      !statusFilter ||
+      asset.status === statusFilter;
+
+    const matchesAsset =
+      asset.assetName
+        ?.toLowerCase()
+        .includes(assetFilter.toLowerCase());
+
+    return (
+      matchesSearch &&
+      matchesStatus &&
+      matchesAsset
+    );
+
+  });
   const indexOfLast = currentPage * assetsPerPage;
   const indexOfFirst = indexOfLast - assetsPerPage;
-  const currentAssets = assets.slice(indexOfFirst, indexOfLast);
-  const totalPages = Math.ceil(assets.length / assetsPerPage);
+  const currentAssets =
+    filteredAssets.slice(
+      indexOfFirst,
+      indexOfLast
+    );
+  const totalPages =
+    Math.ceil(
+      filteredAssets.length / assetsPerPage
+    );
 
   const imagePreviewItems = useMemo(() => previewImages, [previewImages]);
 
@@ -811,7 +1037,136 @@ const handleChange = (event) => {
           + Add Asset
         </button>
       </div>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "16px",
+          marginBottom: "22px",
+          width: "100%",
+        }}
+      >
 
+        {/* SEARCH */}
+
+        <div
+          style={{
+            position: "relative",
+            flex: "1",
+            minWidth: "320px",
+          }}
+        >
+
+          <input
+            type="text"
+            placeholder="Search employee name or ID..."
+            value={searchTerm}
+            onChange={(e) =>
+              setSearchTerm(e.target.value)
+            }
+            style={{
+              width: "100%",
+              height: "46px",
+              padding: "0 18px 0 18px",
+              border: "1px solid #dbe3ef",
+              borderRadius: "18px",
+              outline: "none",
+              fontSize: "16px",
+              background: "#ffffff",
+              color: "#0f172a",
+              boxSizing: "border-box",
+            }}
+          />
+
+          {/* <span
+            style={{
+              position: "absolute",
+              left: "18px",
+              top: "50%",
+              transform: "translateY(-50%)",
+              fontSize: "18px",
+              color: "#94a3b8",
+            }}
+          >
+            🔍
+          </span> */}
+
+        </div>
+
+        {/* STATUS FILTER */}
+
+        <select
+          value={statusFilter}
+          onChange={(e) =>
+            setStatusFilter(e.target.value)
+          }
+          style={{
+            width: "260px",
+            height: "46px",
+            padding: "0 18px",
+            border: "1px solid #dbe3ef",
+            borderRadius: "18px",
+            background: "#fff",
+            fontSize: "16px",
+            outline: "none",
+            color: "#0f172a",
+            cursor: "pointer",
+          }}
+        >
+          <option value="">All Status</option>
+          <option value="Assigned">Assigned</option>
+          <option value="Available">Available</option>
+          <option value="Under Repair">Under Repair</option>
+        </select>
+
+        {/* ASSET FILTER */}
+
+        <input
+          type="text"
+          placeholder="Filter asset name..."
+          value={assetFilter}
+          onChange={(e) =>
+            setAssetFilter(e.target.value)
+          }
+          style={{
+            width: "260px",
+            height: "46px",
+            padding: "0 18px",
+            border: "1px solid #dbe3ef",
+            borderRadius: "18px",
+            background: "#fff",
+            fontSize: "16px",
+            outline: "none",
+            color: "#0f172a",
+            boxSizing: "border-box",
+          }}
+        />
+
+        {/* RESET BUTTON */}
+
+        <button
+          type="button"
+          onClick={() => {
+            setSearchTerm("");
+            setStatusFilter("");
+            setAssetFilter("");
+          }}
+          style={{
+            minWidth: "120px",
+            height: "46px",
+            border: "none",
+            borderRadius: "18px",
+            background: "#0f172a",
+            color: "#fff",
+            fontSize: "16px",
+            fontWeight: "600",
+            cursor: "pointer",
+          }}
+        >
+          Reset
+        </button>
+
+      </div>
       <div className="assets-table-wrap app-table-scroll">
         <table className="assets-table">
           <thead>
@@ -830,12 +1185,46 @@ const handleChange = (event) => {
               currentAssets.map((asset) => (
                 <tr key={asset.assetId ?? asset.serialNo}>
                   <td className="assets-col-employee">
-                    <span
-                      className="asset-cell-text asset-employee-text"
-                      title={asset.employeeDisplay}
+
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "center",
+                        gap: "2px",
+                        lineHeight: "1.2",
+                      }}
                     >
-                      {asset.employeeDisplay}
-                    </span>
+
+                      <span
+                        style={{
+                          fontSize: "14px",
+                          fontWeight: "600",
+                          color: "#111827",
+                          maxWidth: "260px",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          display: "block",
+                        }}
+                        title={asset.employeeName || "-"}
+                      >
+                        {asset.employeeName || "-"}
+                      </span>
+
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          color: "#64748b",
+                          fontWeight: "500",
+                        }}
+                        title={asset.assignedTo || "-"}
+                      >
+                        {asset.assignedTo || "-"}
+                      </span>
+
+                    </div>
+
                   </td>
 
                   <td className="assets-col-serial">

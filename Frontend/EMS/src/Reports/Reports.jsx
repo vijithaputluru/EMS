@@ -16,32 +16,32 @@ import {
   FaUserCheck,
   FaUserTimes
 } from "react-icons/fa";
-
+ 
 function Reports() {
   const token = getStoredToken();
   const navigate = useNavigate();
-
+ 
   const [reportCards, setReportCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
+ 
   useEffect(() => {
     fetchReports();
   }, []);
-
+ 
   const fetchReports = async () => {
     try {
       setLoading(true);
       setError("");
-
+ 
       const response = await api.get(API_ENDPOINTS.reports.all, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-
+ 
       const data = response.data;
-
+ 
       const cards = [
         {
           icon: <FaUsers />,
@@ -112,7 +112,7 @@ function Reports() {
           // path: "/holidays",
         },
       ];
-
+ 
       setReportCards(cards);
     } catch (err) {
       console.error("Error fetching reports:", err);
@@ -121,58 +121,110 @@ function Reports() {
       setLoading(false);
     }
   };
-
-const handleReportClick = (report) => {
-
-  // PRESENT FILTER
-  if (report.filter === "present") {
-    navigate("/attendance?status=present");
-    return;
-  }
-
-  // ABSENT FILTER
-  if (report.filter === "absent") {
-    navigate("/attendance?status=absent");
-    return;
-  }
-
-  // DEFAULT
-  if (report.path) {
-    navigate(report.path);
-  }
-};
-
+ 
+  const handleReportClick = (report) => {
+ 
+    // PRESENT FILTER
+    if (report.filter === "present") {
+      navigate("/attendance?status=present");
+      return;
+    }
+ 
+    // ABSENT FILTER
+    if (report.filter === "absent") {
+      navigate("/attendance?status=absent");
+      return;
+    }
+ 
+    // DEFAULT
+    if (report.path) {
+      navigate(report.path);
+    }
+  };
+ 
   if (loading) {
     return <div className="reports-container">Loading reports...</div>;
   }
-
+ 
   if (error) {
     return <div className="reports-container error-text">{error}</div>;
   }
-
-  return (
-    <div className="reports-container">
-      <div className="reports-header">
-        <h2>Reports</h2>
-        <p>Generate and view reports</p>
-      </div>
-
-      <div className="reports-grid">
-        {reportCards.map((report, index) => (
-          <div
-            key={index}
-            className="report-card"
-            onClick={() => handleReportClick(report)}
-          >
-            <div className="report-icon">{report.icon}</div>
-            <h3>{report.title}</h3>
-            <p>{report.desc}</p>
-            <div className="report-meta">{report.meta}</div>
-          </div>
-        ))}
-      </div>
+ 
+return (
+  <div
+    style={{
+      width: "100%",
+      padding: "0px",
+      margin: "0px",
+      display: "block",
+    }}
+  >
+    {/* HEADER */}
+    <div
+      style={{
+        marginBottom: "20px",
+        padding: "0px",
+        height: "auto",
+      }}
+    >
+      <h2
+        style={{
+          margin: "0px",
+          padding: "0px",
+          fontSize: "26px",
+          fontWeight: "700",
+          color: "#0f172a",
+          lineHeight: "1.2",
+        }}
+      >
+        Reports
+      </h2>
+ 
+      <p
+        style={{
+          margin: "6px 0px 0px 2px",
+          color: "#64748b",
+          fontSize: "14px",
+          lineHeight: "1.4",
+        }}
+      >
+        Generate and view reports
+      </p>
     </div>
-  );
+ 
+    {/* REPORT CARDS */}
+    <div
+      className="reports-grid"
+      style={{
+        marginTop: "0px",
+        paddingTop: "0px",
+      }}
+    >
+      {reportCards.map((report, index) => (
+        <div
+          key={index}
+          className="report-card"
+          onClick={() => handleReportClick(report)}
+        >
+          <div className="report-icon">
+            {report.icon}
+          </div>
+ 
+          <h3>{report.title}</h3>
+ 
+          <p>{report.desc}</p>
+ 
+          <div className="report-meta">
+            {report.meta}
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
 }
-
+ 
 export default Reports;
+ 
+ 
+ 

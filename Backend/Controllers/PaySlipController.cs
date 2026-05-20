@@ -150,8 +150,8 @@ namespace EmployeeManagementSystem.Controllers
 
             var payslips = await _context.PaySlips
                 .Where(p => p.EmployeeId == employee.Employee_Id)
-                .OrderBy(p => p.Year)
-                .ThenBy(p => p.Month)
+                .OrderByDescending(p => p.Year)
+                .ThenByDescending(p => p.Month)
                 .ToListAsync();
 
             var baseUrl = $"{Request.Scheme}://{Request.Host}";

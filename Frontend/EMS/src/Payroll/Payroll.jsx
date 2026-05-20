@@ -862,6 +862,24 @@ function Payroll() {
             </div>
 
             <div
+              style={{
+                width: "100%",
+                padding: "6px 15px",
+                marginBottom: "14px",
+                border: "1px solid #bae6fd",
+                borderRadius: "16px",
+                background: "#f0f9ff",
+                color: "#0284c7",
+                fontSize: "13px",
+                fontWeight: "450",
+                textAlign: "center",
+                boxSizing: "border-box",
+              }}
+            >
+              ← Scroll horizontally to view more payroll details →
+            </div>
+
+            <div
               className="table-scroll"
               style={{
                 overflowX: "auto",
@@ -890,12 +908,12 @@ function Payroll() {
                   <tr>
                     {[
                       ["Employee", "left", "240px"],
-                      ["Department", "left", "170px"],
-                      ["Period", "center", "140px"],
-                      ["Net Pay", "center", "170px"],
-                      ["Deduction", "right", "170px"],
-                      ["CTC", "right", "180px"],
-                      ["Generated", "center", "240px"],
+                      ["Department", "left", "110px"],
+                      ["Period", "center", "80px"],
+                      ["Net Pay", "center", "150px"],
+                      ["Deduction", "right", "110px"],
+                      ["CTC", "right", "130px"],
+                      ["Generated", "center", "180px"],
                       ["Actions", "center", "110px"]
                     ].map(([title, align, width]) => (
                       <th
@@ -978,7 +996,7 @@ function Payroll() {
                           style={{
                             background: "#fff",
                             transition: "0.2s ease",
-                            height: "42px"
+                            height: "50px"
                           }}
                         >
                           {/* EMPLOYEE */}
@@ -1020,7 +1038,7 @@ function Payroll() {
                           {/* DEPARTMENT */}
                           <td
                             style={{
-                              padding: "4px 10px",
+                              padding: "10px 25px",
                               borderBottom: "1px solid #f1f5f9",
                               color: "#111827",
                               verticalAlign: "middle",
@@ -1050,7 +1068,7 @@ function Payroll() {
                           {/* NET PAY */}
                           <td
                             style={{
-                              padding: "4px 14px 4px 10px",
+                              padding: "4px 25px 4px 10px",
                               borderBottom: "1px solid #f1f5f9",
                               textAlign: "right",
                               verticalAlign: "middle",

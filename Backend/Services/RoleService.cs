@@ -6,7 +6,6 @@
     using EmployeeManagementSystem.Models;
     using Microsoft.EntityFrameworkCore;
 
-
     public class RoleService : IRoleService
     {
         private readonly AppDbContext _context;
@@ -26,7 +25,8 @@
 
             var role = new Role
             {
-                Name = dto.Name
+                Name = dto.Name,
+                IsActive = dto.IsActive
             };
 
             _context.Roles.Add(role);
@@ -42,13 +42,12 @@
                 {
                     Id = r.RoleId,
                     Name = r.Name,
-
-                    // ✅ COUNT USERS BASED ON ROLE
+                    IsActive = r.IsActive,
                     UsersCount = _context.Users.Count(u => u.RoleId == r.RoleId)
                 })
                 .ToListAsync();
         }
-        
+
         public async Task<Role?> UpdateRole(int roleId, CreateRoleDto dto)
         {
             var role = await _context.Roles
@@ -58,11 +57,13 @@
                 return null;
 
             role.Name = dto.Name;
+            role.IsActive = dto.IsActive;
 
             await _context.SaveChangesAsync();
 
             return role;
         }
+
         public async Task<bool> DeleteRole(int roleId)
         {
             var role = await _context.Roles
@@ -71,7 +72,6 @@
             if (role == null)
                 return false;
 
-            // 🔥 IMPORTANT: Check if role is used
             var isUsed = await _context.Users
                 .AnyAsync(u => u.RoleId == roleId);
 
@@ -85,4 +85,3 @@
         }
     }
 }
-

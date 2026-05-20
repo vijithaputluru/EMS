@@ -1454,6 +1454,52 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "EmployeeManagementSystem.Controllers.MonitoringController",
+    "Method": "GetDashboard",
+    "RelativePath": "api/Monitoring/dashboard",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.MonitoringController",
+    "Method": "GetEmployees",
+    "RelativePath": "api/Monitoring/employees",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.MonitoringController",
+    "Method": "GetSettings",
+    "RelativePath": "api/Monitoring/settings",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.MonitoringController",
+    "Method": "SaveSettings",
+    "RelativePath": "api/Monitoring/settings",
+    "HttpMethod": "PUT",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "EmployeeManagementSystem.DTOs.MonitoringSettingsDto",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "EmployeeManagementSystem.Controllers.OfferLetterController",
     "Method": "GetAllOfferLetters",
     "RelativePath": "api/OfferLetter/all",
@@ -1804,6 +1850,112 @@
       {
         "Name": "roleId",
         "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.ScreenshotController",
+    "Method": "GetById",
+    "RelativePath": "api/Screenshot/{id}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.ScreenshotController",
+    "Method": "Delete",
+    "RelativePath": "api/Screenshot/{id}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "id",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.ScreenshotController",
+    "Method": "CleanupOldScreenshots",
+    "RelativePath": "api/Screenshot/cleanup/{days}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "days",
+        "Type": "System.Int32",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.ScreenshotController",
+    "Method": "DeleteEmployeeScreenshots",
+    "RelativePath": "api/Screenshot/employee/{employeeId}",
+    "HttpMethod": "DELETE",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "employeeId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.ScreenshotController",
+    "Method": "GetHistory",
+    "RelativePath": "api/Screenshot/history/{employeeId}",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "employeeId",
+        "Type": "System.String",
+        "IsRequired": true
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.ScreenshotController",
+    "Method": "GetStatistics",
+    "RelativePath": "api/Screenshot/statistics",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.ScreenshotController",
+    "Method": "Upload",
+    "RelativePath": "api/Screenshot/upload",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "dto",
+        "Type": "EmployeeManagementSystem.DTOs.ScreenshotUploadDto",
         "IsRequired": true
       }
     ],

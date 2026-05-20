@@ -20,8 +20,9 @@ function AttendanceTable({
   month,
   year
 }) {
-  const [attendanceData, setAttendanceData] = useState([]);
+  const [attendanceData, setAttendanceData] = useState("");
   const [loading, setLoading] = useState(false);
+  const [, setLiveTimer] = useState(0);
 
   // =========================
   // ADMIN EDIT STATES
@@ -94,13 +95,65 @@ function AttendanceTable({
   };
 
   const formatHoursWorked = (emp) => {
-    return (
-      emp?.hoursWorked ||
-      emp?.totalHours ||
-      emp?.workingHours ||
-      emp?.hours ||
-      "-"
-    );
+
+    const checkIn =
+      getCheckIn(emp);
+
+    const checkOut =
+      getCheckOut(emp);
+
+    // NO CHECK IN
+    if (!checkIn) {
+      return "0h 0m";
+    }
+
+    try {
+
+      const checkInDate =
+        new Date(checkIn);
+
+      // IF CHECK OUT EXISTS
+      // USE FINAL TIME
+      const endTime =
+        checkOut
+          ? new Date(checkOut)
+          : new Date();
+
+      // INVALID DATE
+      if (
+        isNaN(checkInDate.getTime()) ||
+        isNaN(endTime.getTime())
+      ) {
+        return "0h 0m";
+      }
+
+      // DIFFERENCE
+      const diffMs =
+        endTime - checkInDate;
+
+      // TOTAL MINUTES
+      const totalMinutes =
+        Math.floor(diffMs / (1000 * 60));
+
+      // HOURS
+      const hours =
+        Math.floor(totalMinutes / 60);
+
+      // MINUTES
+      const minutes =
+        totalMinutes % 60;
+
+      return `${hours}h ${minutes}m`;
+
+    } catch (error) {
+
+      console.error(
+        "Hours Calculate Error:",
+        error
+      );
+
+      return "0h 0m";
+    }
   };
 
   const formatCheckTime = (value) => {
@@ -358,6 +411,18 @@ function AttendanceTable({
     return "monthly-status empty";
   };
 
+
+  useEffect(() => {
+
+    const interval = setInterval(() => {
+
+      setLiveTimer(prev => prev + 1);
+
+    }, 60000);
+
+    return () => clearInterval(interval);
+
+  }, []);
   // =========================
   // FETCH DAILY / MONTHLY
   // =========================
@@ -475,9 +540,18 @@ function AttendanceTable({
   // NORMALIZE MONTHLY DATA ONCE
   // =========================
   const normalizedMonthlyData = useMemo(() => {
-    if (viewMode !== "monthly") return [];
 
-    return attendanceData.map((emp) => {
+    if (viewMode !== "monthly") {
+      return [];
+    }
+
+    // SAFE ARRAY CHECK
+    const safeAttendanceData =
+      Array.isArray(attendanceData)
+        ? attendanceData
+        : [];
+
+    return safeAttendanceData.map((emp) => {
       const rawDays = Array.isArray(emp?.days) ? emp.days : [];
 
       const dayMap = {};
@@ -530,9 +604,16 @@ function AttendanceTable({
   // =========================
   const filteredDailyData = useMemo(() => {
 
-    if (viewMode !== "daily") return [];
+    if (viewMode !== "daily") {
+      return [];
+    }
 
-    return attendanceData.filter((item) => {
+    const safeAttendanceData =
+      Array.isArray(attendanceData)
+        ? attendanceData
+        : [];
+
+    return safeAttendanceData.filter((item) => {
 
       const finalStatus = getResolvedStatus(item);
 
@@ -572,7 +653,12 @@ function AttendanceTable({
   }, [normalizedMonthlyData, filter, matchesSearch, viewMode]);
 
   const employeeDirectory = useMemo(() => {
-    const source = viewMode === "monthly" ? normalizedMonthlyData : attendanceData;
+    const source =
+      viewMode === "monthly"
+        ? normalizedMonthlyData
+        : Array.isArray(attendanceData)
+          ? attendanceData
+          : [];
     const uniqueEmployees = new Map();
 
     source.forEach((emp) => {
@@ -696,6 +782,7 @@ function AttendanceTable({
       if (!resolvedEmployeeId || !editForm.date) {
         toast.warning("Employee ID and Date are required");
         return;
+
       }
 
       if (isFutureDate(editForm.date)) {
@@ -714,13 +801,23 @@ function AttendanceTable({
 
       setUpdateLoading(true);
 
-      const checkInDateTime = editForm.checkIn
-        ? `${editForm.date}T${editForm.checkIn}:00`
-        : null;
+      const isAbsent =
+        editForm.checkIn === "00:00" &&
+        editForm.checkOut === "00:00";
 
-      const checkOutDateTime = editForm.checkOut
-        ? `${editForm.date}T${editForm.checkOut}:00`
-        : null;
+      const checkInDateTime =
+        isAbsent
+          ? null
+          : editForm.checkIn
+            ? `${editForm.date}T${editForm.checkIn}:00`
+            : null;
+
+      const checkOutDateTime =
+        isAbsent
+          ? null
+          : editForm.checkOut
+            ? `${editForm.date}T${editForm.checkOut}:00`
+            : null;
 
       await api.post(
         API_ENDPOINTS.attendance.adminUpdate,
@@ -792,6 +889,52 @@ function AttendanceTable({
     if (!month || !year) return "";
     return formatMonthYear(new Date(year, month - 1, 1), "");
   }, [month, year]);
+
+  const getDayName = (day) => {
+    if (!month || !year || !day) return "";
+
+    const date = new Date(year, month - 1, day);
+
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+    });
+  };
+
+  const getHour = (time) => {
+    return time?.split(":")[0] || "09";
+  };
+
+  const getMinute = (time) => {
+    return time?.split(":")[1] || "00";
+  };
+
+  const updateTime = (
+    field,
+    type,
+    value
+  ) => {
+
+    const current =
+      editForm[field] || "00:00";
+
+    const [hour, minute] =
+      current.split(":");
+
+    const newHour =
+      type === "hour"
+        ? value
+        : hour;
+
+    const newMinute =
+      type === "minute"
+        ? value
+        : minute;
+
+    setEditForm((prev) => ({
+      ...prev,
+      [field]: `${newHour}:${newMinute}`
+    }));
+  };
 
   return (
     <>
@@ -925,14 +1068,22 @@ function AttendanceTable({
                           top: 0,
                           zIndex: 999,
                           background: "#f8fafc",
-                          height: "56px",
-                          minHeight: "56px",
+                          height: "72px",
+                          minHeight: "72px",
                           display: "flex",
+                          flexDirection: "column",
                           alignItems: "center",
                           justifyContent: "center",
+                          gap: "4px",
                         }}
                       >
-                        {day}
+                        <span className="monthly-day-number">
+                          {day}
+                        </span>
+
+                        <span className="monthly-day-name">
+                          {getDayName(day)}
+                        </span>
                       </div>
                     ))}
                     <div
@@ -1108,9 +1259,26 @@ function AttendanceTable({
                                     : `Day ${day}: ${status || "-"} (Click to Edit)`
                                 }
                                 onClick={() => {
+
+                                  if (status === "Weekend") {
+
+                                    toast.error(
+                                      "Weekend attendance cannot be edited"
+                                    );
+
+                                    return;
+                                  }
+
                                   if (!futureDay) {
-                                    openMonthlyDayEditModal(emp, dayObj, day);
+
+                                    openMonthlyDayEditModal(
+                                      emp,
+                                      dayObj,
+                                      day
+                                    );
+
                                   } else {
+
                                     toast.warning(
                                       "You cannot edit attendance for a future date"
                                     );
@@ -1332,22 +1500,166 @@ function AttendanceTable({
 
                 <div className="attendance-form-group">
                   <label>Check In</label>
-                  <input
-                    type="time"
-                    name="checkIn"
-                    value={editForm.checkIn}
-                    onChange={handleEditChange}
-                  />
+
+                  <div className="time-picker-wheel">
+
+                    {/* HOURS */}
+                    <div className="time-wheel-column">
+                      <div className="wheel-label">
+                        Hour
+                      </div>
+
+                      <div className="time-wheel-scroll">
+                        {Array.from(
+                          { length: 24 },
+                          (item, hour) => hour
+                        ).map((hour) => {
+
+                          const value =
+                            String(hour).padStart(2, "0");
+
+                          return (
+                            <div
+                              key={value}
+                              className={`time-wheel-item ${getHour(editForm.checkIn) === value
+                                ? "active"
+                                : ""
+                                }`}
+                              onClick={() =>
+                                updateTime(
+                                  "checkIn",
+                                  "hour",
+                                  value
+                                )
+                              }
+                            >
+                              {value}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* MINUTES */}
+                    <div className="time-wheel-column">
+                      <div className="wheel-label">
+                        Minute
+                      </div>
+
+                      <div className="time-wheel-scroll">
+                        {Array.from(
+                          { length: 60 },
+                          (item, minute) => minute
+                        ).map((minute) => {
+
+                          const value =
+                            String(minute).padStart(2, "0");
+
+                          return (
+                            <div
+                              key={value}
+                              className={`time-wheel-item ${getMinute(editForm.checkIn) === value
+                                ? "active"
+                                : ""
+                                }`}
+                              onClick={() =>
+                                updateTime(
+                                  "checkIn",
+                                  "minute",
+                                  value
+                                )
+                              }
+                            >
+                              {value}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                  </div>
                 </div>
 
                 <div className="attendance-form-group">
                   <label>Check Out</label>
-                  <input
-                    type="time"
-                    name="checkOut"
-                    value={editForm.checkOut}
-                    onChange={handleEditChange}
-                  />
+
+                  <div className="time-picker-wheel">
+
+                    {/* HOURS */}
+                    <div className="time-wheel-column">
+                      <div className="wheel-label">
+                        Hour
+                      </div>
+
+                      <div className="time-wheel-scroll">
+                        {Array.from(
+                          { length: 24 },
+                          (item, hour) => hour
+                        ).map((hour) => {
+
+                          const value =
+                            String(hour).padStart(2, "0");
+
+                          return (
+                            <div
+                              key={value}
+                              className={`time-wheel-item ${getHour(editForm.checkOut) === value
+                                ? "active"
+                                : ""
+                                }`}
+                              onClick={() =>
+                                updateTime(
+                                  "checkOut",
+                                  "hour",
+                                  value
+                                )
+                              }
+                            >
+                              {value}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* MINUTES */}
+                    <div className="time-wheel-column">
+                      <div className="wheel-label">
+                        Minute
+                      </div>
+
+                      <div className="time-wheel-scroll">
+                        {Array.from(
+                          { length: 60 },
+                          (item, minute) => minute
+                        ).map((minute) => {
+
+                          const value =
+                            String(minute).padStart(2, "0");
+
+                          return (
+                            <div
+                              key={value}
+                              className={`time-wheel-item ${getMinute(editForm.checkOut) === value
+                                ? "active"
+                                : ""
+                                }`}
+                              onClick={() =>
+                                updateTime(
+                                  "checkOut",
+                                  "minute",
+                                  value
+                                )
+                              }
+                            >
+                              {value}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                  </div>
                 </div>
               </div>
             </div>

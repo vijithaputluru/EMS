@@ -4,51 +4,94 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace EmployeeManagementSystem.Controllers
 {
-    [ApiController]                       // ✅ ADD THIS
-    [Route("api/[controller]")]          // ✅ ADD THIS
+    [Route("api/[controller]")]
+    [ApiController]
     public class RolesController : ControllerBase
     {
-        private readonly IRoleService _service;
+        private readonly IRoleService _roleService;
 
-        public RolesController(IRoleService service)
+        public RolesController(IRoleService roleService)
         {
-            _service = service;
+            _roleService = roleService;
         }
 
-        // ✅ POST: Create Role
         [HttpPost]
-        public async Task<IActionResult> CreateRole(CreateRoleDto dto)
+        public async Task<IActionResult> CreateRole([FromBody] CreateRoleDto dto)
         {
-            var role = await _service.CreateRole(dto);
-            return Ok(role);
+            try
+            {
+                var role = await _roleService.CreateRole(dto);
+
+                return Ok(new
+                {
+                    message = "Role created successfully",
+                    data = role
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
         }
 
-        // ✅ GET: Get Roles
         [HttpGet]
         public async Task<IActionResult> GetRoles()
         {
-            var roles = await _service.GetRoles();
+            var roles = await _roleService.GetRoles();
+
             return Ok(roles);
         }
+
         [HttpPut("{roleId}")]
-        public async Task<IActionResult> UpdateRole(int roleId, CreateRoleDto dto)
+        public async Task<IActionResult> UpdateRole(int roleId, [FromBody] CreateRoleDto dto)
         {
-            var role = await _service.UpdateRole(roleId, dto);
+            var role = await _roleService.UpdateRole(roleId, dto);
 
             if (role == null)
-                return NotFound("Role not found");
+            {
+                return NotFound(new
+                {
+                    message = "Role not found"
+                });
+            }
 
-            return Ok(role);
+            return Ok(new
+            {
+                message = "Role updated successfully",
+                data = role
+            });
         }
+
         [HttpDelete("{roleId}")]
         public async Task<IActionResult> DeleteRole(int roleId)
         {
-            var result = await _service.DeleteRole(roleId);
+            try
+            {
+                var result = await _roleService.DeleteRole(roleId);
 
-            if (!result)
-                return NotFound("Role not found");
+                if (!result)
+                {
+                    return NotFound(new
+                    {
+                        message = "Role not found"
+                    });
+                }
 
-            return Ok("Role deleted successfully");
+                return Ok(new
+                {
+                    message = "Role deleted successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    message = ex.Message
+                });
+            }
         }
     }
 }

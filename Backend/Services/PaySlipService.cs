@@ -167,7 +167,7 @@ namespace EmployeeManagementSystem.Services
                 Directory.CreateDirectory(outputFolder);
 
             var fileName =
-                $"Payslip_{employee.Employee_Id}_{DateTime.Now:yyyyMMddHHmmss}.docx";
+    $"Payslip_{employee.Employee_Id}_{GetIndianTime():yyyyMMddHHmmss}.docx";
 
             var outputPath =
                 Path.Combine(outputFolder, fileName);
@@ -180,10 +180,17 @@ namespace EmployeeManagementSystem.Services
             using (WordprocessingDocument wordDoc =
                 WordprocessingDocument.Open(outputPath, true))
             {
+                var candidateName = personalInfo == null
+    ? "-"
+    : $"{personalInfo.FirstName} {personalInfo.LastName}".Trim();
+
+                if (string.IsNullOrWhiteSpace(candidateName))
+                    candidateName = "-";
+
                 ReplaceBookmark(
                     wordDoc,
                     "CandidateName",
-                    employee.Name ?? "-");
+                    candidateName);
 
                 ReplaceBookmark(
                     wordDoc,
@@ -191,9 +198,12 @@ namespace EmployeeManagementSystem.Services
                     employee.Employee_Id ?? "-");
 
                 ReplaceBookmark(
-                    wordDoc,
-                    "Position",
-                    employee.RoleName ?? "-");
+                   wordDoc,
+                   "Position",
+                   string.IsNullOrWhiteSpace(
+                       personalInfo?.Designation)
+                   ? "-"
+                   : personalInfo.Designation);
 
                 ReplaceBookmark(
                     wordDoc,
@@ -246,12 +256,9 @@ namespace EmployeeManagementSystem.Services
                     : personalInfo.PanNumber);
 
                 ReplaceBookmark(
-                    wordDoc,
+                     wordDoc,
                     "Location",
-                    string.IsNullOrWhiteSpace(
-                        personalInfo?.Location)
-                    ? "Hyderabad"
-                    : personalInfo.Location);
+                    "Hyderabad");
 
                 ReplaceBookmark(
                     wordDoc,
@@ -265,32 +272,32 @@ namespace EmployeeManagementSystem.Services
                 ReplaceBookmark(
                     wordDoc,
                     "Basic",
-                    basic.ToString("N0"));
+                    basic.ToString("N2"));
 
                 ReplaceBookmark(
                     wordDoc,
                     "HRA",
-                    hra.ToString("N0"));
+                    hra.ToString("N2"));
 
                 ReplaceBookmark(
                     wordDoc,
                     "ConveyanceAllowance",
-                    conveyance.ToString("N0"));
+                    conveyance.ToString("N2"));
 
                 ReplaceBookmark(
                     wordDoc,
                     "Medical",
-                    medical.ToString("N0"));
+                    medical.ToString("N2"));
 
                 ReplaceBookmark(
                     wordDoc,
                     "Special",
-                    specialAllowance.ToString("N0"));
+                    specialAllowance.ToString("N2"));
 
                 ReplaceBookmark(
                     wordDoc,
                     "TotalEarnings",
-                    totalEarnings.ToString("N0"));
+                    totalEarnings.ToString("N2"));
 
                 //--------------------------------
                 // DEDUCTIONS
@@ -298,22 +305,22 @@ namespace EmployeeManagementSystem.Services
                 ReplaceBookmark(
                     wordDoc,
                     "PFAmount",
-                    pf.ToString("N0"));
+                    pf.ToString("N2"));
 
                 ReplaceBookmark(
                     wordDoc,
                     "ProfessionalTax",
-                    professionalTax.ToString("N0"));
+                    professionalTax.ToString("N2"));
 
                 ReplaceBookmark(
                     wordDoc,
                     "OtherDeductions",
-                    OtherDeductions.ToString("N0"));
+                    OtherDeductions.ToString("N2"));
 
                 ReplaceBookmark(
                     wordDoc,
                     "TotalDeduction",
-                    totalDeductions.ToString("N0"));
+                    totalDeductions.ToString("N2"));
 
                 //--------------------------------
                 // FINAL
@@ -321,7 +328,7 @@ namespace EmployeeManagementSystem.Services
                 ReplaceBookmark(
                     wordDoc,
                     "NetSalary",
-                    netSalary.ToString("N0"));
+                    netSalary.ToString("N2"));
 
                 ReplaceBookmark(
                     wordDoc,
@@ -350,38 +357,44 @@ namespace EmployeeManagementSystem.Services
             //--------------------------------
             // DOCX → PDF
             //--------------------------------
+            //--------------------------------
+            // DOCX → PDF
+            //--------------------------------
             var pdfPath =
                 outputPath.Replace(".docx", ".pdf");
 
-            var process = new Process();
-
             var sofficePath =
-                RuntimeInformation.IsOSPlatform(
-                    OSPlatform.Windows)
+                RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
                 ? @"C:\Program Files\LibreOffice\program\soffice.exe"
                 : "/usr/bin/soffice";
 
-            process.StartInfo.FileName =
-                sofficePath;
+            using var process = new Process();
+
+            process.StartInfo.FileName = sofficePath;
 
             process.StartInfo.Arguments =
                 $"--headless --convert-to pdf \"{outputPath}\" --outdir \"{outputFolder}\"";
 
             process.StartInfo.CreateNoWindow = true;
-
             process.StartInfo.UseShellExecute = false;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
 
             process.Start();
 
-            process.WaitForExit();
+            await process.WaitForExitAsync();
 
             if (!File.Exists(pdfPath))
+            {
+                string error = await process.StandardError.ReadToEndAsync();
+
                 throw new Exception(
-                    "PDF generation failed.");
+                    $"PDF generation failed. {error}");
+            }
 
             if (File.Exists(outputPath))
                 File.Delete(outputPath);
-
+            
             //--------------------------------
             // SAVE DB
             //--------------------------------
@@ -396,7 +409,7 @@ namespace EmployeeManagementSystem.Services
                 TotalDeductions = totalDeductions,
                 OtherDeductions = OtherDeductions,
                 FilePath = pdfPath,
-                Generated_On = DateTime.Now
+                Generated_On = GetIndianTime()
             };
 
             _context.PaySlips.Add(payslip);
@@ -428,6 +441,7 @@ namespace EmployeeManagementSystem.Services
             GenerateAllPaySlips(int year, string month)
         {
             var employeeIds = await _context.Employees
+                .AsNoTracking()
                 .Select(e => e.Employee_Id)
                 .ToListAsync();
 
@@ -490,6 +504,19 @@ namespace EmployeeManagementSystem.Services
         //--------------------------------
         // NUMBER TO WORDS
         //--------------------------------
+        private DateTime GetIndianTime()
+        {
+            TimeZoneInfo indiaZone =
+                TimeZoneInfo.FindSystemTimeZoneById(
+                    RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                    ? "India Standard Time"
+                    : "Asia/Kolkata");
+
+            return TimeZoneInfo.ConvertTimeFromUtc(
+                DateTime.UtcNow,
+                indiaZone);
+        }
+
         public static string NumberToWords(
             long number)
         {
