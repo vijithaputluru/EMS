@@ -588,14 +588,18 @@ export default function Assets() {
     }
 
     if (name === "serial") {
-      if (!value) return "Serial Number is required";
+
+      if (!value) {
+        return "Serial Number is required";
+      }
 
       if (value.length > 20) {
         return "Serial Number must not exceed 20 characters";
       }
 
-      if (!/^[A-Za-z0-9 ]+$/.test(value)) {
-        return "Special characters are not allowed";
+      // no spaces and no special characters
+      if (!/^[A-Za-z0-9]+$/.test(value)) {
+        return "Spaces and special characters are not allowed";
       }
 
       const duplicate = assets.find(
@@ -608,30 +612,30 @@ export default function Assets() {
 
       return "";
     }
-
     if (name === "assigned") {
 
-      // no validation for Available or Under Repair
+      // validation for Assigned and Under Repair
       if (
-        draft.status === "Available" ||
+        draft.status === "Assigned" ||
         draft.status === "Under Repair"
       ) {
+
+        if (!value) {
+          return "Employee Code is required";
+        }
+
+        if (value.length > 10) {
+          return "Employee Code must not exceed 10 characters";
+        }
+
+        if (!/^[A-Za-z0-9 ]+$/.test(value)) {
+          return "Special characters are not allowed";
+        }
+
         return "";
       }
 
-      // validation only for Assigned
-      if (draft.status === "Assigned" && !value) {
-        return "Employee Code is required";
-      }
-
-      if (value.length > 10) {
-        return "Employee Code must not exceed 10 characters";
-      }
-
-      if (!/^[A-Za-z0-9 ]+$/.test(value)) {
-        return "Special characters are not allowed";
-      }
-
+      // no validation only for Available
       return "";
     }
 
@@ -699,7 +703,19 @@ export default function Assets() {
     let sanitizedValue = value.replace(/^\s+/g, "");
 
     // remove special characters
-    sanitizedValue = sanitizedValue.replace(/[^A-Za-z0-9 ]/g, "");
+    // remove special characters
+    if (name === "serial") {
+
+      // remove spaces + special chars
+      sanitizedValue =
+        sanitizedValue.replace(/[^A-Za-z0-9]/g, "");
+
+    } else {
+
+      sanitizedValue =
+        sanitizedValue.replace(/[^A-Za-z0-9 ]/g, "");
+
+    }
 
     // max lengths
     if (name === "name") {
@@ -722,7 +738,10 @@ export default function Assets() {
           : sanitizedValue,
     };
 
-    if (name === "status" && value !== "Assigned") {
+    if (
+      name === "status" &&
+      value === "Available"
+    ) {
       draft.assigned = "";
     }
 
@@ -809,12 +828,14 @@ export default function Assets() {
       setSaving(true);
 
       const normalizedAssignedCode =
-        trimmedAsset.status === "Assigned"
+        trimmedAsset.status === "Assigned" ||
+          trimmedAsset.status === "Under Repair"
           ? matchedAssignedEmployee?.code || trimmedAsset.assigned
           : "";
 
       if (
-        trimmedAsset.status === "Assigned" &&
+        (trimmedAsset.status === "Assigned" ||
+          trimmedAsset.status === "Under Repair") &&
         (!normalizedAssignedCode ||
           !employeeCodeLookup.has(normalizedAssignedCode.toLowerCase()))
       ) {
@@ -842,7 +863,10 @@ export default function Assets() {
       formData.append("SerialNo", trimmedAsset.serial);
       formData.append("Status", trimmedAsset.status);
 
-      if (trimmedAsset.status === "Assigned") {
+      if (
+        trimmedAsset.status === "Assigned" ||
+        trimmedAsset.status === "Under Repair"
+      ) {
         formData.append("AssignedTo", normalizedAssignedCode);
         formData.append("EmployeeCode", normalizedAssignedCode);
 
@@ -1338,34 +1362,11 @@ export default function Assets() {
 
             {apiError && <p className="asset-submit-error">{apiError}</p>}
 
-            <div className="asset-field-group">
-              <label htmlFor="asset-name-input">Asset Name</label>
-              <input
-                id="asset-name-input"
-                type="text"
-                name="name"
-                value={newAsset.name}
-                onChange={handleChange}
-                className={errors.name ? "has-error" : ""}
-              />
-              {errors.name && <p className="asset-error">{errors.name}</p>}
-            </div>
+            {/* EMPLOYEE CODE */}
 
             <div className="asset-field-group">
-              <label htmlFor="asset-serial-input">Serial Number</label>
-              <input
-                id="asset-serial-input"
-                type="text"
-                name="serial"
-                value={newAsset.serial}
-                onChange={handleChange}
-                className={errors.serial ? "has-error" : ""}
-              />
-              {errors.serial && <p className="asset-error">{errors.serial}</p>}
-            </div>
+              <label htmlFor="asset-assigned-input">Employee Code or Name</label>
 
-            <div className="asset-field-group">
-              <label htmlFor="asset-assigned-input">Employee Code</label>
               <input
                 id="asset-assigned-input"
                 type="text"
@@ -1373,9 +1374,10 @@ export default function Assets() {
                 value={newAsset.assigned}
                 onChange={handleChange}
                 className={errors.assigned ? "has-error" : ""}
-                disabled={newAsset.status !== "Assigned"}
+                disabled={newAsset.status === "Available"}
                 list="asset-employee-options"
               />
+
               <datalist id="asset-employee-options">
                 {employeeOptions.map((employee) => (
                   <option
@@ -1386,13 +1388,36 @@ export default function Assets() {
                 ))}
               </datalist>
 
-              {newAsset.status === "Assigned" && matchedAssignedEmployee?.name && (
-                <p className="asset-helper">
-                  Assigning this asset to {matchedAssignedEmployee.name}.
-                </p>
-              )}
+              {(newAsset.status === "Assigned" ||
+                newAsset.status === "Under Repair") &&
+                matchedAssignedEmployee?.name && (
+                  <p
+                    className="asset-helper"
+                    style={{
+                      fontWeight: "400",
+                    }}
+                  >
+                    Assigning this asset to{" "}
+                    <span
+                      style={{
+                        fontWeight: "700",
+                        color: "#111827",
+                        display: "inline-block",
+                        maxWidth: "220px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        verticalAlign: "bottom",
+                      }}
+                      title={matchedAssignedEmployee.name}
+                    >
+                      {matchedAssignedEmployee.name}
+                    </span>
+                  </p>
+                )}
 
-              {newAsset.status === "Assigned" &&
+              {(newAsset.status === "Assigned" ||
+                newAsset.status === "Under Repair") &&
                 !matchedAssignedEmployee &&
                 employeeLoadError && (
                   <p className="asset-helper asset-helper--warning">
@@ -1400,11 +1425,60 @@ export default function Assets() {
                   </p>
                 )}
 
-              {errors.assigned && <p className="asset-error">{errors.assigned}</p>}
+              {errors.assigned && (
+                <p className="asset-error">
+                  {errors.assigned}
+                </p>
+              )}
             </div>
+
+            {/* ASSET NAME */}
+
+            <div className="asset-field-group">
+              <label htmlFor="asset-name-input">Asset Name</label>
+
+              <input
+                id="asset-name-input"
+                type="text"
+                name="name"
+                value={newAsset.name}
+                onChange={handleChange}
+                className={errors.name ? "has-error" : ""}
+              />
+
+              {errors.name && (
+                <p className="asset-error">
+                  {errors.name}
+                </p>
+              )}
+            </div>
+
+            {/* SERIAL NUMBER */}
+
+            <div className="asset-field-group">
+              <label htmlFor="asset-serial-input">Serial Number</label>
+
+              <input
+                id="asset-serial-input"
+                type="text"
+                name="serial"
+                value={newAsset.serial}
+                onChange={handleChange}
+                className={errors.serial ? "has-error" : ""}
+              />
+
+              {errors.serial && (
+                <p className="asset-error">
+                  {errors.serial}
+                </p>
+              )}
+            </div>
+
+            {/* STATUS */}
 
             <div className="asset-field-group">
               <label htmlFor="asset-status-select">Status</label>
+
               <select
                 id="asset-status-select"
                 name="status"
@@ -1417,11 +1491,19 @@ export default function Assets() {
                   </option>
                 ))}
               </select>
-              {errors.status && <p className="asset-error">{errors.status}</p>}
+
+              {errors.status && (
+                <p className="asset-error">
+                  {errors.status}
+                </p>
+              )}
             </div>
+
+            {/* IMAGES */}
 
             <div className="asset-field-group">
               <label htmlFor="asset-image-input">Images</label>
+
               <input
                 id="asset-image-input"
                 type="file"

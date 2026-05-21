@@ -88,7 +88,7 @@ function ClientDetails() {
  
       <h2>{client.client_Name}</h2>
  
-      <div style={{ marginTop: "20px", lineHeight: "1.8" }}>
+      <div className="client-details-copy" style={{ marginTop: "20px" }}>
         <p><strong>ID:</strong> {client.id}</p>
         <p><strong>Description:</strong> {client.description}</p>
         <p><strong>Location:</strong> {client.location}</p>

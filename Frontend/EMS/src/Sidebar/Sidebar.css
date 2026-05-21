@@ -17,7 +17,7 @@
   --sidebar-submenu-radius: 12px;
   --sidebar-item-gap: 6px;
   --sidebar-submenu-indent: 8px;
-  --sidebar-font: "Inter", "Manrope", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  --sidebar-font: var(--font-sans);
   --sidebar-transition-duration: var(--layout-transition-duration, 0.34s);
   --sidebar-transition-easing: var(--layout-transition-easing, cubic-bezier(0.22, 1, 0.36, 1));
   width: var(--layout-sidebar-width);

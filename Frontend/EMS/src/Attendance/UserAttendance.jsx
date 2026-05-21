@@ -164,19 +164,58 @@ function UserAttendance() {
   };
 
   const updateTodayAttendanceState = (rows) => {
-    const todayStr = getInputDateValue(new Date());
 
-    const todayRow = rows.find((row) => {
-      if (!row.rawDate) return false;
-      return getInputDateValue(row.rawDate) === todayStr;
-    });
+    const todayStr =
+      getInputDateValue(new Date());
+
+    const todayRow =
+      rows.find((row) => {
+
+        if (!row.rawDate) {
+          return false;
+        }
+
+        return (
+          getInputDateValue(row.rawDate) ===
+          todayStr
+        );
+
+      });
 
     if (todayRow) {
-      setCheckedIn(todayRow.checkIn && todayRow.checkIn !== "--");
-      setCheckedOut(todayRow.checkOut && todayRow.checkOut !== "--");
+
+      const hasCheckIn =
+        todayRow.checkIn &&
+        todayRow.checkIn !== "--";
+
+      const hasCheckOut =
+        todayRow.checkOut &&
+        todayRow.checkOut !== "--";
+
+      setCheckedIn(!!hasCheckIn);
+      setCheckedOut(!!hasCheckOut);
+
+      // LIVE HOURS BEFORE CHECKOUT
+      if (
+        hasCheckIn &&
+        !hasCheckOut
+      ) {
+
+        const checkInTime =
+          todayRow.checkIn;
+
+        setStats((prev) => ({
+          ...prev,
+          checkIn: checkInTime,
+          checkOut: "--",
+        }));
+      }
+
     } else {
+
       setCheckedIn(false);
       setCheckedOut(false);
+
     }
   };
 
@@ -240,10 +279,116 @@ function UserAttendance() {
     fetchAttendanceHistory(viewType);
   }, [viewType]);
 
+  useEffect(() => {
+
+    let interval;
+
+    // LIVE WORKING HOURS
+    if (
+      checkedIn &&
+      !checkedOut &&
+      stats.checkIn &&
+      stats.checkIn !== "--"
+    ) {
+
+      interval = setInterval(() => {
+
+        try {
+
+          const currentTime =
+            stats.checkIn;
+
+          const [time, modifier] =
+            currentTime.split(" ");
+
+          let [hours, minutes] =
+            time.split(":").map(Number);
+
+          // convert AM PM
+          if (
+            modifier === "PM" &&
+            hours !== 12
+          ) {
+            hours += 12;
+          }
+
+          if (
+            modifier === "AM" &&
+            hours === 12
+          ) {
+            hours = 0;
+          }
+
+          const checkInDate =
+            new Date();
+
+          checkInDate.setHours(
+            hours,
+            minutes,
+            0,
+            0
+          );
+
+          const now =
+            new Date();
+
+          const diff =
+            now - checkInDate;
+
+          const totalMinutes =
+            Math.floor(diff / 60000);
+
+          const hrs =
+            Math.floor(totalMinutes / 60);
+
+          const mins =
+            totalMinutes % 60;
+
+          setStats((prev) => ({
+            ...prev,
+            workedHours:
+              `${hrs}h ${mins}m`
+          }));
+
+        } catch (error) {
+
+          console.error(
+            "Live hours error:",
+            error
+          );
+
+        }
+
+      }, 1000);
+
+    }
+
+    return () => {
+
+      if (interval) {
+        clearInterval(interval);
+      }
+
+    };
+
+  }, [
+    checkedIn,
+    checkedOut,
+    stats.checkIn
+  ]);
+  
   const handleCheckIn = async () => {
+
+    // prevent multiple checkin
+    if (checkedIn) {
+      toast.warning("Already checked in");
+      return;
+    }
+
     setLoading(true);
 
     try {
+
       await api.post(
         API_ENDPOINTS.attendance.checkIn,
         null,
@@ -255,15 +400,27 @@ function UserAttendance() {
         }
       );
 
-      toast.success("Checked in successfully");
+      toast.success(
+        "Checked in successfully"
+      );
+
       setCheckedIn(true);
       setCheckedOut(false);
 
       await fetchWeeklySummary();
       await fetchAttendanceHistory(viewType);
+
     } catch (err) {
-      console.error(err?.response?.data || err.message);
-      toast.error("Server error during check-in");
+
+      console.error(
+        err?.response?.data ||
+        err.message
+      );
+
+      toast.error(
+        err?.response?.data?.message ||
+        "Already checked in today"
+      );
     }
 
     setLoading(false);
@@ -456,7 +613,6 @@ function UserAttendance() {
             padding: "18px 20px",
             background: "#f8fafc",
             borderRadius: "14px",
-            fontWeight: "700",
             marginTop: "25px"
           }}
         >

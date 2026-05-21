@@ -31,6 +31,11 @@ function AttendanceTable({
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [updateLoading, setUpdateLoading] = useState(false);
   const activeRequestRef = useRef(0);
+  const checkInHourRef = useRef(null);
+  const checkInMinuteRef = useRef(null);
+
+  const checkOutHourRef = useRef(null);
+  const checkOutMinuteRef = useRef(null);
 
   const [editForm, setEditForm] = useState({
     employeeId: "",
@@ -936,6 +941,51 @@ function AttendanceTable({
     }));
   };
 
+  useEffect(() => {
+
+    const scrollToActive = (
+      ref,
+      activeValue
+    ) => {
+
+      if (!ref?.current) return;
+
+      const activeElement =
+        ref.current.querySelector(
+          `[data-value="${activeValue}"]`
+        );
+
+      if (activeElement) {
+
+        activeElement.scrollIntoView({
+          block: "center",
+          behavior: "smooth"
+        });
+      }
+    };
+
+    scrollToActive(
+      checkInHourRef,
+      getHour(editForm.checkIn)
+    );
+
+    scrollToActive(
+      checkInMinuteRef,
+      getMinute(editForm.checkIn)
+    );
+
+    scrollToActive(
+      checkOutHourRef,
+      getHour(editForm.checkOut)
+    );
+
+    scrollToActive(
+      checkOutMinuteRef,
+      getMinute(editForm.checkOut)
+    );
+
+  }, [editForm]);
+
   return (
     <>
       <ToastContainer
@@ -1260,10 +1310,13 @@ function AttendanceTable({
                                 }
                                 onClick={() => {
 
-                                  if (status === "Weekend") {
+                                  if (
+                                    status === "Weekend" ||
+                                    status === "Holiday"
+                                  ) {
 
                                     toast.error(
-                                      "Weekend attendance cannot be edited"
+                                      `${status} attendance cannot be edited`
                                     );
 
                                     return;
@@ -1509,7 +1562,9 @@ function AttendanceTable({
                         Hour
                       </div>
 
-                      <div className="time-wheel-scroll">
+                      <div className="time-wheel-scroll"
+                        ref={checkInHourRef}
+                      >
                         {Array.from(
                           { length: 24 },
                           (item, hour) => hour
@@ -1521,6 +1576,7 @@ function AttendanceTable({
                           return (
                             <div
                               key={value}
+                              data-value={value}
                               className={`time-wheel-item ${getHour(editForm.checkIn) === value
                                 ? "active"
                                 : ""
@@ -1546,7 +1602,11 @@ function AttendanceTable({
                         Minute
                       </div>
 
-                      <div className="time-wheel-scroll">
+
+                      <div
+                        className="time-wheel-scroll"
+                        ref={checkInMinuteRef}
+                      >
                         {Array.from(
                           { length: 60 },
                           (item, minute) => minute
@@ -1558,6 +1618,7 @@ function AttendanceTable({
                           return (
                             <div
                               key={value}
+                              data-value={value}
                               className={`time-wheel-item ${getMinute(editForm.checkIn) === value
                                 ? "active"
                                 : ""
@@ -1591,7 +1652,9 @@ function AttendanceTable({
                         Hour
                       </div>
 
-                      <div className="time-wheel-scroll">
+                      <div className="time-wheel-scroll"
+                        ref={checkOutHourRef}
+                      >
                         {Array.from(
                           { length: 24 },
                           (item, hour) => hour
@@ -1603,6 +1666,7 @@ function AttendanceTable({
                           return (
                             <div
                               key={value}
+                              data-value={value}
                               className={`time-wheel-item ${getHour(editForm.checkOut) === value
                                 ? "active"
                                 : ""
@@ -1628,7 +1692,9 @@ function AttendanceTable({
                         Minute
                       </div>
 
-                      <div className="time-wheel-scroll">
+                      <div className="time-wheel-scroll"
+                        ref={checkOutMinuteRef}
+                      >
                         {Array.from(
                           { length: 60 },
                           (item, minute) => minute
@@ -1640,6 +1706,7 @@ function AttendanceTable({
                           return (
                             <div
                               key={value}
+                              data-value={value}
                               className={`time-wheel-item ${getMinute(editForm.checkOut) === value
                                 ? "active"
                                 : ""

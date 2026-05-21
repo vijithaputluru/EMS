@@ -2,7 +2,7 @@
   padding: 18px;
   background: #f4f7fb;
   min-height: 100vh;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  font-family: var(--font-sans);
   color: #0f172a;
   box-sizing: border-box;
 }

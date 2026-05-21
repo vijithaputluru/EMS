@@ -421,11 +421,6 @@ function Payroll() {
 
   const baseTableHeaderStyle = {
     ...baseTableCellStyle,
-    fontSize: "12px",
-    color: "#6b7280",
-    fontWeight: 600,
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
     paddingBottom: "16px",
     borderBottom: "2px solid #e5e7eb"
   };
@@ -922,7 +917,6 @@ function Payroll() {
                           position: title === "Employee" ? "sticky" : "static",
                           left: title === "Employee" ? 0 : "auto",
                           zIndex: title === "Employee" ? 20 : 1,
-                          background: "#f8fafc",
                           width,
                           minWidth: width,
                           maxWidth: width,
@@ -935,15 +929,11 @@ function Payroll() {
                                 : "0px",
                           textAlign: align,
                           verticalAlign: "middle",
-                          fontSize: "13px",
-                          fontWeight: 700,
-                          color: "#64748b",
                           borderBottom: "1px solid #e2e8f0",
                           whiteSpace: "nowrap",
                           background: "#f8fafc",
                           height: "48px",
-                          lineHeight: "20px",
-                          letterSpacing: "0.4px"
+                          lineHeight: "20px"
                         }}
                       >
                         {title}

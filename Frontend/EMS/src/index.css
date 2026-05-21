@@ -1,5 +1,5 @@
 :root {
-  --font-sans: "Inter", "Poppins", "Segoe UI", Roboto, Arial, sans-serif;
+  --font-sans: Inter, sans-serif;
   --bg-app: #f5f7fa;
   --bg-page: #ffffff;
   --bg-muted: #f5f7fa;
@@ -27,9 +27,9 @@
   --space-page: clamp(16px, 2.5vw, 32px);
   --space-section: clamp(16px, 2vw, 24px);
   --space-card: clamp(16px, 1.6vw, 22px);
-  --button-font-family: "Inter", "Poppins", "Segoe UI", Roboto, Arial, sans-serif;
+  --button-font-family: Inter, sans-serif;
   --button-font-weight: 600;
-  --page-heading-font-family: "Inter", "Poppins", "Segoe UI", Roboto, Arial, sans-serif;
+  --page-heading-font-family: Inter, sans-serif;
   --page-heading-font-size: clamp(1.25rem, 2.5vw, 1.5rem);
   --page-heading-font-weight: 700;
   --page-heading-color: #041c32;

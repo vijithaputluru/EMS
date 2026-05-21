@@ -1002,9 +1002,11 @@
 }
 
 .time-wheel-scroll {
-  height: 220px;
+  height: 168px;
   overflow-y: auto;
   scroll-behavior: smooth;
+  scroll-snap-type: y mandatory;
+  padding: 56px 0;
 }
 
 .time-wheel-scroll::-webkit-scrollbar {
@@ -1017,7 +1019,9 @@
 }
 
 .time-wheel-item {
+  min-height: 42px;
   height: 42px;
+  scroll-snap-align: center;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -3,7 +3,7 @@
   padding: 20px;
   background: #f5f7fb;
   min-height: 100vh;
-  font-family: "Segoe UI", sans-serif;
+  font-family: var(--font-sans);
 }
 
 /* HEADER */

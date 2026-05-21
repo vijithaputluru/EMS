@@ -1,6 +1,6 @@
 body {
   background: #f5f7fa;
-  font-family: sans-serif;
+  font-family: var(--font-sans);
   overflow-x: hidden;
 }
 

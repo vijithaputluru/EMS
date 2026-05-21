@@ -186,15 +186,15 @@ function CompanyDetails() {
         .replace(/[^A-Za-z\s]/g, "")
         .replace(/\s{2,}/g, " ")
         .replace(/^\s+/g, "")
-        .slice(0, 40);
+        .slice(2, 40);
     }
     else if (name === "phone") {
       // Exactly 10 digits only
       nextValue = value.replace(/\D/g, "").slice(0, 10);
     }
     else if (name === "email") {
-      // Max 35 chars
-      nextValue = value.trimStart().slice(0, 35);
+      // Max 40 chars
+      nextValue = value.trimStart().slice(0, 40);
     }
     else if (name === "gst") {
       // GSTIN2345666835 format
@@ -240,8 +240,8 @@ function CompanyDetails() {
       // only 10 digits
       nextValue = value.replace(/\D/g, "").slice(0, 10);
     } else if (name === "email") {
-      // max 35 chars
-      nextValue = value.slice(0, 35).trimStart();
+      // max 40 chars
+      nextValue = value.slice(0, 40).trimStart();
     }
 
     setBranchForm((prev) => ({
@@ -290,6 +290,10 @@ function CompanyDetails() {
       nextErrors.phone =
         "Phone Number must contain exactly 10 digits";
     }
+    else if (/^(\d)\1{9}$/.test(company.phone)) {
+      nextErrors.phone =
+        "Phone Number cannot contain same digit continuously";
+    }
 
     // Email
     if (!company.email) {
@@ -300,13 +304,22 @@ function CompanyDetails() {
         "Email Address cannot exceed 35 characters";
     }
     else if (
-      !/^[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+\.com$/.test(
-        company.email
-      )
-    ) {
-      nextErrors.email =
-        "Email must end with @domain.com";
-    }
+  !/^[A-Za-z0-9]+@[A-Za-z0-9-]+\.com$/.test(
+    company.email
+  )
+) {
+  nextErrors.email =
+    "Email must end with @domain.com";
+}
+else {
+  const localPart =
+    company.email.split("@")[0];
+
+  if (/^(.)\1+$/.test(localPart)) {
+    nextErrors.email =
+      "Email cannot contain repeated same character continuously";
+  }
+}
 
     // GST Number Format -> GSTIN2345666835
     if (!company.gst) {
@@ -375,6 +388,10 @@ function CompanyDetails() {
     } else if (!/^\d{10}$/.test(branchForm.phone)) {
       nextErrors.phone =
         "Phone Number must contain exactly 10 digits";
+    }
+    else if (/^(\d)\1{9}$/.test(branchForm.phone)) {
+      nextErrors.phone =
+        "Phone Number cannot contain same digit continuously";
     }
 
     // Email Validation
@@ -553,6 +570,9 @@ function CompanyDetails() {
           className="company-add-btn app-button-primary"
           type="button"
           onClick={() => openBranchForm()}
+          style={{
+            transform: "translateX(-20px)"
+          }}
         >
           + Add Branch
         </button>

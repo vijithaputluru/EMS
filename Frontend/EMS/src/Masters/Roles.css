@@ -3,7 +3,7 @@
   background: transparent;
   min-height: 100%;
   overflow-x: hidden;
-  font-family: "Inter", "Manrope", "Segoe UI", Arial, sans-serif;
+  font-family: var(--font-sans);
 }
 
 .roles-header-bar {

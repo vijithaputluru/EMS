@@ -9,6 +9,7 @@ function LeaveManagement() {
   const [filter, setFilter] = useState("All");
   const [selectedLeave, setSelectedLeave] = useState(null);
   const [leaveData, setLeaveData] = useState([]);
+  const [actionLoading, setActionLoading] = useState("");
 
   const getToken = () =>
     localStorage.getItem("token") || sessionStorage.getItem("token");
@@ -36,27 +37,56 @@ function LeaveManagement() {
   }, []);
 
   /* ================= UPDATE STATUS ================= */
-  const updateStatus = async (leaveId, status) => {
+  const updateStatus = async (
+    leaveId,
+    status
+  ) => {
+
     try {
-      await api.put(API_ENDPOINTS.leave.updateStatus(leaveId), null, {
-        params: { status },
-        headers: {
-          Authorization: `Bearer ${getToken()}`,
-        },
-      });
 
-      console.log("✅ Leave Updated Successfully");
+      setActionLoading(
+        `${leaveId}-${status}`
+      );
 
-      fetchLeaves();
+      await api.put(
+        API_ENDPOINTS.leave.updateStatus(leaveId),
+        null,
+        {
+          params: { status },
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        }
+      );
 
-      if (selectedLeave?.id === leaveId) {
+      console.log(
+        "✅ Leave Updated Successfully"
+      );
+
+      await fetchLeaves();
+
+      if (
+        selectedLeave?.id === leaveId
+      ) {
+
         setSelectedLeave((prev) => ({
           ...prev,
           status,
         }));
+
       }
+
     } catch (error) {
-      console.error("Update failed:", error);
+
+      console.error(
+        "Update failed:",
+        error
+      );
+
+    } finally {
+
+      setActionLoading("");
+
     }
   };
 
@@ -165,16 +195,40 @@ function LeaveManagement() {
                       >
                         <button
                           className="approve-btn"
-                          onClick={() => updateStatus(leave.id, "Approved")}
+                          onClick={() =>
+                            updateStatus(
+                              leave.id,
+                              "Approved"
+                            )
+                          }
+                          disabled={
+                            actionLoading ===
+                            `${leave.id}-Approved`
+                          }
                         >
-                          Approve
+                          {actionLoading ===
+                            `${leave.id}-Approved`
+                            ? "Approving..."
+                            : "Approve"}
                         </button>
 
                         <button
                           className="reject-btn"
-                          onClick={() => updateStatus(leave.id, "Rejected")}
+                          onClick={() =>
+                            updateStatus(
+                              leave.id,
+                              "Rejected"
+                            )
+                          }
+                          disabled={
+                            actionLoading ===
+                            `${leave.id}-Rejected`
+                          }
                         >
-                          Reject
+                          {actionLoading ===
+                            `${leave.id}-Rejected`
+                            ? "Rejecting..."
+                            : "Reject"}
                         </button>
                       </td>
                     </tr>

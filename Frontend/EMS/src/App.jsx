@@ -51,6 +51,7 @@ import {
   getStoredRole,
   getStoredToken,
 } from "./utils/authStorage";
+import "./typography.css";
 
 /* ================= HELPERS ================= */
 

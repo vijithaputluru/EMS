@@ -4,7 +4,7 @@ import { FaCalendarAlt } from "react-icons/fa";
 import api from "../api/axiosInstance";
 import { API_ENDPOINTS } from "../api/endpoints";
 import TruncatedText from "../components/TruncatedText";
-import { extractCollection, sortByRecency } from "../utils/collections";
+import { extractCollection } from "../utils/collections";
 import { formatDate } from "../utils/date";
 import { getStoredToken } from "../utils/authStorage";
 
@@ -29,25 +29,27 @@ function UserHolidays() {
         }
       );
 
-      const data =
-        extractCollection(res.data);
+      const data = extractCollection(res.data);
 
       if (!Array.isArray(data)) {
 
         setHolidays([]);
-
         return;
       }
 
-      const formatted =
-        sortByRecency(
-          data.filter(
-            (item) =>
-              item.holiday_Name &&
-              item.holiday_Name.trim() !== "" &&
-              item.holiday_Date !== "0001-01-01T00:00:00"
-          )
-        ).map((item) => ({
+      const formatted = data
+        .filter(
+          (item) =>
+            item.holiday_Name &&
+            item.holiday_Name.trim() !== "" &&
+            item.holiday_Date !== "0001-01-01T00:00:00"
+        )
+        .sort(
+          (a, b) =>
+            new Date(a.holiday_Date) -
+            new Date(b.holiday_Date)
+        )
+        .map((item) => ({
           id: item.id,
           name: item.holiday_Name,
           date: item.holiday_Date
@@ -162,9 +164,6 @@ function UserHolidays() {
                 style={{
                   padding: "14px 20px",
                   textAlign: "left",
-                  fontSize: "14px",
-                  fontWeight: "700",
-                  color: "#0f172a",
                 }}
               >
                 S.No
@@ -175,9 +174,6 @@ function UserHolidays() {
                 style={{
                   padding: "14px 20px",
                   textAlign: "left",
-                  fontSize: "14px",
-                  fontWeight: "700",
-                  color: "#0f172a",
                 }}
               >
                 Holiday Name
@@ -188,9 +184,6 @@ function UserHolidays() {
                 style={{
                   padding: "14px 20px",
                   textAlign: "left",
-                  fontSize: "14px",
-                  fontWeight: "700",
-                  color: "#0f172a",
                 }}
               >
                 Date
@@ -201,9 +194,6 @@ function UserHolidays() {
                 style={{
                   padding: "14px 20px",
                   textAlign: "left",
-                  fontSize: "14px",
-                  fontWeight: "700",
-                  color: "#0f172a",
                 }}
               >
                 Day
@@ -214,9 +204,6 @@ function UserHolidays() {
                 style={{
                   padding: "14px 20px",
                   textAlign: "left",
-                  fontSize: "14px",
-                  fontWeight: "700",
-                  color: "#0f172a",
                 }}
               >
                 Type
