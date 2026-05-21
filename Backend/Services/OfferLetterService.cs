@@ -521,46 +521,46 @@ namespace EmployeeManagementSystem.Services
                 ReplaceBookmark(wordDoc, "Position", dto.Position);
 
                 ReplaceBookmark(wordDoc, "CTCAnnual",
-                   annualCTC.ToString("N0", new CultureInfo("en-IN")) + "/-");
+                   annualCTC.ToString("N2", new CultureInfo("en-IN")) + "/-");
 
                 ReplaceBookmark(wordDoc, "MonthlySalary",
-                    monthlyCTC.ToString("N0", new CultureInfo("en-IN")) + "/-");
+                    monthlyCTC.ToString("N2", new CultureInfo("en-IN")) + "/-");
 
-                ReplaceBookmark(wordDoc, "Basic", basic.ToString("F0"));
-                ReplaceBookmark(wordDoc, "BasicYearly", basicYearly.ToString("F0"));
+                ReplaceBookmark(wordDoc, "Basic", basic.ToString("N2"));
+                ReplaceBookmark(wordDoc, "BasicYearly", basicYearly.ToString("N2"));
 
-                ReplaceBookmark(wordDoc, "HRA", hra.ToString("F0"));
-                ReplaceBookmark(wordDoc, "HRAYearly", hraYearly.ToString("F0"));
+                ReplaceBookmark(wordDoc, "HRA", hra.ToString("N2"));
+                ReplaceBookmark(wordDoc, "HRAYearly", hraYearly.ToString("N2"));
 
-                ReplaceBookmark(wordDoc, "Conveyance", conveyance.ToString("F0"));
-                ReplaceBookmark(wordDoc, "ConveyanceYearly", conveyanceYearly.ToString("F0"));
+                ReplaceBookmark(wordDoc, "Conveyance", conveyance.ToString("N2"));
+                ReplaceBookmark(wordDoc, "ConveyanceYearly", conveyanceYearly.ToString("N2"));
 
-                ReplaceBookmark(wordDoc, "MedicalAllowance", medicalAllowance.ToString("F0"));
-                ReplaceBookmark(wordDoc, "MedicalAllowanceYearly", medicalAllowanceYearly.ToString("F0"));
+                ReplaceBookmark(wordDoc, "MedicalAllowance", medicalAllowance.ToString("N2"));
+                ReplaceBookmark(wordDoc, "MedicalAllowanceYearly", medicalAllowanceYearly.ToString("N2"));
 
-                ReplaceBookmark(wordDoc, "OtherAllowance", otherAllowance.ToString("F0"));
-                ReplaceBookmark(wordDoc, "OtherAllowanceYearly", otherAllowanceYearly.ToString("F0"));
+                ReplaceBookmark(wordDoc, "OtherAllowance", otherAllowance.ToString("N2"));
+                ReplaceBookmark(wordDoc, "OtherAllowanceYearly", otherAllowanceYearly.ToString("N2"));
 
-                ReplaceBookmark(wordDoc, "Gross", gross.ToString("F0"));
-                ReplaceBookmark(wordDoc, "GrossYearly", grossYearly.ToString("F0"));
+                ReplaceBookmark(wordDoc, "Gross", gross.ToString("N2"));
+                ReplaceBookmark(wordDoc, "GrossYearly", grossYearly.ToString("N2"));
 
-                ReplaceBookmark(wordDoc, "Gross1", gross.ToString("F0"));
-                ReplaceBookmark(wordDoc, "GrossYearly1", grossYearly.ToString("F0"));
+                ReplaceBookmark(wordDoc, "Gross1", gross.ToString("N2"));
+                ReplaceBookmark(wordDoc, "GrossYearly1", grossYearly.ToString("N2"));
 
-                ReplaceBookmark(wordDoc, "ProfessionalTax", professionaltaxMonthly.ToString("F0"));
-                ReplaceBookmark(wordDoc, "ProfessionalTaxYearly", professionaltaxAnnual.ToString("F0"));
+                ReplaceBookmark(wordDoc, "ProfessionalTax", professionaltaxMonthly.ToString("N2"));
+                ReplaceBookmark(wordDoc, "ProfessionalTaxYearly", professionaltaxAnnual.ToString("N2"));
 
-                ReplaceBookmark(wordDoc, "ProvidentFund", providentfundMonthly.ToString("F0"));
+                ReplaceBookmark(wordDoc, "ProvidentFund", providentfundMonthly.ToString("N2"));
                 ReplaceBookmark(wordDoc, "ProvidentFundYearly", providentfundAnnual.ToString("F0"));
 
-                ReplaceBookmark(wordDoc, "NetTakeHome", netMonthly.ToString("F0"));
-                ReplaceBookmark(wordDoc, "NetTakeHomeYearly", netAnnual.ToString("F0"));
+                ReplaceBookmark(wordDoc, "NetTakeHome", netMonthly.ToString("N2"));
+                ReplaceBookmark(wordDoc, "NetTakeHomeYearly", netAnnual.ToString("N2"));
 
-                ReplaceBookmark(wordDoc, "ProvidentFund1", employerPfMonthly.ToString("F0"));
-                ReplaceBookmark(wordDoc, "ProvidentFund1Yearly", employerPfAnnual.ToString("F0"));
+                ReplaceBookmark(wordDoc, "ProvidentFund1", employerPfMonthly.ToString("N2"));
+                ReplaceBookmark(wordDoc, "ProvidentFund1Yearly", employerPfAnnual.ToString("N2"));
 
-                ReplaceBookmark(wordDoc, "MonthlyCTC", monthlyCTC.ToString("F0"));
-                ReplaceBookmark(wordDoc, "CTCAnnual1", annualCTC.ToString("F0"));
+                ReplaceBookmark(wordDoc, "MonthlyCTC", monthlyCTC.ToString("N2"));
+                ReplaceBookmark(wordDoc, "CTCAnnual1", annualCTC.ToString("N2"));
             }
 
             // =============================

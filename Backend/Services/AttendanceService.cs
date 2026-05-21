@@ -1105,10 +1105,10 @@ namespace EmployeeManagementSystem.Services
         }
 
         public async Task<IActionResult> AdminUpdateAttendance(
-        string employeeId,
-        DateTime date,
-        DateTime? checkIn,
-        DateTime? checkOut)
+            string employeeId,
+            DateTime date,
+            DateTime? checkIn,
+            DateTime? checkOut)
         {
             if (date.Date > DateTime.UtcNow.Date)
                 return new BadRequestObjectResult("Cannot mark future attendance");
@@ -1121,6 +1121,15 @@ namespace EmployeeManagementSystem.Services
             }
 
             var utcDate = DateTime.SpecifyKind(date.Date, DateTimeKind.Utc);
+
+            // Holiday check
+            var isHoliday = await _context.Holidays
+                .AnyAsync(h => h.Holiday_Date.Date == utcDate.Date);
+
+            if (isHoliday)
+            {
+                return new BadRequestObjectResult("Holiday attendance cannot be updated");
+            }
 
             var attendance = await _context.Attendance
                 .FirstOrDefaultAsync(a =>
@@ -1145,14 +1154,6 @@ namespace EmployeeManagementSystem.Services
                     istZone);
             }
 
-
-            if (checkIn != null)
-            {
-                checkInUtc = TimeZoneInfo.ConvertTimeToUtc(
-                    DateTime.SpecifyKind(checkIn.Value, DateTimeKind.Unspecified),
-                    istZone);
-            }
-
             if (checkOut != null)
             {
                 checkOutUtc = TimeZoneInfo.ConvertTimeToUtc(
@@ -1160,8 +1161,12 @@ namespace EmployeeManagementSystem.Services
                     istZone);
             }
 
-            if (checkInUtc != null && checkOutUtc != null && checkOutUtc < checkInUtc)
+            if (checkInUtc != null &&
+                checkOutUtc != null &&
+                checkOutUtc < checkInUtc)
+            {
                 return new BadRequestObjectResult("Check-out cannot be before check-in");
+            }
 
             if (attendance == null)
             {
@@ -1174,21 +1179,11 @@ namespace EmployeeManagementSystem.Services
                 _context.Attendance.Add(attendance);
             }
 
-            // Admin can update again and again
             attendance.Check_In = checkInUtc;
             attendance.Check_Out = checkOutUtc;
 
             if (attendance.Check_In != null &&
-    attendance.Check_Out != null &&
-    attendance.Check_In.Value.TimeOfDay == TimeSpan.Zero &&
-    attendance.Check_Out.Value.TimeOfDay == TimeSpan.Zero)
-            {
-                attendance.Check_In = null;
-                attendance.Check_Out = null;
-                attendance.WorkingMinutes = 0;
-                attendance.Status = "Absent";
-            }
-            else if (attendance.Check_In != null && attendance.Check_Out != null)
+                attendance.Check_Out != null)
             {
                 var minutes = (int)(attendance.Check_Out.Value - attendance.Check_In.Value).TotalMinutes;
 
@@ -1198,7 +1193,8 @@ namespace EmployeeManagementSystem.Services
 
                 attendance.Status = hours < 4 ? "Half Day" : "Present";
             }
-            else if (attendance.Check_In != null && attendance.Check_Out == null)
+            else if (attendance.Check_In != null &&
+                     attendance.Check_Out == null)
             {
                 attendance.WorkingMinutes = 0;
                 attendance.Status = "Present";

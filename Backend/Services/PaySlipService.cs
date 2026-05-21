@@ -217,6 +217,11 @@ namespace EmployeeManagementSystem.Services
 
                 ReplaceBookmark(
                     wordDoc,
+                    "Month1",
+                    $"{month} {year}");
+
+                ReplaceBookmark(
+                    wordDoc,
                     "BankAccountNumber",
                     string.IsNullOrWhiteSpace(
                         employee.BankDetails?.Account_Number)
