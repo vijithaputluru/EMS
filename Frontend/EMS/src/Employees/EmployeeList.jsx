@@ -637,7 +637,7 @@ function EmployeeList() {
               <col style={{ width: "150px" }} />  {/* Role */}
               <col style={{ width: "220px" }} />  {/* Status */}
               <col style={{ width: "110px" }} />  {/* Joined */}
-              <col style={{ width: "155px" }} />  {/* Action */}
+              <col style={{ width: "165x" }} />  {/* Action */}
             </colgroup>
             <thead>
               <tr>
@@ -703,11 +703,11 @@ function EmployeeList() {
                           alignItems: "center",
                         }}
                       >
-                        <button
+                         <button
                           className="edit-btn"
                           style={{
-                            width: "59px",
-                            minWidth: "59px",
+                            width: "70px",
+                            minWidth: "60px",
                             height: "40px",
                           }}
                           onClick={(event) => {
@@ -717,12 +717,12 @@ function EmployeeList() {
                         >
                           Edit
                         </button>
-
+ 
                         <button
                           className="delete-btn"
                           style={{
-                            width: "59px",
-                            minWidth: "59px",
+                            width: "70px",
+                            minWidth: "62px",
                             height: "40px",
                           }}
                           onClick={(event) => {
@@ -733,6 +733,7 @@ function EmployeeList() {
                         >
                           Delete
                         </button>
+ 
                       </div>
                     </td>
                   </tr>

@@ -20,9 +20,13 @@ function AttendanceTable({
   month,
   year
 }) {
-  const [attendanceData, setAttendanceData] = useState("");
+  const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [, setLiveTimer] = useState(0);
+
+  // ENSURE month/year ARE NUMBERS (fixes AWS server issue)
+  const monthNum = month ? Number(month) : null;
+  const yearNum = year ? Number(year) : null;
 
   // =========================
   // ADMIN EDIT STATES
@@ -261,16 +265,16 @@ function AttendanceTable({
     }
   };
 
-  const buildDateFromDay = (dayNumber) => {
+  const buildDateFromDay = useCallback((dayNumber) => {
     try {
-      if (!month || !year || !dayNumber) return "";
+      if (!monthNum || !yearNum || !dayNumber) return "";
 
       const pad = (n) => String(n).padStart(2, "0");
-      return `${year}-${pad(month)}-${pad(dayNumber)}`;
+      return `${yearNum}-${pad(monthNum)}-${pad(dayNumber)}`;
     } catch {
       return "";
     }
-  };
+  }, [monthNum, yearNum]);
 
   const getDefaultEditTimes = (checkIn, checkOut) => {
     return {
@@ -472,7 +476,7 @@ function AttendanceTable({
       setLoading(true);
 
       const res = await api.get(API_ENDPOINTS.attendance.monthly, {
-        params: { month, year },
+        params: { month: monthNum, year: yearNum },
         headers: {
           Authorization: `Bearer ${token}`,
         }
@@ -502,7 +506,7 @@ function AttendanceTable({
         setLoading(false);
       }
     }
-  }, [month, year, token]);
+  }, [monthNum, yearNum, token]);
 
   useEffect(() => {
     const requestId = ++activeRequestRef.current;
@@ -512,8 +516,8 @@ function AttendanceTable({
     }
     else if (
       viewMode === "monthly" &&
-      month &&
-      year
+      monthNum &&
+      yearNum
     ) {
       fetchMonthlyAttendance(requestId);
     }
@@ -522,8 +526,8 @@ function AttendanceTable({
     fetchMonthlyAttendance,
     fetchTodayAttendance,
     viewMode,
-    month,
-    year
+    monthNum,
+    yearNum
   ]);
 
   // =========================
@@ -881,9 +885,9 @@ function AttendanceTable({
   // MONTHLY HELPERS
   // =========================
   const daysInMonth = useMemo(() => {
-    if (!month || !year) return 31;
-    return new Date(year, month, 0).getDate();
-  }, [month, year]);
+    if (!monthNum || !yearNum) return 31;
+    return new Date(yearNum, monthNum, 0).getDate();
+  }, [monthNum, yearNum]);
 
   const daysArray = useMemo(
     () => Array.from({ length: daysInMonth }, (_, i) => i + 1),
@@ -891,14 +895,14 @@ function AttendanceTable({
   );
 
   const monthLabel = useMemo(() => {
-    if (!month || !year) return "";
-    return formatMonthYear(new Date(year, month - 1, 1), "");
-  }, [month, year]);
+    if (!monthNum || !yearNum) return "";
+    return formatMonthYear(new Date(yearNum, monthNum - 1, 1), "");
+  }, [monthNum, yearNum]);
 
   const getDayName = (day) => {
-    if (!month || !year || !day) return "";
+    if (!monthNum || !yearNum || !day) return "";
 
-    const date = new Date(year, month - 1, day);
+    const date = new Date(yearNum, monthNum - 1, day);
 
     return date.toLocaleDateString("en-US", {
       weekday: "short",
@@ -1099,11 +1103,13 @@ function AttendanceTable({
                         left: 0,
                         zIndex: 9999,
                         background: "#f8fafc",
-                        height: "56px",
-                        minHeight: "56px",
+                        height: "72px",
+                        minHeight: "72px",
                         display: "flex",
                         alignItems: "center",
-                        paddingLeft: "20px",
+                        justifyContent: "center",
+                        borderBottom: "1px solid #e5e7eb",
+                        boxSizing: "border-box",
                       }}
                     >
                       EMPLOYEE
@@ -1143,8 +1149,8 @@ function AttendanceTable({
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "56px",
-                        minHeight: "56px",
+                        height: "72px",
+                        minHeight: "72px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1160,8 +1166,8 @@ function AttendanceTable({
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "56px",
-                        minHeight: "56px",
+                        height: "72px",
+                        minHeight: "72px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1177,8 +1183,8 @@ function AttendanceTable({
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "56px",
-                        minHeight: "56px",
+                        height: "72px",
+                        minHeight: "72px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1194,8 +1200,8 @@ function AttendanceTable({
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "56px",
-                        minHeight: "56px",
+                        height: "72px",
+                        minHeight: "72px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1211,8 +1217,8 @@ function AttendanceTable({
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "56px",
-                        minHeight: "56px",
+                        height: "72px",
+                        minHeight: "72px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1228,8 +1234,8 @@ function AttendanceTable({
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "56px",
-                        minHeight: "56px",
+                        height: "72px",
+                        minHeight: "72px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1245,8 +1251,8 @@ function AttendanceTable({
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "56px",
-                        minHeight: "56px",
+                        height: "72px",
+                        minHeight: "72px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -1262,8 +1268,8 @@ function AttendanceTable({
                         top: 0,
                         zIndex: 999,
                         background: "#f8fafc",
-                        height: "56px",
-                        minHeight: "56px",
+                        height: "72px",
+                        minHeight: "72px",
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",

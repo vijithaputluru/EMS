@@ -9,7 +9,7 @@ import {
   getTodayInputValue,
   toIsoDateString,
 } from "../utils/date";
- 
+
 const EMPTY_FORM = {
   taskTitle: "",
   assignedTo: "",
@@ -18,17 +18,17 @@ const EMPTY_FORM = {
   dueDate: "",
   description: "",
 };
- 
+
 const PRIORITY_OPTIONS = ["Low", "Medium", "High", "Critical"];
- 
+
 const normalizeSpaces = (value) => value.replace(/\s+/g, " ").trim();
- 
+
 function CreateTaskModal({ emsTaskClosePopup, editData }) {
   const [employees, setEmployees] = useState([]);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
- 
+
   const firstInputRef = useRef(null);
   const today = getTodayInputValue();
   const initialEditDueDate = editData?.emsTaskDue
@@ -38,14 +38,14 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
     editData && initialEditDueDate && initialEditDueDate < today
       ? initialEditDueDate
       : today;
- 
+
   const hasEmployeeMatch = (value) => {
     const normalizedAssignee = normalizeSpaces(value).toLowerCase();
- 
+
     if (!normalizedAssignee || employees.length === 0) {
       return true;
     }
- 
+
     return employees.some((employee) => {
       const employeeId = String(employee.id || "").trim().toLowerCase();
       const employeeName = String(employee.name || "").trim().toLowerCase();
@@ -54,7 +54,7 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
       );
     });
   };
- 
+
   const validateField = (fieldName, fieldValue) => {
     switch (fieldName) {
       case "taskTitle": {
@@ -104,7 +104,7 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
         return "";
     }
   };
- 
+
   useEffect(() => {
     if (editData) {
       const nextFormData = {
@@ -119,15 +119,15 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
           : "",
         description: editData.emsTaskDescription || "",
       };
- 
+
       setFormData(nextFormData);
     } else {
       setFormData(EMPTY_FORM);
     }
- 
+
     setErrors({});
   }, [editData]);
- 
+
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
@@ -135,7 +135,7 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
         const employeeList = Array.isArray(res.data)
           ? res.data
           : res.data?.data || [];
- 
+
         setEmployees(
           employeeList.map((emp) => ({
             id: emp.employee_Id || emp.employee_id || emp.employeeId || "",
@@ -146,167 +146,167 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
         console.error("Employee list fetch failed:", error);
       }
     };
- 
+
     fetchEmployees();
   }, []);
- 
+
   useEffect(() => {
     firstInputRef.current?.focus();
   }, []);
- 
+
   useEffect(() => {
     const handleEscape = (event) => {
       if (event.key === "Escape" && !saving) {
         emsTaskClosePopup();
       }
     };
- 
+
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
   }, [emsTaskClosePopup, saving]);
- 
+
   useEffect(() => {
     if (!formData.assignedTo || employees.length === 0) {
       return;
     }
- 
+
     const assigneeError = validateField("assignedTo", formData.assignedTo);
- 
+
     setErrors((prev) => {
       if (!prev.assignedTo && !assigneeError) {
         return prev;
       }
- 
+
       if (!assigneeError) {
         const { assignedTo, ...rest } = prev;
         return rest;
       }
- 
+
       return { ...prev, assignedTo: assigneeError };
     });
   }, [employees, formData.assignedTo, initialEditDueDate, today]);
- 
+
   const handleChange = (event) => {
     const { name, value } = event.target;
     const nextValue =
       name === "taskTitle" || name === "project" ? value.replace(/\s+/g, " ") : value;
     const nextFormData = { ...formData, [name]: nextValue };
- 
+
     setFormData(nextFormData);
- 
+
     const fieldError = validateField(name, nextValue);
     setErrors((prev) => {
       if (!fieldError && !prev[name]) {
         return prev;
       }
- 
+
       if (!fieldError) {
         const { [name]: removedError, ...rest } = prev;
         return rest;
       }
- 
+
       return { ...prev, [name]: fieldError };
     });
   };
- 
+
   const handleBlur = (event) => {
     const { name, value } = event.target;
- 
+
     if (!["taskTitle", "assignedTo", "project", "description"].includes(name)) {
       return;
     }
- 
+
     const trimmedValue = normalizeSpaces(value);
     const nextFormData = { ...formData, [name]: trimmedValue };
     const fieldError = validateField(name, trimmedValue);
- 
+
     setFormData(nextFormData);
     setErrors((prev) => {
       if (!fieldError && !prev[name]) {
         return prev;
       }
- 
+
       if (!fieldError) {
         const { [name]: removedError, ...rest } = prev;
         return rest;
       }
- 
+
       return { ...prev, [name]: fieldError };
     });
   };
- 
+
   const validateForm = () => {
     const nextErrors = {};
- 
+
     Object.entries(formData).forEach(([fieldName, fieldValue]) => {
       const fieldError = validateField(fieldName, fieldValue);
       if (fieldError) {
         nextErrors[fieldName] = fieldError;
       }
     });
- 
+
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
- 
+
   const handleSubmit = async (event) => {
     event.preventDefault();
- 
+
     console.log("============= TASK SUBMIT START =============");
- 
+
     if (saving || !validateForm()) {
       console.log("Validation Failed");
       console.log("Errors:", errors);
       return;
     }
- 
+
     setSaving(true);
- 
+
     const normalizedAssignee = normalizeSpaces(formData.assignedTo).toLowerCase();
- 
+
     console.log("Normalized Assignee:", normalizedAssignee);
- 
+
     const matchedEmployee = employees.find((employee) => {
       const employeeId = String(employee.id || "").trim().toLowerCase();
       const employeeName = String(employee.name || "").trim().toLowerCase();
- 
+
       return (
         employeeId === normalizedAssignee ||
         employeeName === normalizedAssignee
       );
     });
- 
+
     console.log("Matched Employee:", matchedEmployee);
- 
+
     const payload = {
       taskTitle: normalizeSpaces(formData.taskTitle),
- 
+
       assignedTo:
         matchedEmployee?.id ||
         normalizeSpaces(formData.assignedTo),
- 
+
       project: normalizeSpaces(formData.project),
- 
+
       priority: formData.priority,
- 
+
       dueDate: toIsoDateString(formData.dueDate),
- 
+
       description: normalizeSpaces(formData.description),
- 
+
       status: editData?.emsTaskState || "ToDo",
     };
- 
+
     console.log("FINAL PAYLOAD:");
     console.log(JSON.stringify(payload, null, 2));
- 
+
     try {
       let response;
- 
+
       if (editData) {
- 
+
         console.log("UPDATE API:");
         console.log(API_ENDPOINTS.tasks.byId(editData.emsTaskId));
- 
+
         response = await api.put(
           API_ENDPOINTS.tasks.byId(editData.emsTaskId),
           payload,
@@ -316,16 +316,16 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
             },
           }
         );
- 
+
         console.log("UPDATE SUCCESS RESPONSE:", response);
- 
+
         toast.success("Task updated successfully");
- 
+
       } else {
- 
+
         console.log("CREATE API:");
         console.log(API_ENDPOINTS.tasks.list);
- 
+
         response = await api.post(
           API_ENDPOINTS.tasks.list,
           payload,
@@ -335,46 +335,46 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
             },
           }
         );
- 
+
         console.log("CREATE SUCCESS RESPONSE:", response);
- 
+
         toast.success("Task created successfully");
       }
- 
+
       setFormData(EMPTY_FORM);
       setErrors({});
       emsTaskClosePopup();
- 
+
     } catch (error) {
- 
+
       console.error("============= TASK SUBMIT ERROR =============");
- 
+
       console.error("FULL ERROR:", error);
- 
+
       if (error.response) {
         console.error("ERROR STATUS:", error.response.status);
         console.error("ERROR DATA:", error.response.data);
         console.error("ERROR HEADERS:", error.response.headers);
       }
- 
+
       if (error.request) {
         console.error("ERROR REQUEST:", error.request);
       }
- 
+
       console.error("ERROR MESSAGE:", error.message);
- 
+
       toast.error(
         error?.response?.data?.message ||
         "We could not save the task right now. Please try again."
       );
- 
+
     } finally {
       setSaving(false);
- 
+
       console.log("============= TASK SUBMIT END =============");
     }
   };
- 
+
   return (
     <div
       className="ems-task-create-overlay"
@@ -399,14 +399,15 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
           <button
             type="button"
             className="ems-task-modal-close"
-            onClick={emsTaskClosePopup}
+            onClick={() => emsTaskClosePopup()}
             disabled={saving}
             aria-label="Close task form"
           >
-            X
+            ×
           </button>
+
         </div>
- 
+
         <form className="ems-task-create-form" onSubmit={handleSubmit} noValidate>
           <div className="ems-task-form-grid">
             <div className="ems-task-field-group">
@@ -430,7 +431,7 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
                 </p>
               ) : null}
             </div>
- 
+
             <div className="ems-task-field-group">
               <label htmlFor="task-assigned-input">Assignee</label>
               <input
@@ -473,7 +474,7 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
                 </p>
               ) : null}
             </div>
- 
+
             <div className="ems-task-field-group">
               <label htmlFor="task-project-input">Project</label>
               <input
@@ -494,7 +495,7 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
                 </p>
               ) : null}
             </div>
- 
+
             <div className="ems-task-field-group">
               <label htmlFor="task-priority-select">Priority</label>
               <select
@@ -518,7 +519,7 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
                 </p>
               ) : null}
             </div>
- 
+
             <div className="ems-task-field-group">
               <label htmlFor="task-due-date-input">Due Date</label>
               <AppDatePicker
@@ -542,7 +543,7 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
                 </p>
               ) : null}
             </div>
- 
+
             <div className="ems-task-field-group ems-task-field-group-full">
               <label htmlFor="task-description-input">Description</label>
               <textarea
@@ -569,7 +570,7 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
               ) : null}
             </div>
           </div>
- 
+
           <div className="ems-task-create-buttons">
             <button
               type="button"
@@ -589,7 +590,7 @@ function CreateTaskModal({ emsTaskClosePopup, editData }) {
     </div>
   );
 }
- 
+
 export default CreateTaskModal;
- 
- 
+
+

@@ -5,45 +5,45 @@ import { API_ENDPOINTS } from "../api/endpoints";
 import { extractCollection, sortByRecency } from "../utils/collections";
 import { formatDate } from "../utils/date";
 import { getStoredToken } from "../utils/authStorage";
-
+ 
 function UserTaskManagement() {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
-
+ 
   // =========================
   // FETCH TASKS
   // =========================
   const fetchTasks = async () => {
     try {
       const token = getStoredToken();
-
+ 
       if (!token) {
         console.error("❌ No token found");
         setTasks([]);
         setLoading(false);
         return;
       }
-
+ 
       const res = await api.get(API_ENDPOINTS.tasks.myTasks, {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
       });
-
+ 
       const data = res.data;
       console.log("📦 Tasks API Response:", data);
-
+ 
       // ✅ FIXED: API returns object with tasks array
       const taskList = sortByRecency(
         Array.isArray(data?.tasks)
           ? data.tasks
           : extractCollection(data)
       );
-
+ 
       console.log("✅ Final Task List:", taskList);
-
+ 
       setTasks(taskList);
     } catch (err) {
       console.error("❌ Fetch Error:", err);
@@ -52,7 +52,7 @@ function UserTaskManagement() {
       setLoading(false);
     }
   };
-
+ 
   // =========================
   // UPDATE TASK STATUS
   // =========================
@@ -60,10 +60,10 @@ function UserTaskManagement() {
     try {
       const token = getStoredToken();
       setUpdatingId(taskId);
-
+ 
       console.log("🛠 Updating Task ID:", taskId);
       console.log("🛠 New Status:", newStatus);
-
+ 
       const res = await api.put(
         API_ENDPOINTS.tasks.updateUserStatus(taskId),
         JSON.stringify(newStatus),
@@ -74,20 +74,20 @@ function UserTaskManagement() {
           },
         }
       );
-
+ 
       console.log("📡 Update Status Code:", res.status);
-
+ 
       const updatedTask = res.data || null;
       console.log("✅ Update Response:", updatedTask);
-
+ 
       // ✅ Update UI instantly
       setTasks((prev) =>
         prev.map((task) =>
           (task.id || task.taskId || task._id) === taskId
             ? {
-                ...task,
-                status: updatedTask?.status || newStatus,
-              }
+              ...task,
+              status: updatedTask?.status || newStatus,
+            }
             : task
         )
       );
@@ -98,18 +98,20 @@ function UserTaskManagement() {
       setUpdatingId(null);
     }
   };
-
+ 
   useEffect(() => {
     fetchTasks();
   }, []);
-
+ 
   return (
     <div className="task-page">
       <div className="task-header">
-        <h2>My Tasks</h2>
-        <p>View tasks assigned to you</p>
+        <div>
+          <h2>My Tasks</h2>
+          <p>View tasks assigned to you</p>
+        </div>
       </div>
-
+ 
       <div className="task-table">
         <table>
           <thead>
@@ -121,7 +123,7 @@ function UserTaskManagement() {
               <th>Actions</th>
             </tr>
           </thead>
-
+ 
           <tbody>
             {loading ? (
               <tr>
@@ -139,7 +141,7 @@ function UserTaskManagement() {
               tasks.map((task, index) => {
                 const taskId = task.id || task.taskId || task._id || index;
                 const taskStatus = task.status || "Pending";
-
+ 
                 return (
                   <tr key={taskId}>
                     <td>{task.taskTitle || task.title || "-"}</td>
@@ -180,5 +182,8 @@ function UserTaskManagement() {
     </div>
   );
 }
-
+ 
 export default UserTaskManagement;
+ 
+ 
+ 

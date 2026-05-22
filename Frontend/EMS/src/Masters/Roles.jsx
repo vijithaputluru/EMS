@@ -12,37 +12,37 @@ import {
   sanitizeRoleNameInput,
   validateRoleName,
 } from "../utils/validation";
-
+ 
 const normalizeRoleStatus = (value) =>
   String(value || "").trim().toLowerCase() === "inactive" ? "Inactive" : "Active";
-
+ 
 function Roles() {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [rolesShowModal, setRolesShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
-
+ 
   const [isEdit, setIsEdit] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState(null);
-
+ 
   const [rolesForm, setRolesForm] = useState({
     roleName: "",
     status: "Active"
   });
-
+ 
   const navigate = useNavigate();
-
+ 
   useEffect(() => {
     fetchRoles();
   }, []);
-
+ 
   const fetchRoles = async () => {
     setLoading(true);
-
+ 
     try {
       const res = await api.get(API_ENDPOINTS.masters.roles.list);
-
+ 
       const formattedData = sortByNewestIdFirst(
         extractCollection(res.data).map((role) => ({
           roleId: role.id ?? role.roleId ?? role.role_Id,
@@ -52,7 +52,7 @@ function Roles() {
         })),
         (role) => role.roleId
       );
-
+ 
       setRoles(formattedData);
     } catch (error) {
       console.error(error);
@@ -62,12 +62,12 @@ function Roles() {
       setLoading(false);
     }
   };
-
+ 
   const handleRolesChange = (e) => {
     const { name, value } = e.target;
-
+ 
     let nextValue = value;
-
+ 
     if (name === "roleName") {
       // allow only letters and single space
       nextValue = value
@@ -75,18 +75,18 @@ function Roles() {
         .replace(/\s+/g, " ") // only one space
         .replace(/^ /, ""); // no starting space
     }
-
+ 
     if (name === "status") {
       nextValue = normalizeRoleStatus(value);
     }
-
+ 
     const nextForm = {
       ...rolesForm,
       [name]: nextValue,
     };
-
+ 
     setRolesForm(nextForm);
-
+ 
     setErrors((prev) => ({
       ...prev,
       [name]:
@@ -97,44 +97,44 @@ function Roles() {
             : "Status is required",
     }));
   };
-
+ 
   const validateRoleForm = () => {
     const trimmedRoleName = normalizeWhitespace(rolesForm.roleName);
     const normalizedStatus = normalizeRoleStatus(rolesForm.status);
-
+ 
     const nextErrors = {};
-
+ 
     const roleNameError = validateRoleName(trimmedRoleName);
-
+ 
     if (roleNameError) {
       nextErrors.roleName = roleNameError;
     }
-
+ 
     if (!normalizedStatus) {
       nextErrors.status = "Status is required";
     }
-
+ 
     setErrors(nextErrors);
-
+ 
     setRolesForm((prev) => ({
       ...prev,
       roleName: trimmedRoleName,
       status: normalizedStatus,
     }));
-
+ 
     return Object.keys(nextErrors).length === 0;
   };
-
+ 
   const handleRolesSubmit = async () => {
     if (!validateRoleForm()) return;
-
+ 
     const payload = {
       name: rolesForm.roleName.trim(),
       isActive: normalizeRoleStatus(rolesForm.status) === "Active",
     };
-
+ 
     setSaving(true);
-
+ 
     try {
       if (isEdit) {
         await api.put(
@@ -146,7 +146,7 @@ function Roles() {
             }
           }
         );
-
+ 
         toast.success("Role updated successfully");
       } else {
         await api.post(API_ENDPOINTS.masters.roles.list, payload, {
@@ -154,10 +154,10 @@ function Roles() {
             "Content-Type": "application/json",
           }
         });
-
+ 
         toast.success("Role added successfully");
       }
-
+ 
       resetForm();
       fetchRoles();
     } catch (error) {
@@ -167,18 +167,18 @@ function Roles() {
       setSaving(false);
     }
   };
-
+ 
   const handleDelete = async (id) => {
     try {
       await api.delete(API_ENDPOINTS.masters.roles.byId(id));
-
+ 
       toast.success("Role deleted successfully");
       fetchRoles();
     } catch (error) {
       console.error(error);
-
+ 
       const msg = error.response?.data || "";
-
+ 
       if (msg.includes("assigned to users")) {
         toast.error("This role is assigned to users");
       } else {
@@ -186,19 +186,19 @@ function Roles() {
       }
     }
   };
-
+ 
   const handleEditClick = (role) => {
     setIsEdit(true);
     setSelectedRoleId(role.roleId);
-
+ 
     setRolesForm({
       roleName: role.roleName,
       status: normalizeRoleStatus(role.status),
     });
-
+ 
     setRolesShowModal(true);
   };
-
+ 
   const resetForm = () => {
     setRolesForm({ roleName: "", status: "Active" });
     setErrors({});
@@ -206,11 +206,11 @@ function Roles() {
     setSelectedRoleId(null);
     setRolesShowModal(false);
   };
-
+ 
   if (loading) {
     return <p style={{ padding: "20px" }}>Loading roles...</p>;
   }
-
+ 
   return (
     <div className="roles-page-container">
       <ToastContainer
@@ -227,7 +227,7 @@ function Roles() {
         <div>
           <h2>Roles & Permissions</h2>
         </div>
-
+ 
         <button
           className="roles-add-btn"
           onClick={() => {
@@ -241,61 +241,212 @@ function Roles() {
           + Add Role
         </button>
       </div>
-
-      <div className="roles-table-wrap">
-        <table className="roles-table-main">
+ 
+      <div
+        className="roles-table-wrap"
+        style={{
+          background: "#fff",
+          borderRadius: "16px",
+          overflow: "hidden",
+          border: "1px solid #e5e7eb",
+        }}
+      >
+        <table
+          style={{
+            width: "100%",
+            borderCollapse: "collapse",
+          }}
+        >
           <thead>
-            <tr>
-              <th>Role</th>
-              <th>Users</th>
-              <th>Status</th>
-              <th>Actions</th>
+            <tr
+              style={{
+                background: "#f3f4f6",
+                height: "30px",
+              }}
+            >
+              <th
+                style={{
+                  padding: "12px 50px",
+                  textAlign: "left",
+                  fontSize: "15px",
+                  fontWeight: "700",
+                  color: "#1e3a5f",
+                }}
+              >
+                ROLE
+              </th>
+ 
+              <th
+                style={{
+                  padding: "12px 16px",
+                  textAlign: "center",
+                  fontSize: "15px",
+                  fontWeight: "700",
+                  color: "#1e3a5f",
+                }}
+              >
+                USERS
+              </th>
+ 
+              <th
+                style={{
+                  padding: "12px 16px",
+                  textAlign: "center",
+                  fontSize: "15px",
+                  fontWeight: "700",
+                  color: "#1e3a5f",
+                }}
+              >
+                STATUS
+              </th>
+ 
+              <th
+                style={{
+                  padding: "12px 16px",
+                  textAlign: "center",
+                  fontSize: "15px",
+                  fontWeight: "700",
+                  color: "#1e3a5f",
+                }}
+              >
+                ACTIONS
+              </th>
             </tr>
           </thead>
-
+ 
           <tbody>
             {roles.map((r, i) => (
-              <tr key={r.roleId || i}>
+              <tr
+                key={r.roleId || i}
+                style={{
+                  borderBottom: "1px solid #e5e7eb",
+                  height: "62px",
+                }}
+              >
                 <td
-                  className="roles-name-cell"
                   onClick={() =>
                     navigate(`/employee-permissions/${r.roleId}/${r.roleName}`)
                   }
+                  style={{
+                    padding: "10px 16px",
+                    cursor: "pointer",
+                  }}
                 >
-                  <div className="roles-icon-box">
-                    <FaShieldAlt />
-                  </div>
-                  {r.roleName}
-                </td>
-
-                <td>{r.users}</td>
-                <td>{r.status}</td>
-
-                <td className="roles-action-cell">
-                  <div className="roles-action-group">
-                    <button
-                      type="button"
-                      className="roles-action-btn app-icon-action-button app-icon-action-button--edit"
-                      aria-label={`Edit ${r.roleName}`}
-                      onClick={() => handleEditClick(r)}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: "36px",
+                        height: "36px",
+                        borderRadius: "10px",
+                        background: "#dff7f7",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#00838f",
+                        fontSize: "15px",
+                        flexShrink: 0,
+                      }}
                     >
-                      <FaEdit />
-                    </button>
-
+                      <FaShieldAlt />
+                    </div>
+ 
+                    <span
+                      style={{
+                        fontSize: "15px",
+                        fontWeight: "500",
+                        color: "#0f172a",
+                      }}
+                    >
+                      {r.roleName}
+                    </span>
+                  </div>
+                </td>
+ 
+                <td
+                  style={{
+                    textAlign: "center",
+                    fontSize: "15px",
+                    fontWeight: "600",
+                    color: "#0f172a",
+                  }}
+                >
+                  {r.users}
+                </td>
+ 
+                <td
+                  style={{
+                    textAlign: "center",
+                    fontSize: "15px",
+                    fontWeight: "500",
+                    color: "#0f172a",
+                  }}
+                >
+                  {r.status}
+                </td>
+ 
+                <td
+                  style={{
+                    textAlign: "center",
+                    padding: "10px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "center",
+                      alignItems: "center",
+                      gap: "10px",
+                    }}
+                  >
                     <button
                       type="button"
-                      className={`roles-action-btn app-icon-action-button app-icon-action-button--delete ${r.users > 0 ? "is-disabled" : ""
-                        }`}
-                      aria-label={`Delete ${r.roleName}`}
+                      onClick={() => handleEditClick(r)}
+                      style={{
+                        minWidth: "78px",
+                        height: "40px",
+                        borderRadius: "10px",
+                        border: "1px solid #b2ebf2",
+                        background: "#dff7f7",
+                        color: "#0f2b46",
+                        fontWeight: "700",
+                        fontSize: "14px",
+                        cursor: "pointer",
+                      }}
+                    >
+                      Edit
+                    </button>
+ 
+                    <button
+                      type="button"
                       onClick={() => {
                         if (r.users > 0) {
                           toast.warning("Role already assigned to users");
                           return;
                         }
+ 
                         handleDelete(r.roleId);
                       }}
+                      disabled={r.users > 0}
+                      style={{
+                        minWidth: "78px",
+                        height: "40px",
+                        borderRadius: "12px",
+                        border: "1px solid #f5c2c2",
+                        background: "#fff5f5",
+                        color: r.users > 0 ? "#bfc5ce" : "#ef4444",
+                        fontWeight: "700",
+                        fontSize: "14px",
+                        cursor: r.users > 0 ? "not-allowed" : "pointer",
+                        opacity: r.users > 0 ? 0.7 : 1,
+                      }}
                     >
-                      <FaTrash />
+                      Delete
                     </button>
                   </div>
                 </td>
@@ -304,12 +455,12 @@ function Roles() {
           </tbody>
         </table>
       </div>
-
+ 
       {rolesShowModal && (
         <div className="roles-modal-overlay">
           <div className="roles-modal-container">
             <h3>{isEdit ? "Edit Role" : "Add Role"}</h3>
-
+ 
             <div className="roles-field-group">
               <label htmlFor="role-name-input">Role Name</label>
               <input
@@ -325,7 +476,7 @@ function Roles() {
               />
               {errors.roleName && <p className="roles-error">{errors.roleName}</p>}
             </div>
-
+ 
             <div className="roles-field-group">
               <label htmlFor="role-status-select">Status</label>
               <select
@@ -341,10 +492,10 @@ function Roles() {
               </select>
               {errors.status && <p className="roles-error">{errors.status}</p>}
             </div>
-
+ 
             <div className="roles-modal-actions">
               <button onClick={resetForm}>Cancel</button>
-
+ 
               <button onClick={handleRolesSubmit} disabled={saving}>
                 {saving ? (isEdit ? "Updating..." : "Saving...") : isEdit ? "Update" : "Save"}
               </button>
@@ -355,5 +506,7 @@ function Roles() {
     </div>
   );
 }
-
+ 
 export default Roles;
+ 
+ 

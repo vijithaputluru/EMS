@@ -2,7 +2,9 @@
 using EmployeeManagementSystem.DTOs;
 using EmployeeManagementSystem.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace EmployeeManagementSystem.Services
 {
@@ -13,16 +15,6 @@ namespace EmployeeManagementSystem.Services
         public UserDashboardService(AppDbContext context)
         {
             _context = context;
-        }
-
-        //---------------------------------------
-        // Convert UTC → IST
-        //---------------------------------------
-
-        private static DateTime ConvertToIST(DateTime utcTime)
-        {
-            var istZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
-            return TimeZoneInfo.ConvertTimeFromUtc(utcTime, istZone);
         }
 
         //---------------------------------------
@@ -64,8 +56,11 @@ namespace EmployeeManagementSystem.Services
             // ATTENDANCE %
             //---------------------------------------
 
-            var currentMonth = DateTime.UtcNow.Month;
-            var currentYear = DateTime.UtcNow.Year;
+            var istZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+            var istNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, istZone);
+
+            var currentMonth = istNow.Month;
+            var currentYear = istNow.Year;
 
             var presentDays = await _context.Attendance
                 .Where(a => a.Employee_Id == employeeId
@@ -76,7 +71,12 @@ namespace EmployeeManagementSystem.Services
 
             var totalDays = DateTime.DaysInMonth(currentYear, currentMonth);
 
-            double attendancePercentage = ((double)presentDays / totalDays) * 100;
+            double attendancePercentage = 0;
+
+            if (totalDays > 0)
+            {
+                attendancePercentage = ((double)presentDays / totalDays) * 100;
+            }
 
             //---------------------------------------
             // RECENT ACTIVITIES
@@ -91,16 +91,17 @@ namespace EmployeeManagementSystem.Services
             var activities = activityData.Select(n => new RecentActivityDto
             {
                 Activity = n.Message,
-                Time = ConvertToIST(n.CreatedAt)
-                    .ToString("dd MMM yyyy hh:mm tt")
+                Time = GetTimeAgo(n.CreatedAt)
             }).ToList();
 
             //---------------------------------------
             // UPCOMING HOLIDAYS
             //---------------------------------------
 
+            var todayIst = istNow.Date;
+
             var holidayData = await _context.Holidays
-                .Where(h => h.Holiday_Date >= DateTime.UtcNow.Date)
+                .Where(h => h.Holiday_Date >= todayIst)
                 .OrderBy(h => h.Holiday_Date)
                 .Take(3)
                 .ToListAsync();
@@ -108,7 +109,7 @@ namespace EmployeeManagementSystem.Services
             var holidays = holidayData.Select(h => new UpComingHolidayDto
             {
                 HolidayName = h.Holiday_Name,
-                Date = ConvertToIST(h.Holiday_Date)
+                Date = h.Holiday_Date
             }).ToList();
 
             //---------------------------------------
@@ -120,10 +121,48 @@ namespace EmployeeManagementSystem.Services
                 MyTasks = myTasks,
                 CompletedTasks = completedTasks,
                 PendingTasks = pendingTasks,
-                Attendance = attendancePercentage,
+                Attendance = Math.Round(attendancePercentage, 2),
                 RecentActivities = activities,
                 UpcomingHolidays = holidays
             };
+        }
+
+        //---------------------------------------
+        // TIME AGO
+        //---------------------------------------
+
+        private static string GetTimeAgo(DateTime createdAt)
+        {
+            /*
+             IMPORTANT:
+             CreatedAt should be saved as DateTime.UtcNow.
+             Example:
+             CreatedAt = DateTime.UtcNow
+            */
+
+            if (createdAt.Kind == DateTimeKind.Unspecified)
+            {
+                createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
+            }
+
+            var timeSpan = DateTime.UtcNow - createdAt;
+
+            if (timeSpan.TotalSeconds < 0)
+                return "Just now";
+
+            if (timeSpan.TotalSeconds < 60)
+                return $"{(int)timeSpan.TotalSeconds} seconds ago";
+
+            if (timeSpan.TotalMinutes < 60)
+                return $"{(int)timeSpan.TotalMinutes} minutes ago";
+
+            if (timeSpan.TotalHours < 24)
+                return $"{(int)timeSpan.TotalHours} hours ago";
+
+            if (timeSpan.TotalDays < 7)
+                return $"{(int)timeSpan.TotalDays} days ago";
+
+            return createdAt.ToString("dd MMM yyyy");
         }
     }
 }

@@ -318,9 +318,10 @@ namespace EmployeeManagementSystem.Services
                     professionalTax.ToString("N2"));
 
                 ReplaceBookmark(
-                    wordDoc,
-                    "OtherDeductions",
-                    OtherDeductions.ToString("N2"));
+     wordDoc,
+     "OtherDeductions",
+     OtherDeductions == 0 ? "0.00" : OtherDeductions.ToString("N2")
+ );
 
                 ReplaceBookmark(
                     wordDoc,

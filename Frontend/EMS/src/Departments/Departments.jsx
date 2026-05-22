@@ -205,6 +205,7 @@ function Departments() {
   const openCreateModal = () => {
     setEditId(null);
     setErrors({});
+    setHeadSearch("");
     setNewDept(EMPTY_DEPARTMENT_FORM);
     setShowModal(true);
   };
@@ -277,6 +278,7 @@ function Departments() {
       building: dept.building || "",
       status: dept.status || "",
     });
+    setHeadSearch(dept.departmentHead || "");
     setShowModal(true);
     setActiveMenu(null);
   };
@@ -457,175 +459,184 @@ function Departments() {
                       <div
                         key={employee.id}
                         onClick={() => {
+
                           setNewDept((prev) => ({
                             ...prev,
                             head: employee.label,
                           }));
+
+                          // THIS WILL SHOW SELECTED VALUE INSIDE INPUT
+                          setHeadSearch(employee.label);
 
                           setErrors((prev) => ({
                             ...prev,
                             head: "",
                           }));
                         }}
-                        style={{
-                          padding: "10px 12px",
-                          borderRadius: "8px",
-                          cursor: "pointer",
-                          marginBottom: "6px",
-                          background: isSelected
-                            ? "#2563EB"
-                            : "#FFFFFF",
-                          color: isSelected
-                            ? "#FFFFFF"
-                            : "#0F172A",
-                          border: isSelected
-                            ? "1px solid #2563EB"
-                            : "1px solid transparent",
-                        }}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  marginBottom: "6px",
+                  background: isSelected
+                    ? "#2563EB"
+                    : "#FFFFFF",
+                  color: isSelected
+                    ? "#FFFFFF"
+                    : "#0F172A",
+                  border: isSelected
+                    ? "1px solid #2563EB"
+                    : "1px solid transparent",
+                }}
                       >
-                        <div
-                          style={{
-                            fontSize: "14px",
-                            fontWeight: "500",
-                          }}
-                        >
-                          {employee.label}
-                        </div>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    fontWeight: "500",
+                  }}
+                >
+                  {employee.label}
+                </div>
 
-                        <div
-                          style={{
-                            fontSize: "12px",
-                            opacity: 0.8,
-                            marginTop: "2px",
-                          }}
-                        >
-                          Employee ID: {employee.id || "N/A"}
-                        </div>
-                      </div>
-                    );
+                <div
+                  style={{
+                    fontSize: "12px",
+                    opacity: 0.8,
+                    marginTop: "2px",
+                  }}
+                >
+                  Employee ID: {employee.id || "N/A"}
+                </div>
+              </div>
+              );
                   })}
-              </div>
-
-              {errors.head && (
-                <p className="dept-error">{errors.head}</p>
-              )}
             </div>
 
-            <div className="dept-field-group">
-              <label htmlFor="dept-building-input">Building</label>
-              <input
-                id="dept-building-input"
-                name="building"
-                value={newDept.building}
-                onChange={handleChange}
-                aria-invalid={Boolean(errors.building)}
-                className={errors.building ? "field-error" : ""}
-              />
-              {errors.building && <p className="dept-error">{errors.building}</p>}
-            </div>
+            {errors.head && (
+              <p className="dept-error">{errors.head}</p>
+            )}
+          </div>
 
-            <div className="dept-field-group">
-              <label htmlFor="dept-status-select">Status</label>
-              <select
-                id="dept-status-select"
-                name="status"
-                value={newDept.status}
-                onChange={handleChange}
-                aria-invalid={Boolean(errors.status)}
-                className={errors.status ? "field-error" : ""}
-              >
-                <option value="">Select Status</option>
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
-              </select>
-              {errors.status && <p className="dept-error">{errors.status}</p>}
-            </div>
+          <div className="dept-field-group">
+            <label htmlFor="dept-building-input">Building</label>
+            <input
+              id="dept-building-input"
+              name="building"
+              value={newDept.building}
+              onChange={handleChange}
+              aria-invalid={Boolean(errors.building)}
+              className={errors.building ? "field-error" : ""}
+            />
+            {errors.building && <p className="dept-error">{errors.building}</p>}
+          </div>
 
-            <div className="dept-modal-btns">
-              <button onClick={closeModal} disabled={saving}>
-                Cancel
-              </button>
-              <button className="dept-save-btn" onClick={handleSubmit} disabled={saving}>
-                {saving ? (editId ? "Updating..." : "Saving...") : editId ? "Update" : "Save"}
-              </button>
-            </div>
+          <div className="dept-field-group">
+            <label htmlFor="dept-status-select">Status</label>
+            <select
+              id="dept-status-select"
+              name="status"
+              value={newDept.status}
+              onChange={handleChange}
+              aria-invalid={Boolean(errors.status)}
+              className={errors.status ? "field-error" : ""}
+            >
+              <option value="">Select Status</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+            {errors.status && <p className="dept-error">{errors.status}</p>}
+          </div>
+
+          <div className="dept-modal-btns">
+            <button onClick={closeModal} disabled={saving}>
+              Cancel
+            </button>
+            <button className="dept-save-btn" onClick={handleSubmit} disabled={saving}>
+              {saving ? (editId ? "Updating..." : "Saving...") : editId ? "Update" : "Save"}
+            </button>
           </div>
         </div>
-      )}
-
-      {showDeleteModal && (
-        <div className="delete-overlay">
-          <div className="delete-modal">
-            <h3>Confirm Delete</h3>
-            <p>
-              Are you sure you want to delete{" "}
-              <strong>{deptToDelete?.departmentName || "this department"}</strong>?
-            </p>
-
-            <div className="delete-actions">
-              <button
-                className="cancel-btn"
-                onClick={() => setShowDeleteModal(false)}
-              >
-                Cancel
-              </button>
-
-              <button
-                className="confirm-delete-btn"
-                onClick={confirmDelete}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
         </div>
-      )}
+  )
+}
 
-      {selectedDept && (
-        <div className="dept-members-overlay" onClick={() => setSelectedDept(null)}>
-          <div
-            className="dept-members-modal"
-            onClick={(event) => event.stopPropagation()}
+{
+  showDeleteModal && (
+    <div className="delete-overlay">
+      <div className="delete-modal">
+        <h3>Confirm Delete</h3>
+        <p>
+          Are you sure you want to delete{" "}
+          <strong>{deptToDelete?.departmentName || "this department"}</strong>?
+        </p>
+
+        <div className="delete-actions">
+          <button
+            className="cancel-btn"
+            onClick={() => setShowDeleteModal(false)}
           >
-            <div className="dept-members-modal-header">
-              <div>
-                <h3>{selectedDept.departmentName}</h3>
-                <p>{selectedDepartmentMembers.length} assigned members</p>
-              </div>
+            Cancel
+          </button>
 
-              <button
-                type="button"
-                className="dept-members-close"
-                onClick={() => setSelectedDept(null)}
-                aria-label="Close department members"
-              >
-                x
-              </button>
-            </div>
-
-            <div className="dept-members-list">
-              {selectedDepartmentMembers.length > 0 ? (
-                selectedDepartmentMembers.map((member) => (
-                  <div className="dept-member-row" key={member.id || member.label}>
-                    <span className="dept-member-avatar">
-                      {member.label.substring(0, 2).toUpperCase()}
-                    </span>
-                    <div>
-                      <strong>{member.label}</strong>
-                      <p>{member.id || "No employee code"}</p>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="dept-members-empty-state">
-                  No employees are assigned to this department yet.
-                </p>
-              )}
-            </div>
-          </div>
+          <button
+            className="confirm-delete-btn"
+            onClick={confirmDelete}
+          >
+            Delete
+          </button>
         </div>
-      )}
+      </div>
     </div>
+  )
+}
+
+{
+  selectedDept && (
+    <div className="dept-members-overlay" onClick={() => setSelectedDept(null)}>
+      <div
+        className="dept-members-modal"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="dept-members-modal-header">
+          <div>
+            <h3>{selectedDept.departmentName}</h3>
+            <p>{selectedDepartmentMembers.length} assigned members</p>
+          </div>
+
+          <button
+            type="button"
+            className="dept-members-close"
+            onClick={() => setSelectedDept(null)}
+            aria-label="Close department members"
+          >
+            x
+          </button>
+        </div>
+
+        <div className="dept-members-list">
+          {selectedDepartmentMembers.length > 0 ? (
+            selectedDepartmentMembers.map((member) => (
+              <div className="dept-member-row" key={member.id || member.label}>
+                <span className="dept-member-avatar">
+                  {member.label.substring(0, 2).toUpperCase()}
+                </span>
+                <div>
+                  <strong>{member.label}</strong>
+                  <p>{member.id || "No employee code"}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="dept-members-empty-state">
+              No employees are assigned to this department yet.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+    </div >
   );
 }
 

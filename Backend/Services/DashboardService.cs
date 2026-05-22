@@ -2,6 +2,8 @@
 using EmployeeManagementSystem.DTOs;
 using EmployeeManagementSystem.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Threading.Tasks;
 
 namespace EmployeeManagementSystem.Services
 {
@@ -17,9 +19,11 @@ namespace EmployeeManagementSystem.Services
         public async Task<DashboardResponseDto> GetDashboardData()
         {
             var utcNow = DateTime.UtcNow;
-            var today = utcNow.Date;
-
             var istZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+            var istNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, istZone);
+            var today = istNow.Date;
+
+
 
             // Total Employees
             var totalEmployees = await _context.Employees.CountAsync();
@@ -62,9 +66,7 @@ namespace EmployeeManagementSystem.Services
                 .Select(a => new RecentActivityDto
                 {
                     Activity = a.Activity,
-                    Time = GetTimeAgo(
-                        TimeZoneInfo.ConvertTimeFromUtc(a.CreatedAt, istZone)
-                    )
+                    Time = GetTimeAgo(a.CreatedAt)
                 })
                 .ToList();
 
@@ -91,23 +93,36 @@ namespace EmployeeManagementSystem.Services
             };
         }
 
-        private static string GetTimeAgo(DateTime dateTime)
+        private static string GetTimeAgo(DateTime createdAt)
         {
-            var timeSpan = DateTime.Now - dateTime;
+            var now = DateTime.UtcNow;
+
+            // If CreatedAt is saved as local/IST but Kind is Unspecified,
+            // convert it safely
+            if (createdAt.Kind == DateTimeKind.Unspecified)
+            {
+                createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
+            }
+
+            var timeSpan = now - createdAt;
+
+            // prevent negative seconds
+            if (timeSpan.TotalSeconds < 0)
+                return "Just now";
 
             if (timeSpan.TotalSeconds < 60)
-                return $"{timeSpan.Seconds} seconds ago";
+                return $"{(int)timeSpan.TotalSeconds} seconds ago";
 
             if (timeSpan.TotalMinutes < 60)
-                return $"{timeSpan.Minutes} minutes ago";
+                return $"{(int)timeSpan.TotalMinutes} minutes ago";
 
             if (timeSpan.TotalHours < 24)
-                return $"{timeSpan.Hours} hours ago";
+                return $"{(int)timeSpan.TotalHours} hours ago";
 
             if (timeSpan.TotalDays < 7)
-                return $"{timeSpan.Days} days ago";
+                return $"{(int)timeSpan.TotalDays} days ago";
 
-            return dateTime.ToString("dd MMM yyyy");
+            return createdAt.ToString("dd MMM yyyy");
         }
     }
 }

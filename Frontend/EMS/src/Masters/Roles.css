@@ -74,13 +74,32 @@
   border-bottom: 1px solid #edf2f7;
   font-size: 14px;
   vertical-align: middle;
-  text-align: left;
 }
 
 .roles-table-main th {
-  color: #000000;
+  color: #041c32;
   font-weight: 800;
   white-space: nowrap;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.roles-table-main th:first-child {
+  text-align: left;
+  padding-left: 0;
+}
+
+.roles-table-main th:first-child,
+.roles-table-main td:first-child {
+  padding-left: 28px;
+  text-align: left;
+}
+
+.roles-table-main td:nth-child(2),
+.roles-table-main td:nth-child(3),
+.roles-table-main td:nth-child(4) {
+  text-align: center;
+  vertical-align: middle;
 }
 
 .roles-table-main tbody tr:hover {
@@ -99,6 +118,7 @@
   color: #041c32;
   font-weight: 600;
   cursor: pointer;
+  padding-left: 4px;
 }
 
 .roles-action-cell {
@@ -108,17 +128,48 @@
 .roles-action-group {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: 10px;
+  justify-content: center;
+  gap: 12px;
 }
 
 .roles-action-btn {
+  min-width: 78px;
+  height: 34px;
+  padding: 0 20px;
+
+  border-radius: 12px;
+  border: 1px solid;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  font-size: 15px;
+  font-weight: 700;
+
   cursor: pointer;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
+
+  transition: all 0.2s ease;
+}
+
+.app-icon-action-button--edit {
+  background: rgba(0, 209, 209, 0.08);
+  border-color: rgba(0, 209, 209, 0.18);
+  color: #06283d;
+}
+
+.app-icon-action-button--edit:hover {
+  background: #dff9fb;
+}
+
+.app-icon-action-button--delete {
+  background: #fff5f5;
+  border-color: #fecaca;
+  color: #c62828;
+}
+
+.app-icon-action-button--delete:hover {
+  background: #fff1f1;
 }
 
 .roles-action-btn svg {

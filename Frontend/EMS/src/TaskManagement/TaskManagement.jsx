@@ -21,6 +21,7 @@ function TaskManagement() {
   };
 
   /* ================= NORMALIZE STATUS ================= */
+
   const normalizeStatus = (status) => {
     if (!status) return "ToDo";
 
@@ -41,21 +42,18 @@ function TaskManagement() {
       const res = await api.get(API_ENDPOINTS.tasks.list);
 
       const formatted = extractCollection(res.data).map((task) => ({
-          emsTaskId: task.id ?? task.Id,
-          emsTaskTitle: task.taskTitle ?? task.TaskTitle,
-          emsTaskUser: task.assignedTo ?? task.AssignedTo,
-          emsTaskProject: task.project ?? task.Project,
-          emsTaskDescription: task.description ?? task.Description,
-          emsTaskPriority: task.priority ?? task.Priority,
-          emsTaskDue: task.dueDate ?? task.DueDate,
-          emsTaskState: normalizeStatus(task.status ?? task.Status)
-        }));
+        emsTaskId: task.id ?? task.Id,
+        emsTaskTitle: task.taskTitle ?? task.TaskTitle,
+        emsTaskUser: task.assignedTo ?? task.AssignedTo,
+        emsTaskProject: task.project ?? task.Project,
+        emsTaskDescription: task.description ?? task.Description,
+        emsTaskPriority: task.priority ?? task.Priority,
+        emsTaskDue: task.dueDate ?? task.DueDate,
+        emsTaskState: normalizeStatus(task.status ?? task.Status)
+      }));
 
       setEmsTaskData(formatted);
 
-      if (showToast) {
-        // toast.success("Tasks loaded successfully");
-      }
     } catch (error) {
       console.error("Fetch failed:", error);
       toast.error("Something went wrong while fetching tasks");
@@ -64,6 +62,62 @@ function TaskManagement() {
 
   useEffect(() => {
     fetchTasks(true);
+  }, []);
+
+  useEffect(() => {
+
+    const slider = document.querySelector(
+      ".ems-task-horizontal-scroll-wrapper"
+    );
+
+    if (!slider) return;
+
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    const mouseDown = (e) => {
+      isDown = true;
+      slider.classList.add("active");
+      startX = e.pageX - slider.offsetLeft;
+      scrollLeft = slider.scrollLeft;
+    };
+
+    const mouseLeave = () => {
+      isDown = false;
+    };
+
+    const mouseUp = () => {
+      isDown = false;
+    };
+
+    const mouseMove = (e) => {
+
+      if (!isDown) return;
+
+      e.preventDefault();
+
+      const x = e.pageX - slider.offsetLeft;
+
+      const walk = (x - startX) * 1.5;
+
+      slider.scrollLeft = scrollLeft - walk;
+    };
+
+    slider.addEventListener("mousedown", mouseDown);
+    slider.addEventListener("mouseleave", mouseLeave);
+    slider.addEventListener("mouseup", mouseUp);
+    slider.addEventListener("mousemove", mouseMove);
+
+    return () => {
+
+      slider.removeEventListener("mousedown", mouseDown);
+      slider.removeEventListener("mouseleave", mouseLeave);
+      slider.removeEventListener("mouseup", mouseUp);
+      slider.removeEventListener("mousemove", mouseMove);
+
+    };
+
   }, []);
 
   /* ================= DELETE TASK ================= */
@@ -89,20 +143,58 @@ function TaskManagement() {
     emsTaskFilter === "All"
       ? emsTaskData
       : emsTaskData.filter(
-          task =>
-            task.emsTaskState.toLowerCase() ===
-            emsTaskFilter.toLowerCase()
-        );
+        (task) =>
+          task.emsTaskState.toLowerCase() ===
+          emsTaskFilter.toLowerCase()
+      );
 
   return (
-    <div className="ems-task-page-wrapper">
+    <div
+      className="ems-task-page-wrapper"
+      style={{
+        padding: "18px"
+      }}
+    >
       <ToastContainer position="top-right" autoClose={2500} />
 
-      {/* HEADER */}
-      <div className="ems-task-header-wrapper">
+      {/* =======================================================
+        HEADER
+      ======================================================= */}
+
+      <div
+        className="ems-task-header-wrapper"
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "16px",
+          marginBottom: "18px",
+          flexWrap: "wrap"
+        }}
+      >
         <div>
-          <h2>Task Management</h2>
-          <p>Create, assign and monitor tasks</p>
+          <h2
+            style={{
+              fontSize: "32px",
+              fontWeight: "800",
+              color: "#0f172a",
+              marginBottom: "4px",
+              lineHeight: "1.1"
+            }}
+          >
+            Task Management
+          </h2>
+
+          <p
+            style={{
+              fontSize: "14px",
+              color: "#64748b",
+              fontWeight: "500",
+              margin: "0"
+            }}
+          >
+            Create, assign and monitor tasks
+          </p>
         </div>
 
         <button
@@ -111,122 +203,484 @@ function TaskManagement() {
             setEmsTaskSelected(null);
             setEmsTaskShowPopup(true);
           }}
+          style={{
+            border: "none",
+            background: "#12c7c7",
+            color: "#001219",
+            padding: "10px 18px",
+            borderRadius: "12px",
+            fontSize: "14px",
+            fontWeight: "700",
+            cursor: "pointer",
+            height: "42px",
+            minWidth: "140px",
+            boxShadow: "0 6px 18px rgba(18,199,199,0.15)"
+          }}
         >
           + Create Task
         </button>
       </div>
 
-      {/* SUMMARY */}
-      <div className="ems-task-summary-card-container">
-        <div className="ems-task-summary-single-card">
-          To Do{" "}
-          <span>
-            {emsTaskData.filter(
-              t => t.emsTaskState.toLowerCase() === "todo"
-            ).length}
-          </span>
+      {/* =======================================================
+    SUMMARY CARDS
+======================================================= */}
+
+      <div
+        className="ems-task-summary-card-container"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(4, 1fr)",
+          gap: "14px",
+          marginBottom: "18px"
+        }}
+      >
+        {/* TODO */}
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "14px",
+            padding: "10px 22px",
+            boxShadow: "0 2px 8px rgba(15,23,42,0.04)",
+            border: "1px solid #e5edf5",
+            minHeight: "58px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}
+        >
+          <p
+            style={{
+              color: "#475569",
+              fontSize: "15px",
+              margin: 0,
+              fontWeight: "600"
+            }}
+          >
+            To Do
+          </p>
+
+          <h3
+            style={{
+              fontSize: "22px",
+              fontWeight: "700",
+              color: "#0f172a",
+              margin: 0,
+              lineHeight: 1
+            }}
+          >
+            {
+              emsTaskData.filter(
+                (t) => t.emsTaskState.toLowerCase() === "todo"
+              ).length
+            }
+          </h3>
         </div>
 
-        <div className="ems-task-summary-single-card">
-          In Progress{" "}
-          <span>
-            {emsTaskData.filter(
-              t => t.emsTaskState.toLowerCase() === "inprogress"
-            ).length}
-          </span>
+        {/* IN PROGRESS */}
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "14px",
+            padding: "10px 22px",
+            boxShadow: "0 2px 8px rgba(15,23,42,0.04)",
+            border: "1px solid #e5edf5",
+            minHeight: "58px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}
+        >
+          <p
+            style={{
+              color: "#475569",
+              fontSize: "15px",
+              margin: 0,
+              fontWeight: "600"
+            }}
+          >
+            In Progress
+          </p>
+
+          <h3
+            style={{
+              fontSize: "22px",
+              fontWeight: "700",
+              color: "#2563eb",
+              margin: 0,
+              lineHeight: 1
+            }}
+          >
+            {
+              emsTaskData.filter(
+                (t) => t.emsTaskState.toLowerCase() === "inprogress"
+              ).length
+            }
+          </h3>
         </div>
 
-        <div className="ems-task-summary-single-card">
-          Completed{" "}
-          <span>
-            {emsTaskData.filter(
-              t => t.emsTaskState.toLowerCase() === "completed"
-            ).length}
-          </span>
+        {/* COMPLETED */}
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "14px",
+            padding: "10px 22px",
+            boxShadow: "0 2px 8px rgba(15,23,42,0.04)",
+            border: "1px solid #e5edf5",
+            minHeight: "58px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}
+        >
+          <p
+            style={{
+              color: "#475569",
+              fontSize: "15px",
+              margin: 0,
+              fontWeight: "600"
+            }}
+          >
+            Completed
+          </p>
+
+          <h3
+            style={{
+              fontSize: "22px",
+              fontWeight: "700",
+              color: "#16a34a",
+              margin: 0,
+              lineHeight: 1
+            }}
+          >
+            {
+              emsTaskData.filter(
+                (t) => t.emsTaskState.toLowerCase() === "completed"
+              ).length
+            }
+          </h3>
         </div>
 
-        <div className="ems-task-summary-single-card ems-task-summary-overdue-card">
-          Overdue{" "}
-          <span>
-            {emsTaskData.filter(
-              t => t.emsTaskState.toLowerCase() === "overdue"
-            ).length}
-          </span>
+        {/* OVERDUE */}
+        <div
+          style={{
+            background: "#ffffff",
+            borderRadius: "14px",
+            padding: "10px 22px",
+            boxShadow: "0 2px 8px rgba(15,23,42,0.04)",
+            border: "1px solid #e5edf5",
+            minHeight: "58px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center"
+          }}
+        >
+          <p
+            style={{
+              color: "#475569",
+              fontSize: "15px",
+              margin: 0,
+              fontWeight: "600"
+            }}
+          >
+            Overdue
+          </p>
+
+          <h3
+            style={{
+              fontSize: "22px",
+              fontWeight: "700",
+              color: "#ef4444",
+              margin: 0,
+              lineHeight: 1
+            }}
+          >
+            {
+              emsTaskData.filter(
+                (t) => t.emsTaskState.toLowerCase() === "overdue"
+              ).length
+            }
+          </h3>
         </div>
       </div>
 
-      {/* FILTER */}
-      <div className="ems-task-filter-tab-container">
-        {["All", "ToDo", "InProgress", "Completed", "Overdue"].map(tab => (
+      {/* =======================================================
+        FILTER BUTTONS
+      ======================================================= */}
+
+      <div
+        className="ems-task-filter-tab-container"
+        style={{
+          display: "flex",
+          gap: "10px",
+          flexWrap: "wrap",
+          marginBottom: "18px"
+        }}
+      >
+        {["All", "ToDo", "InProgress", "Completed", "Overdue"].map((tab) => (
           <button
             key={tab}
-            className={
-              emsTaskFilter === tab
-                ? "ems-task-filter-tab-button ems-task-filter-active-button"
-                : "ems-task-filter-tab-button"
-            }
             onClick={() => setEmsTaskFilter(tab)}
+            style={{
+              border: "none",
+              padding: "8px 16px",
+              borderRadius: "999px",
+              cursor: "pointer",
+              fontWeight: "700",
+              fontSize: "13px",
+              height: "38px",
+              transition: ".2s ease",
+              background:
+                emsTaskFilter === tab ? "#12c7c7" : "#e2e8f0",
+              color:
+                emsTaskFilter === tab ? "#ffffff" : "#334155"
+            }}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      {/* TABLE */}
-      <div className="ems-task-data-table-outer-wrapper">
-        <div className="ems-task-horizontal-scroll-wrapper">
-          <table className="ems-task-data-main-table">
+      {/* =======================================================
+        TABLE
+      ======================================================= */}
+
+      <div
+        className="ems-task-horizontal-scroll-wrapper"
+        
+      >
+
+        {/* SCROLL NOTICE */}
+
+        <div
+          style={{
+            background: "#ecfeff",
+            color: "#17889c",
+            padding: "10px",
+            textAlign: "center",
+            fontWeight: "700",
+            fontSize: "14px",
+            borderBottom: "1px solid #d9fafa"
+          }}
+        >
+          ← Scroll horizontally to view more task details →
+        </div>
+        <div
+          className="ems-task-horizontal-scroll-wrapper"
+          style={{
+            width: "100%",
+            overflowX: "auto",
+            overflowY: "auto",
+            maxHeight: "500px",
+            WebkitOverflowScrolling: "touch",
+            cursor: "grab"
+          }}
+        >
+           <table
+            className="ems-task-data-main-table"
+            style={{
+              width: "100%",
+              minWidth: "1450px",
+              borderCollapse: "collapse",
+              tableLayout: "auto"
+            }}
+          
+          >
             <thead>
               <tr>
-                <th>Task</th>
-                <th>Assignee</th>
-                <th>Project</th>
-                <th>Description</th>
-                <th>Priority</th>
-                <th>Due</th>
-                <th>Status</th>
-                <th>Actions</th>
+                {[
+                  "TASK",
+                  "ASSIGNEE",
+                  "PROJECT",
+                  "DESCRIPTION",
+                  "PRIORITY",
+                  "DUE",
+                  "STATUS",
+                  "ACTIONS"
+                ].map((head) => (
+                  <th
+                    key={head}
+                    className="task-table-heading"
+                  >
+                    <span>{head}</span>
+                  </th>
+                ))}
               </tr>
             </thead>
 
             <tbody>
               {emsFilteredTaskData.length === 0 ? (
                 <tr>
-                  <td colSpan="8" className="ems-task-empty-state">
+                  <td
+                    colSpan="8"
+                    style={{
+                      textAlign: "center",
+                      padding: "30px",
+                      fontWeight: "600",
+                      color: "#64748b"
+                    }}
+                  >
                     No tasks found for the selected filter.
                   </td>
                 </tr>
               ) : (
-                emsFilteredTaskData.map(task => (
-                  <tr key={task.emsTaskId}>
-                    <td title={task.emsTaskTitle}>{task.emsTaskTitle}</td>
-                    <td title={task.emsTaskUser}>{task.emsTaskUser}</td>
-                    <td title={task.emsTaskProject}>{task.emsTaskProject}</td>
+                emsFilteredTaskData.map((task) => (
+                  <tr
+                    key={task.emsTaskId}
+                    style={{
+                      borderBottom: "1px solid #edf2f7"
+                    }}
+                  >
+                    {/* TASK */}
+                    <td
+                      style={{
+                        padding: "14px 18px",
+                        fontWeight: "700",
+                        color: "#0f172a",
+                        whiteSpace: "nowrap",
+                        overflow: "visible",
+                        textOverflow: "ellipsis",
+                        maxWidth: "220px",
+                        fontSize: "14px"
+                      }}
+                      title={task.emsTaskTitle}
+                    >
+                      {task.emsTaskTitle}
+                    </td>
 
-                    <td onClick={() => setViewTask(task)} style={{ cursor: "pointer" }} title={task.emsTaskDescription}>
+                    {/* ASSIGNEE */}
+
+                    <td
+                      style={{
+                        padding: "14px 18px",
+                        color: "#334155",
+                        fontWeight: "600",
+                        fontSize: "14px"
+                      }}
+                    >
+                      {task.emsTaskUser}
+                    </td>
+
+                    {/* PROJECT */}
+
+                    <td
+                      style={{
+                        padding: "14px 18px",
+                        color: "#334155",
+                        fontWeight: "600",
+                        fontSize: "14px"
+                      }}
+                    >
+                      {task.emsTaskProject}
+                    </td>
+
+                    {/* DESCRIPTION */}
+
+                    <td
+                      onClick={() => setViewTask(task)}
+                      title={task.emsTaskDescription}
+                      style={{
+                        padding: "14px 18px",
+                        cursor: "pointer",
+                        color: "#64748b",
+                        maxWidth: "240px",
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                        textOverflow: "ellipsis",
+                        fontSize: "14px"
+                      }}
+                    >
                       {task.emsTaskDescription}
                     </td>
 
-                    <td>
-                      <span className={`ems-task-priority-pill ems-task-priority-${(task.emsTaskPriority || "").toLowerCase()}`}>
+                    {/* PRIORITY */}
+
+                    <td style={{ padding: "14px 18px" }}>
+                      <span
+                        style={{
+                          padding: "7px 12px",
+                          borderRadius: "999px",
+                          fontWeight: "700",
+                          fontSize: "12px",
+                          display: "inline-flex",
+                          background:
+                            task.emsTaskPriority?.toLowerCase() === "high"
+                              ? "#fee2e2"
+                              : task.emsTaskPriority?.toLowerCase() === "medium"
+                                ? "#dbeafe"
+                                : "#e5e7eb",
+                          color:
+                            task.emsTaskPriority?.toLowerCase() === "high"
+                              ? "#991b1b"
+                              : task.emsTaskPriority?.toLowerCase() === "medium"
+                                ? "#1d4ed8"
+                                : "#374151"
+                        }}
+                      >
                         {task.emsTaskPriority}
                       </span>
                     </td>
 
-                    <td>{formatTaskDate(task.emsTaskDue)}</td>
+                    {/* DUE */}
 
-                    <td>
-                      <span className={`ems-task-state-pill ems-task-state-${task.emsTaskState.toLowerCase()}`}>
+                    <td
+                      style={{
+                        padding: "14px 18px",
+                        color: "#334155",
+                        fontWeight: "600",
+                        whiteSpace: "nowrap",
+                        fontSize: "14px"
+                      }}
+                    >
+                      {formatTaskDate(task.emsTaskDue)}
+                    </td>
+
+                    {/* STATUS */}
+
+                    <td style={{ padding: "14px 18px" }}>
+                      <span
+                        style={{
+                          fontWeight: "800",
+                          fontSize: "14px",
+                          color:
+                            task.emsTaskState === "Completed"
+                              ? "#16a34a"
+                              : task.emsTaskState === "Overdue"
+                                ? "#ef4444"
+                                : task.emsTaskState === "InProgress"
+                                  ? "#2563eb"
+                                  : "#64748b"
+                        }}
+                      >
                         {task.emsTaskState}
                       </span>
                     </td>
 
-                    <td>
+                    {/* ACTIONS */}
+
+                    <td
+                      style={{
+                        padding: "14px 18px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px"
+                      }}
+                    >
                       <button
                         className="ems-task-edit-btn"
                         onClick={() => {
                           setEmsTaskSelected(task);
                           setEmsTaskShowPopup(true);
+                        }}
+                        style={{
+                          border: "1px solid #bae6fd",
+                          background: "#ecfeff",
+                          color: "#0f3b52",
+                          minWidth: "78px",
+                          height: "40px",
+                          borderRadius: "10px",
+                          fontWeight: "700",
+                          cursor: "pointer",
+                          fontSize: "13px"
                         }}
                       >
                         Edit
@@ -235,6 +689,17 @@ function TaskManagement() {
                       <button
                         className="ems-task-delete-btn"
                         onClick={() => setDeleteTaskId(task.emsTaskId)}
+                        style={{
+                          border: "1px solid #fecdd3",
+                          background: "#fff1f2",
+                          color: "#dc2626",
+                          minWidth: "78px",
+                          height: "40px",
+                          borderRadius: "10px",
+                          fontWeight: "700",
+                          cursor: "pointer",
+                          fontSize: "13px"
+                        }}
                       >
                         Delete
                       </button>
@@ -243,65 +708,17 @@ function TaskManagement() {
                 ))
               )}
             </tbody>
-
           </table>
         </div>
       </div>
 
-      {/* VIEW TASK */}
-      {viewTask && (
-        <div className="ems-task-view-overlay" onClick={() => setViewTask(null)}>
-          <div className="ems-task-view-popup" onClick={(e) => e.stopPropagation()}>
-            <h3>Task Details</h3>
-            <p><strong>Task:</strong> {viewTask.emsTaskTitle}</p>
-            <p><strong>Assignee:</strong> {viewTask.emsTaskUser}</p>
-            <p><strong>Project:</strong> {viewTask.emsTaskProject}</p>
+      {/* MODAL */}
 
-            <p><strong>Description:</strong></p>
-            <div className="ems-task-full-desc">
-              {viewTask.emsTaskDescription}
-            </div>
-
-            <button onClick={() => setViewTask(null)}>Close</button>
-          </div>
-        </div>
-      )}
-
-      {/* DELETE */}
-      {deleteTaskId && (
-        <div className="ems-task-delete-overlay" onClick={() => setDeleteTaskId(null)}>
-          <div className="ems-task-delete-popup" onClick={(e) => e.stopPropagation()}>
-            <h3>Delete Task</h3>
-            <p>Are you sure you want to delete this task?</p>
-
-            <div className="ems-task-delete-actions">
-              <button
-                className="ems-task-cancel-delete-btn"
-                onClick={() => setDeleteTaskId(null)}
-              >
-                Cancel
-              </button>
-
-              <button
-                className="ems-task-confirm-delete-btn"
-                onClick={() => handleDeleteTask(deleteTaskId)}
-              >
-                Yes, Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* CREATE */}
       {emsTaskShowPopup && (
         <CreateTaskModal
+          emsTaskClosePopup={() => setEmsTaskShowPopup(false)}
           editData={emsTaskSelected}
-          emsTaskClosePopup={() => {
-            setEmsTaskShowPopup(false);
-            setEmsTaskSelected(null);
-            fetchTasks();
-          }}
+          refreshTasks={fetchTasks}
         />
       )}
     </div>

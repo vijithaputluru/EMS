@@ -62,7 +62,15 @@ function RecentActivity() {
     }
   };
 
-  const formatTime = (time) => timeAgo(time);
+  const formatTime = (time) => {
+    if (!time) return "";
+
+    if (typeof time === "string" && time.toLowerCase().includes("ago")) {
+      return time;
+    }
+
+    return timeAgo(time);
+  };
 
   return (
     <div className="activity">

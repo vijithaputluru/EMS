@@ -96,6 +96,9 @@
 
 .branch-header {
   margin-bottom: 14px;
+  margin-top: 0;
+  align-items: flex-start;
+  padding-left: 20px;
 }
 
 .company-branch-table-wrap {
@@ -147,10 +150,6 @@
   justify-content: center;
   gap: 8px;
   white-space: nowrap;
-}
-
-.company-edit-btn,
-.company-delete-btn {
 }
 
 .company-modal-overlay {
@@ -376,4 +375,24 @@
   .branch-detail-row strong {
     text-align: left;
   }
+}
+.branch-header {
+  margin-top: 0;
+  padding-top: 0;
+  align-items: flex-start;
+}
+
+.branch-header > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+}
+
+.branch-header h3 {
+  margin-top: 0;
+  line-height: 1;
+}
+
+.branch-header p {
+  margin-top: 6px;
 }

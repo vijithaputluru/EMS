@@ -156,6 +156,7 @@ function Clients() {
     }
 
     if (name === "phone") {
+
       if (!value) {
         return "Phone is required";
       }
@@ -164,10 +165,16 @@ function Clients() {
         return "Phone Number must contain exactly 10 digits";
       }
 
+      // NO SAME DIGITS 10 TIMES
+      if (/^(\d)\1{9}$/.test(value)) {
+        return "Phone Number cannot contain same digit repeatedly";
+      }
+
       return "";
     }
 
     if (name === "email") {
+
       if (!value) {
         return "Email is required";
       }
@@ -176,8 +183,36 @@ function Clients() {
         return "Email cannot exceed 40 characters";
       }
 
-      if (!/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.com$/.test(value)) {
-        return "Enter valid email (Example: demo@gmail.com)";
+      // NO SPACES
+      if (/\s/.test(value)) {
+        return "Email cannot contain spaces";
+      }
+
+      // MUST START WITH LETTER
+      if (!/^[A-Za-z]/.test(value)) {
+        return "Email must start with an alphabet";
+      }
+
+      // ONLY ONE @
+      if ((value.match(/@/g) || []).length !== 1) {
+        return "Email must contain exactly one @";
+      }
+
+      // ONLY ONE .com
+      if ((value.match(/\.com/g) || []).length !== 1) {
+        return ".com is allowed only once";
+      }
+
+      // ALLOW ONLY gmail/yahoo/pirnav
+      if (
+        !/^[A-Za-z][A-Za-z0-9]*@(gmail|yahoo|pirnav)\.com$/.test(value)
+      ) {
+        return "Email must be like demo@gmail.com";
+      }
+
+      // NO SPECIAL CHARACTERS
+      if (!/^[A-Za-z0-9@.]+$/.test(value)) {
+        return "Special characters are not allowed";
       }
 
       return "";

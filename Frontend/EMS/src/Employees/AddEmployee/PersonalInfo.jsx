@@ -467,8 +467,8 @@ function PersonalInfo({ onNext, viewMode, data }) {
             <label>Designation<span className="required">*</span></label>
             <select name="designation" value={formData.designation} onChange={handleChange} disabled={viewMode}>
               <option value="">Select</option>
-              <option value="Junior Developer">Junior Developer</option>
-              <option value="Senior Developer">Senior Developer</option>
+              <option value="Associate Software Engineer">Associate Software Engineer</option>
+              <option value="Senior Software Engineer">Senior Software Engineer</option>
               <option value="Team Lead">Team Lead</option>
               <option value="Manager">Manager</option>
               <option value="HR Executive">HR Executive</option>

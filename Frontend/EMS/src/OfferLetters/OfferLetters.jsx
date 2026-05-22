@@ -97,7 +97,9 @@ function OfferLetters() {
 
     /* ================= CTC AUTO CALCULATION ================= */
     if (name === "ctc_Annual") {
-      const numericValue = value.replace(/\D/g, "");
+      const numericValue = value
+        .replace(/\D/g, "")
+        .slice(0, 8);
       const annualCTC = Number(numericValue);
 
       const handleChange = async (e) => {
@@ -138,23 +140,15 @@ function OfferLetters() {
         /* ================= CANDIDATE NAME ================= */
         if (name === "candidate_Name") {
 
-          let filteredValue = value.replace(/^\s+/g, "");
+          // remove starting spaces
+          let filteredValue = value
+            .replace(/^\s+/g, "")
+            .replace(/\s{2,}/g, " ");
 
+          // allow only alphabets and spaces
           filteredValue = filteredValue.replace(
-            /[^A-Za-z0-9 ]/g,
+            /[^A-Za-z\s]/g,
             ""
-          );
-
-          const numbers =
-            filteredValue.match(/\d/g);
-
-          if (numbers && numbers.length > 1) {
-            return;
-          }
-
-          filteredValue = filteredValue.replace(
-            /\s{2,}/g,
-            " "
           );
 
           if (filteredValue.length > 50) {
@@ -172,10 +166,41 @@ function OfferLetters() {
         /* ================= EMAIL ================= */
         if (name === "email") {
 
-          let filteredValue =
-            value.replace(/\s/g, "");
+          let filteredValue = value
+            .toLowerCase()
+            .replace(/\s/g, "")
+            .replace(/[^a-z0-9@.]/g, "");
 
-          if (filteredValue.length > 100) {
+          // first character must be alphabet
+          if (
+            filteredValue.length === 1 &&
+            !/[a-z]/.test(filteredValue)
+          ) {
+            return;
+          }
+
+          // allow only one @
+          const atCount =
+            (filteredValue.match(/@/g) || []).length;
+
+          if (atCount > 1) {
+            return;
+          }
+
+          // prevent multiple .com
+          const comCount =
+            (filteredValue.match(/\.com/g) || []).length;
+
+          if (comCount > 1) {
+            return;
+          }
+
+          // prevent consecutive dots
+          if (filteredValue.includes("..")) {
+            return;
+          }
+
+          if (filteredValue.length > 40) {
             return;
           }
 
@@ -190,15 +215,19 @@ function OfferLetters() {
         /* ================= ADDRESS ================= */
         if (name === "address") {
 
-          let filteredValue =
-            value.replace(/^\s+/g, "");
+          let filteredValue = value
+            .replace(/^\s+/g, "")
+            .replace(/\s{2,}/g, " ")
+            .replace(/[^A-Za-z0-9\s-]/g, "");
 
-          filteredValue = filteredValue.replace(
-            /\s{2,}/g,
-            " "
-          );
+          const hyphenCount =
+            (filteredValue.match(/-/g) || []).length;
 
-          if (filteredValue.length > 250) {
+          if (hyphenCount > 2) {
+            return;
+          }
+
+          if (filteredValue.length > 150) {
             return;
           }
 
@@ -213,20 +242,12 @@ function OfferLetters() {
         /* ================= POSITION ================= */
         if (name === "position") {
 
-          let filteredValue =
-            value.replace(/^\s+/g, "");
+          let filteredValue = value
+            .replace(/^\s+/g, "")
+            .replace(/\s{2,}/g, " ")
+            .replace(/[^A-Za-z\s]/g, "");
 
-          filteredValue = filteredValue.replace(
-            /[^A-Za-z ]/g,
-            ""
-          );
-
-          filteredValue = filteredValue.replace(
-            /\s{2,}/g,
-            " "
-          );
-
-          if (filteredValue.length > 50) {
+          if (filteredValue.length > 35) {
             return;
           }
 
@@ -303,7 +324,9 @@ function OfferLetters() {
         "otherAllowance",
       ].includes(name)
     ) {
-      const numericValue = value.replace(/\D/g, "");
+      const numericValue = value
+        .replace(/\D/g, "")
+        .slice(0, 8);
 
       setFormData((prev) => ({
         ...prev,
@@ -369,9 +392,24 @@ function OfferLetters() {
     let newErrors = {};
 
     // Candidate Name
-    if (!formData.candidate_Name.trim()) {
+    if (
+      formData.candidate_Name.trim().length < 2
+    ) {
       newErrors.candidate_Name =
-        "Candidate name is required";
+        "Candidate Name must contain minimum 2 characters";
+
+      setErrors(newErrors);
+      scrollToField("candidate_Name");
+      return false;
+    }
+
+    if (
+      !/^[A-Za-z\s]+$/.test(
+        formData.candidate_Name.trim()
+      )
+    ) {
+      newErrors.candidate_Name =
+        "Only alphabets are allowed";
 
       setErrors(newErrors);
       scrollToField("candidate_Name");
@@ -379,16 +417,13 @@ function OfferLetters() {
     }
 
     // Email
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
-
-      setErrors(newErrors);
-      scrollToField("email");
-      return false;
-    }
-
-    if (!isValidEmail(formData.email)) {
-      newErrors.email = "Enter valid email address";
+    if (
+      !/^[A-Za-z][A-Za-z0-9]*@(gmail|yahoo|pirnav)\.com$/.test(
+        formData.email
+      )
+    ) {
+      newErrors.email =
+        "Email must be like demo@gmail.com";
 
       setErrors(newErrors);
       scrollToField("email");
