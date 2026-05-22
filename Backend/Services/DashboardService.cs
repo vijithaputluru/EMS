@@ -48,8 +48,10 @@ namespace EmployeeManagementSystem.Services
                 attendancePercentage = (double)totalAttendance / totalEmployees * 100;
             }
 
-            // Activities from last 2 hours
-            var activityExpiry = utcNow.AddHours(-2);
+
+
+            // Last 2 hours only
+            var activityExpiry = DateTime.UtcNow.AddHours(-2);
 
             var activityLogs = await _context.ActivityLogs
                 .Where(a => a.CreatedAt >= activityExpiry)
@@ -63,12 +65,12 @@ namespace EmployeeManagementSystem.Services
                 .ToListAsync();
 
             var recentActivities = activityLogs
-                .Select(a => new RecentActivityDto
-                {
-                    Activity = a.Activity,
-                    Time = GetTimeAgo(a.CreatedAt)
-                })
-                .ToList();
+    .Select(a => new RecentActivityDto
+    {
+        Activity = a.Activity,
+        Time = a.CreatedAt.ToString("o") // exact ISO datetime
+    })
+    .ToList();
 
             // Upcoming Holidays
             var upcomingHolidays = await _context.Holidays
@@ -93,36 +95,36 @@ namespace EmployeeManagementSystem.Services
             };
         }
 
-        private static string GetTimeAgo(DateTime createdAt)
-        {
-            var now = DateTime.UtcNow;
+        //private static string GetTimeAgo(DateTime createdAt)
+        //{
+        //    var now = DateTime.UtcNow;
 
-            // If CreatedAt is saved as local/IST but Kind is Unspecified,
-            // convert it safely
-            if (createdAt.Kind == DateTimeKind.Unspecified)
-            {
-                createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
-            }
+        //    // If CreatedAt is saved as local/IST but Kind is Unspecified,
+        //    // convert it safely
+        //    if (createdAt.Kind == DateTimeKind.Unspecified)
+        //    {
+        //        createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
+        //    }
 
-            var timeSpan = now - createdAt;
+        //    var timeSpan = now - createdAt;
 
-            // prevent negative seconds
-            if (timeSpan.TotalSeconds < 0)
-                return "Just now";
+        //    // prevent negative seconds
+        //    if (timeSpan.TotalSeconds < 0)
+        //        return "Just now";
 
-            if (timeSpan.TotalSeconds < 60)
-                return $"{(int)timeSpan.TotalSeconds} seconds ago";
+        //    if (timeSpan.TotalSeconds < 60)
+        //        return $"{(int)timeSpan.TotalSeconds} seconds ago";
 
-            if (timeSpan.TotalMinutes < 60)
-                return $"{(int)timeSpan.TotalMinutes} minutes ago";
+        //    if (timeSpan.TotalMinutes < 60)
+        //        return $"{(int)timeSpan.TotalMinutes} minutes ago";
 
-            if (timeSpan.TotalHours < 24)
-                return $"{(int)timeSpan.TotalHours} hours ago";
+        //    if (timeSpan.TotalHours < 24)
+        //        return $"{(int)timeSpan.TotalHours} hours ago";
 
-            if (timeSpan.TotalDays < 7)
-                return $"{(int)timeSpan.TotalDays} days ago";
+        //    if (timeSpan.TotalDays < 7)
+        //        return $"{(int)timeSpan.TotalDays} days ago";
 
-            return createdAt.ToString("dd MMM yyyy");
-        }
+        //    return createdAt.ToString("dd MMM yyyy");
+        //}
     }
 }

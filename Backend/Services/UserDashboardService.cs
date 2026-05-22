@@ -82,8 +82,11 @@ namespace EmployeeManagementSystem.Services
             // RECENT ACTIVITIES
             //---------------------------------------
 
+            var activityExpiry = DateTime.UtcNow.AddHours(-2);
+
             var activityData = await _context.UserNotifications
-                .Where(n => n.Employee_Id == employeeId)
+                .Where(n => n.Employee_Id == employeeId
+                    && n.CreatedAt >= activityExpiry)
                 .OrderByDescending(n => n.CreatedAt)
                 .Take(5)
                 .ToListAsync();
@@ -91,7 +94,8 @@ namespace EmployeeManagementSystem.Services
             var activities = activityData.Select(n => new RecentActivityDto
             {
                 Activity = n.Message,
-                Time = GetTimeAgo(n.CreatedAt)
+                Time = n.CreatedAt.ToString("o") // send exact datetime
+
             }).ToList();
 
             //---------------------------------------
@@ -131,38 +135,38 @@ namespace EmployeeManagementSystem.Services
         // TIME AGO
         //---------------------------------------
 
-        private static string GetTimeAgo(DateTime createdAt)
-        {
-            /*
-             IMPORTANT:
-             CreatedAt should be saved as DateTime.UtcNow.
-             Example:
-             CreatedAt = DateTime.UtcNow
-            */
+        //private static string GetTimeAgo(DateTime createdAt)
+        //{
+        //    /*
+        //     IMPORTANT:
+        //     CreatedAt should be saved as DateTime.UtcNow.
+        //     Example:
+        //     CreatedAt = DateTime.UtcNow
+        //    */
 
-            if (createdAt.Kind == DateTimeKind.Unspecified)
-            {
-                createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
-            }
+        //    if (createdAt.Kind == DateTimeKind.Unspecified)
+        //    {
+        //        createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
+        //    }
 
-            var timeSpan = DateTime.UtcNow - createdAt;
+        //    var timeSpan = DateTime.UtcNow - createdAt;
 
-            if (timeSpan.TotalSeconds < 0)
-                return "Just now";
+        //    if (timeSpan.TotalSeconds < 0)
+        //        return "Just now";
 
-            if (timeSpan.TotalSeconds < 60)
-                return $"{(int)timeSpan.TotalSeconds} seconds ago";
+        //    if (timeSpan.TotalSeconds < 60)
+        //        return $"{(int)timeSpan.TotalSeconds} seconds ago";
 
-            if (timeSpan.TotalMinutes < 60)
-                return $"{(int)timeSpan.TotalMinutes} minutes ago";
+        //    if (timeSpan.TotalMinutes < 60)
+        //        return $"{(int)timeSpan.TotalMinutes} minutes ago";
 
-            if (timeSpan.TotalHours < 24)
-                return $"{(int)timeSpan.TotalHours} hours ago";
+        //    if (timeSpan.TotalHours < 24)
+        //        return $"{(int)timeSpan.TotalHours} hours ago";
 
-            if (timeSpan.TotalDays < 7)
-                return $"{(int)timeSpan.TotalDays} days ago";
+        //    if (timeSpan.TotalDays < 7)
+        //        return $"{(int)timeSpan.TotalDays} days ago";
 
-            return createdAt.ToString("dd MMM yyyy");
-        }
+        //    return createdAt.ToString("dd MMM yyyy");
+        //}
     }
 }
