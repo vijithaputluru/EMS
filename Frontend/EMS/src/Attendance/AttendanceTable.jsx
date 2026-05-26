@@ -23,10 +23,13 @@ function AttendanceTable({
   const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [, setLiveTimer] = useState(0);
+  const [dailyPage, setDailyPage] = useState(1);
+  const [monthlyPage, setMonthlyPage] = useState(1);
 
   // ENSURE month/year ARE NUMBERS (fixes AWS server issue)
   const monthNum = month ? Number(month) : null;
   const yearNum = year ? Number(year) : null;
+  const ATTENDANCE_PAGE_SIZE = 10;
 
   // =========================
   // ADMIN EDIT STATES
@@ -34,7 +37,15 @@ function AttendanceTable({
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [updateLoading, setUpdateLoading] = useState(false);
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [selectedAttendance, setSelectedAttendance] = useState(null);
+  const [detailsFilter, setDetailsFilter] = useState("Monthly");
+  const [detailsMonth, setDetailsMonth] = useState("");
+  const [detailsFromDate, setDetailsFromDate] = useState("");
+  const [detailsToDate, setDetailsToDate] = useState("");
   const activeRequestRef = useRef(0);
+  const detailsRequestRef = useRef(0);
   const checkInHourRef = useRef(null);
   const checkInMinuteRef = useRef(null);
 
@@ -55,7 +66,6 @@ function AttendanceTable({
   // =========================
   const DEFAULT_CHECKIN = "09:00";
   const DEFAULT_CHECKOUT = "18:00";
-
   // =========================
   // HELPERS
   // =========================
@@ -101,6 +111,448 @@ function AttendanceTable({
 
   const getCheckOut = (emp) => {
     return emp?.checkOut || emp?.checkOutTime || emp?.outTime || null;
+  };
+
+  const getNumericHoursValue = (value) => {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ""
+    ) {
+      return null;
+    }
+
+    if (typeof value === "number") {
+      return Number.isFinite(value) ? value : null;
+    }
+
+    const normalizedValue =
+      String(value).trim().toLowerCase();
+
+    if (!normalizedValue) {
+      return null;
+    }
+
+    const hoursMatch =
+      normalizedValue.match(/(-?\d+(\.\d+)?)\s*h/i);
+
+    const minutesMatch =
+      normalizedValue.match(/(\d+(\.\d+)?)\s*m/i);
+
+    if (hoursMatch || minutesMatch) {
+
+      const hours =
+        hoursMatch
+          ? Number(hoursMatch[1])
+          : 0;
+
+      const minutes =
+        minutesMatch
+          ? Number(minutesMatch[1])
+          : 0;
+
+      const combinedHours =
+        hours + (minutes / 60);
+
+      return Number.isFinite(combinedHours)
+        ? Number(combinedHours.toFixed(1))
+        : null;
+    }
+
+    const numericMatch =
+      normalizedValue.match(/-?\d+(\.\d+)?/);
+
+    if (!numericMatch) {
+      return null;
+    }
+
+    const parsedValue =
+      Number(numericMatch[0]);
+
+    return Number.isFinite(parsedValue)
+      ? parsedValue
+      : null;
+  };
+
+  const getAttendanceDateTime = (value, attendanceRecord) => {
+    if (!value) {
+      return null;
+    }
+
+    try {
+
+      if (
+        value instanceof Date &&
+        !Number.isNaN(value.getTime())
+      ) {
+        return value;
+      }
+
+      if (typeof value === "string") {
+
+        const trimmedValue =
+          value.trim();
+
+        if (!trimmedValue) {
+          return null;
+        }
+
+        if (/^\d{4}-\d{2}-\d{2}$/.test(trimmedValue)) {
+
+          const [
+            parsedYear,
+            parsedMonth,
+            parsedDay
+          ] = trimmedValue.split("-").map(Number);
+
+          const parsedDate =
+            new Date(
+              parsedYear,
+              parsedMonth - 1,
+              parsedDay
+            );
+
+          return Number.isNaN(parsedDate.getTime())
+            ? null
+            : parsedDate;
+        }
+
+        if (/^\d{2}:\d{2}(:\d{2})?$/.test(trimmedValue)) {
+
+          const baseDateValue =
+            attendanceRecord?.date ||
+            attendanceRecord?.attendanceDate ||
+            attendanceRecord?.currentDate ||
+            null;
+
+          if (baseDateValue) {
+
+            const baseDate =
+              getAttendanceDateTime(baseDateValue);
+
+            if (
+              baseDate &&
+              !Number.isNaN(baseDate.getTime())
+            ) {
+
+              const [
+                hours = "0",
+                minutes = "0",
+                seconds = "0"
+              ] = trimmedValue.split(":");
+
+              baseDate.setHours(
+                Number(hours),
+                Number(minutes),
+                Number(seconds),
+                0
+              );
+
+              return Number.isNaN(baseDate.getTime())
+                ? null
+                : baseDate;
+            }
+          }
+
+          const dayNumber =
+            Number(attendanceRecord?.day);
+
+          if (
+            monthNum &&
+            yearNum &&
+            dayNumber
+          ) {
+
+            const [
+              hours = "0",
+              minutes = "0",
+              seconds = "0"
+            ] = trimmedValue.split(":");
+
+            const parsedDate =
+              new Date(
+                yearNum,
+                monthNum - 1,
+                dayNumber,
+                Number(hours),
+                Number(minutes),
+                Number(seconds),
+                0
+              );
+
+            return Number.isNaN(parsedDate.getTime())
+              ? null
+              : parsedDate;
+          }
+        }
+
+        const parsedStringDate =
+          new Date(trimmedValue);
+
+        if (!Number.isNaN(parsedStringDate.getTime())) {
+          return parsedStringDate;
+        }
+      }
+
+      const parsedDate =
+        new Date(value);
+
+      return Number.isNaN(parsedDate.getTime())
+        ? null
+        : parsedDate;
+
+    } catch {
+      return null;
+    }
+  };
+
+  const getAttendanceRecordDate = (attendanceRecord) => {
+
+    const directDate =
+      getAttendanceDateTime(
+        attendanceRecord?.date ||
+        attendanceRecord?.attendanceDate ||
+        attendanceRecord?.currentDate ||
+        null,
+        attendanceRecord
+      );
+
+    if (directDate) {
+      return directDate;
+    }
+
+    const checkInDate =
+      getAttendanceDateTime(
+        getCheckIn(attendanceRecord),
+        attendanceRecord
+      );
+
+    if (checkInDate) {
+      return checkInDate;
+    }
+
+    const checkOutDate =
+      getAttendanceDateTime(
+        getCheckOut(attendanceRecord),
+        attendanceRecord
+      );
+
+    if (checkOutDate) {
+      return checkOutDate;
+    }
+
+    const dayNumber =
+      Number(attendanceRecord?.day);
+
+    if (
+      monthNum &&
+      yearNum &&
+      dayNumber
+    ) {
+
+      const parsedDate =
+        new Date(
+          yearNum,
+          monthNum - 1,
+          dayNumber
+        );
+
+      return Number.isNaN(parsedDate.getTime())
+        ? null
+        : parsedDate;
+    }
+
+    return null;
+  };
+
+  const getMonthValue = (value) => {
+    const inputDateValue =
+      getInputDateValue(value);
+
+    return inputDateValue
+      ? inputDateValue.slice(0, 7)
+      : "";
+  };
+
+  const getResolvedAttendanceHours = (attendanceRecord) => {
+
+    const workingHours =
+      getNumericHoursValue(
+        attendanceRecord?.workingHours
+      );
+
+    if (workingHours !== null) {
+      return workingHours;
+    }
+
+    const checkIn =
+      getCheckIn(attendanceRecord);
+
+    const checkOut =
+      getCheckOut(attendanceRecord);
+
+    const checkInDate =
+      getAttendanceDateTime(
+        checkIn,
+        attendanceRecord
+      );
+
+    const checkOutDate =
+      getAttendanceDateTime(
+        checkOut,
+        attendanceRecord
+      );
+
+    if (
+      checkInDate &&
+      checkOutDate
+    ) {
+
+      const diffMs =
+        checkOutDate.getTime() -
+        checkInDate.getTime();
+
+      if (diffMs > 0) {
+
+        const calculatedHours =
+          diffMs / (1000 * 60 * 60);
+
+        if (Number.isFinite(calculatedHours)) {
+          return Number(
+            calculatedHours.toFixed(1)
+          );
+        }
+      }
+    }
+
+    const hours =
+      getNumericHoursValue(
+        attendanceRecord?.hours
+      );
+
+    if (hours !== null) {
+      return hours;
+    }
+
+    const totalHours =
+      getNumericHoursValue(
+        attendanceRecord?.totalHours
+      );
+
+    if (totalHours !== null) {
+      return totalHours;
+    }
+
+    return 0;
+  };
+
+  const buildAttendanceDetailsData = (emp) => {
+
+    const attendanceDays =
+      Array.isArray(emp?.days) &&
+        emp.days.length > 0
+        ? emp.days
+        : (
+          getAttendanceRecordDate(emp) ||
+          getCheckIn(emp) ||
+          getCheckOut(emp) ||
+          emp?.status ||
+          emp?.attendanceStatus ||
+          emp?.markStatus ||
+          emp?.dayStatus ||
+          emp?.dailyStatus
+        )
+          ? [emp]
+          : [];
+
+    let totalHours = 0;
+    let present = 0;
+    let absent = 0;
+    let onLeave = 0;
+    let late = 0;
+    let halfDay = 0;
+    let weekends = 0;
+
+    const weeklyMap = {};
+
+    const resolvedDays =
+      attendanceDays.map((d) => {
+
+        const status =
+          getResolvedStatus(d);
+
+        if (status === "Present") present++;
+        if (status === "Absent") absent++;
+        if (status === "On Leave") onLeave++;
+        if (status === "Late") late++;
+        if (status === "Half Day") halfDay++;
+        if (status === "Weekend") weekends++;
+
+        const resolvedHours =
+          getResolvedAttendanceHours(d);
+
+        totalHours += resolvedHours;
+
+        const currentDate =
+          getAttendanceRecordDate(d);
+
+        if (currentDate) {
+
+          const firstDay =
+            new Date(currentDate);
+
+          firstDay.setDate(
+            currentDate.getDate() -
+            currentDate.getDay() + 1
+          );
+
+          const weekKey =
+            firstDay.toDateString();
+
+          if (!weeklyMap[weekKey]) {
+
+            weeklyMap[weekKey] = {
+              week:
+                Object.keys(weeklyMap).length + 18,
+              start: firstDay,
+              end: new Date(firstDay),
+              hours: 0
+            };
+
+            weeklyMap[weekKey].end.setDate(
+              firstDay.getDate() + 6
+            );
+          }
+
+          weeklyMap[weekKey].hours +=
+            resolvedHours;
+        }
+
+        return {
+          ...d,
+          resolvedDate: currentDate,
+          resolvedStatus: status,
+          resolvedCheckIn: getCheckIn(d),
+          resolvedCheckOut: getCheckOut(d),
+          resolvedHours
+        };
+      });
+
+    return {
+      employee: emp,
+      totalHours:
+        `${totalHours.toFixed(1)} hrs`,
+      weeklyHours: "0 hrs",
+      present,
+      absent,
+      onLeave,
+      late,
+      halfDay,
+      weekends,
+      days: resolvedDays,
+      weeklyBreakdown:
+        Object.values(weeklyMap)
+    };
   };
 
   const formatHoursWorked = (emp) => {
@@ -392,22 +844,36 @@ function AttendanceTable({
     return "badge-default";
   };
 
-  const getDayCellText = (dayObj) => {
+  const getDayCellText = (dayObj, futureDay = false) => {
+
     const status = normalizeStatus(dayObj?.status || "");
+
+    // SHOW EVEN FOR FUTURE DAYS
+    if (status === "Weekend") return "W";
+    if (status === "Holiday") return "H";
+    if (status === "On Leave") return "OL";
+
+    // OTHER FUTURE DAYS
+    if (futureDay) {
+      return "-";
+    }
 
     if (status === "Present") return "P";
     if (status === "Absent") return "A";
-    if (status === "On Leave") return "OL";
     if (status === "Late") return "LT";
-    if (status === "Weekend") return "W";
     if (status === "Half Day") return "HD";
-    if (status === "Holiday") return "H";
 
-    return "-";
+    return "";
   };
 
-  const getDayCellClass = (dayObj) => {
+  const getDayCellClass = (dayObj, futureDay = false) => {
+
     const status = normalizeStatus(dayObj?.status || "");
+
+    // FUTURE EMPTY DAYS
+    if (futureDay && !status) {
+      return "";
+    }
 
     if (status === "Present") return "monthly-status present";
     if (status === "Absent") return "monthly-status absent";
@@ -419,7 +885,6 @@ function AttendanceTable({
 
     return "monthly-status empty";
   };
-
 
   useEffect(() => {
 
@@ -649,17 +1114,182 @@ function AttendanceTable({
   ]);
 
   const filteredMonthlyData = useMemo(() => {
+
     if (viewMode !== "monthly") return [];
 
     return normalizedMonthlyData.filter((emp) => {
+
       if (!matchesSearch(emp)) return false;
+
       if (filter === "All") return true;
 
-      return Object.values(emp.__dayMap || {}).some(
-        (d) => normalizeStatus(d?.status) === filter
+      const normalizedFilter =
+        normalizeStatus(filter);
+
+      if (!normalizedFilter) {
+        return false;
+      }
+
+      // ===========================
+      // CURRENT DATE FILTER LOGIC
+      // ===========================
+
+      const today = new Date();
+
+      const currentDay =
+        today.getDate();
+
+      const currentMonth =
+        today.getMonth() + 1;
+
+      const currentYear =
+        today.getFullYear();
+
+      // IF VIEWING CURRENT MONTH
+      const isCurrentMonthView =
+        currentMonth === monthNum &&
+        currentYear === yearNum;
+
+      // GET CURRENT DAY STATUS
+      if (isCurrentMonthView) {
+
+        const todayRecord =
+          emp?.__dayMap?.[currentDay];
+
+        const todayStatus =
+          normalizeStatus(
+            todayRecord?.status
+          );
+
+        // PRESENT FILTER
+        if (
+          normalizedFilter === "Present"
+        ) {
+          return todayStatus === "Present";
+        }
+
+        // ABSENT FILTER
+        if (
+          normalizedFilter === "Absent"
+        ) {
+          return todayStatus === "Absent";
+        }
+
+        // LATE FILTER
+        if (
+          normalizedFilter === "Late"
+        ) {
+          return todayStatus === "Late";
+        }
+
+        // HALF DAY FILTER
+        if (
+          normalizedFilter === "Half Day"
+        ) {
+          return todayStatus === "Half Day";
+        }
+
+        // ON LEAVE FILTER
+        if (
+          normalizedFilter === "On Leave"
+        ) {
+          return todayStatus === "On Leave";
+        }
+      }
+
+      // FALLBACK OLD LOGIC
+      const monthlyStatusCountKeyMap = {
+        Present: "present",
+        Absent: "absent",
+        "On Leave": "onLeave",
+        Late: "late",
+        "Half Day": "halfDay"
+      };
+
+      const countKey =
+        monthlyStatusCountKeyMap[
+        normalizedFilter
+        ];
+
+      if (countKey) {
+
+        const today = new Date().getDate();
+
+        const currentDayStatus =
+          emp?.__dayMap?.[today]?.status;
+
+        return (
+          normalizeStatus(currentDayStatus) ===
+          normalizedFilter
+        );
+      }
+
+      return Object.values(
+        emp?.__dayMap || {}
+      ).some((dayRecord) =>
+        normalizeStatus(
+          dayRecord?.status
+        ) === normalizedFilter
       );
+
     });
-  }, [normalizedMonthlyData, filter, matchesSearch, viewMode]);
+
+  }, [
+    normalizedMonthlyData,
+    filter,
+    matchesSearch,
+    viewMode
+  ]);
+
+  const dailyTotalPages = useMemo(() => {
+    return Math.max(
+      1,
+      Math.ceil(
+        filteredDailyData.length /
+        ATTENDANCE_PAGE_SIZE
+      )
+    );
+  }, [filteredDailyData.length, ATTENDANCE_PAGE_SIZE]);
+
+  const monthlyTotalPages = useMemo(() => {
+    return Math.max(
+      1,
+      Math.ceil(
+        filteredMonthlyData.length /
+        ATTENDANCE_PAGE_SIZE
+      )
+    );
+  }, [filteredMonthlyData.length, ATTENDANCE_PAGE_SIZE]);
+
+  const paginatedDailyData = useMemo(() => {
+    const startIndex =
+      (dailyPage - 1) *
+      ATTENDANCE_PAGE_SIZE;
+
+    return filteredDailyData.slice(
+      startIndex,
+      startIndex + ATTENDANCE_PAGE_SIZE
+    );
+  }, [
+    filteredDailyData,
+    dailyPage,
+    ATTENDANCE_PAGE_SIZE
+  ]);
+
+  const paginatedMonthlyData = useMemo(() => {
+    const startIndex =
+      (monthlyPage - 1) *
+      ATTENDANCE_PAGE_SIZE;
+
+    return filteredMonthlyData.slice(
+      startIndex,
+      startIndex + ATTENDANCE_PAGE_SIZE
+    );
+  }, [
+    filteredMonthlyData,
+    monthlyPage,
+    ATTENDANCE_PAGE_SIZE
+  ]);
 
   const employeeDirectory = useMemo(() => {
     const source =
@@ -704,6 +1334,11 @@ function AttendanceTable({
   // ADMIN UPDATE ATTENDANCE
   // =========================
   const openEditModal = (emp) => {
+    detailsRequestRef.current += 1;
+    setDetailsLoading(false);
+    setDetailsModalOpen(false);
+    setSelectedAttendance(null);
+
     const employeeId = getEmployeeId(emp);
     const checkIn = getCheckIn(emp);
     const checkOut = getCheckOut(emp);
@@ -730,6 +1365,11 @@ function AttendanceTable({
   };
 
   const openMonthlyDayEditModal = (emp, dayObj, dayNumber) => {
+    detailsRequestRef.current += 1;
+    setDetailsLoading(false);
+    setDetailsModalOpen(false);
+    setSelectedAttendance(null);
+
     const employeeId = getEmployeeId(emp);
     const selectedDate = buildDateFromDay(dayNumber);
 
@@ -769,6 +1409,85 @@ function AttendanceTable({
       checkOut: ""
     });
   };
+  const openAttendanceDetails = async (emp) => {
+
+    const employeeId =
+      getEmployeeId(emp);
+
+    const requestId =
+      ++detailsRequestRef.current;
+
+    const baseAttendanceDetails =
+      buildAttendanceDetailsData(emp);
+
+    setDetailsMonth("");
+    setSelectedAttendance(baseAttendanceDetails);
+    setDetailsLoading(true);
+    setDetailsModalOpen(true);
+
+    try {
+
+      const response =
+        await api.get(
+          API_ENDPOINTS.attendance.workingHours(employeeId),
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+
+      const workingHoursData =
+        response?.data || {};
+
+      if (requestId !== detailsRequestRef.current) {
+        return;
+      }
+
+      setSelectedAttendance({
+        ...baseAttendanceDetails,
+        totalHours:
+          workingHoursData?.monthlyWorkingHours ||
+          baseAttendanceDetails.totalHours,
+        weeklyHours:
+          workingHoursData?.weeklyWorkingHours ||
+          baseAttendanceDetails.weeklyHours
+      });
+
+    }
+    catch (error) {
+
+      if (requestId !== detailsRequestRef.current) {
+        return;
+      }
+
+      console.error(
+        "Working Hours API Error:",
+        error
+      );
+
+      toast.error(
+        "Failed to fetch attendance details"
+      );
+
+    }
+    finally {
+
+      if (requestId === detailsRequestRef.current) {
+        setDetailsLoading(false);
+      }
+
+    }
+
+  };
+
+  const closeAttendanceDetails = useCallback(() => {
+    detailsRequestRef.current += 1;
+    setDetailsMonth("");
+    setDetailsLoading(false);
+    setDetailsModalOpen(false);
+    setSelectedAttendance(null);
+  }, []);
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
@@ -899,6 +1618,499 @@ function AttendanceTable({
     return formatMonthYear(new Date(yearNum, monthNum - 1, 1), "");
   }, [monthNum, yearNum]);
 
+  const defaultDetailsMonth = useMemo(() => {
+    if (monthNum && yearNum) {
+      return `${yearNum}-${String(monthNum).padStart(2, "0")}`;
+    }
+
+    return getMonthValue(new Date());
+  }, [monthNum, yearNum]);
+
+  const availableDetailMonths = useMemo(() => {
+
+    if (!selectedAttendance?.days) {
+      return [];
+    }
+
+    const uniqueMonths = new Map();
+
+    selectedAttendance.days.forEach((day) => {
+
+      const currentDate =
+        day?.resolvedDate ||
+        getAttendanceRecordDate(day);
+
+      if (!currentDate) return;
+
+      const year =
+        currentDate.getFullYear();
+
+      const month =
+        String(currentDate.getMonth() + 1)
+          .padStart(2, "0");
+
+      const value =
+        `${year}-${month}`;
+
+      if (!uniqueMonths.has(value)) {
+
+        uniqueMonths.set(value, {
+          value,
+          label: formatMonthYear(
+            new Date(year, Number(month) - 1, 1),
+            value
+          )
+        });
+
+      }
+
+    });
+
+    return Array.from(
+      uniqueMonths.values()
+    ).sort((a, b) =>
+      b.value.localeCompare(a.value)
+    );
+
+  }, [selectedAttendance]);
+
+  const selectedDetailsMonth = useMemo(() => {
+    if (
+      detailsMonth &&
+      availableDetailMonths.some(
+        (monthOption) =>
+          monthOption.value === detailsMonth
+      )
+    ) {
+      return detailsMonth;
+    }
+
+    if (
+      availableDetailMonths.some(
+        (monthOption) =>
+          monthOption.value === defaultDetailsMonth
+      )
+    ) {
+      return defaultDetailsMonth;
+    }
+
+    return (
+      availableDetailMonths[0]?.value ||
+      defaultDetailsMonth
+    );
+  }, [
+    detailsMonth,
+    availableDetailMonths,
+    defaultDetailsMonth
+  ]);
+
+  const selectedDetailsMonthMeta = useMemo(() => {
+    const [selectedYear, selectedMonthNumber] =
+      String(selectedDetailsMonth || "")
+        .split("-")
+        .map(Number);
+
+    if (
+      !selectedYear ||
+      !selectedMonthNumber
+    ) {
+      return null;
+    }
+
+    return {
+      year: selectedYear,
+      month: selectedMonthNumber
+    };
+  }, [selectedDetailsMonth]);
+
+  const handleDetailsMonthChange = useCallback((e) => {
+    const selectedMonth =
+      e?.target?.value || "";
+
+    setDetailsMonth((currentMonth) => {
+      if (
+        selectedMonth &&
+        availableDetailMonths.some(
+          (monthOption) =>
+            monthOption.value === selectedMonth
+        )
+      ) {
+        return selectedMonth;
+      }
+
+      if (
+        currentMonth &&
+        availableDetailMonths.some(
+          (monthOption) =>
+            monthOption.value === currentMonth
+        )
+      ) {
+        return currentMonth;
+      }
+
+      return defaultDetailsMonth;
+    });
+  }, [
+    availableDetailMonths,
+    defaultDetailsMonth
+  ]);
+
+  const detailsDaysInSelectedMonth = useMemo(() => {
+    if (!selectedDetailsMonthMeta) {
+      return daysInMonth;
+    }
+
+    return new Date(
+      selectedDetailsMonthMeta.year,
+      selectedDetailsMonthMeta.month,
+      0
+    ).getDate();
+  }, [selectedDetailsMonthMeta, daysInMonth]);
+
+  useEffect(() => {
+
+    setDailyPage(1);
+    setMonthlyPage(1);
+
+  }, [
+    search,
+    filter,
+    viewMode,
+    monthNum,
+    yearNum
+  ]);
+
+  useEffect(() => {
+    if (dailyPage > dailyTotalPages) {
+      setDailyPage(dailyTotalPages);
+    }
+  }, [dailyPage, dailyTotalPages]);
+
+  useEffect(() => {
+    if (monthlyPage > monthlyTotalPages) {
+      setMonthlyPage(monthlyTotalPages);
+    }
+  }, [monthlyPage, monthlyTotalPages]);
+
+  useEffect(() => {
+
+    if (
+      !detailsModalOpen ||
+      !availableDetailMonths.length
+    ) {
+      return;
+    }
+
+    setDetailsMonth((currentMonth) => {
+      if (
+        currentMonth &&
+        availableDetailMonths.some(
+          (monthOption) =>
+            monthOption.value === currentMonth
+        )
+      ) {
+        return currentMonth;
+      }
+
+      if (
+        availableDetailMonths.some(
+          (monthOption) =>
+            monthOption.value === defaultDetailsMonth
+        )
+      ) {
+        return defaultDetailsMonth;
+      }
+
+      return availableDetailMonths[0].value;
+    });
+
+  }, [
+    detailsModalOpen,
+    availableDetailMonths,
+    defaultDetailsMonth
+  ]);
+
+  useEffect(() => {
+
+    if (
+      !selectedDetailsMonthMeta
+    ) return;
+
+    if (detailsFilter === "Weekly") {
+
+      const today = new Date();
+      const anchorDate = new Date(
+        selectedDetailsMonthMeta.year,
+        selectedDetailsMonthMeta.month - 1,
+        Math.min(
+          today.getDate(),
+          detailsDaysInSelectedMonth
+        )
+      );
+
+      const day =
+        anchorDate.getDay();
+
+      const firstDay = new Date(anchorDate);
+      const diff =
+        anchorDate.getDate() - day + (day === 0 ? -6 : 1);
+
+      firstDay.setDate(diff);
+
+      const lastDay =
+        new Date(firstDay);
+
+      lastDay.setDate(
+        firstDay.getDate() + 6
+      );
+
+      setDetailsFromDate(
+        getInputDateValue(firstDay)
+      );
+
+      setDetailsToDate(
+        getInputDateValue(lastDay)
+      );
+
+    }
+
+    else {
+
+      setDetailsFromDate(
+        `${selectedDetailsMonthMeta.year}-${String(selectedDetailsMonthMeta.month).padStart(2, "0")}-01`
+      );
+
+      setDetailsToDate(
+        `${selectedDetailsMonthMeta.year}-${String(selectedDetailsMonthMeta.month).padStart(2, "0")}-${String(detailsDaysInSelectedMonth).padStart(2, "0")}`
+      );
+
+    }
+
+  }, [
+    detailsFilter,
+    selectedDetailsMonthMeta,
+    detailsDaysInSelectedMonth
+  ]);
+
+  const filteredDetailDays = useMemo(() => {
+
+    if (!selectedAttendance?.days) {
+      return [];
+    }
+
+    return selectedAttendance.days.filter((d) => {
+
+      const currentDate =
+        d?.resolvedDate ||
+        getAttendanceRecordDate(d);
+
+      const formattedDate =
+        getInputDateValue(currentDate);
+
+      if (!formattedDate) {
+        return true;
+      }
+
+      // WEEKLY FILTER
+      if (detailsFilter === "Weekly") {
+
+        if (
+          !detailsFromDate ||
+          !detailsToDate
+        ) {
+          return true;
+        }
+
+        return (
+          formattedDate >= detailsFromDate &&
+          formattedDate <= detailsToDate
+        );
+      }
+
+      // MONTHLY FILTER
+      if (
+        detailsFromDate &&
+        detailsToDate
+      ) {
+
+        return (
+          formattedDate >= detailsFromDate &&
+          formattedDate <= detailsToDate
+        );
+      }
+
+      return true;
+
+    });
+
+  }, [
+    selectedAttendance,
+    detailsFilter,
+    detailsFromDate,
+    detailsToDate,
+    yearNum,
+    monthNum
+  ]);
+
+  const detailSummary = useMemo(() => {
+    let totalHours = 0;
+    let present = 0;
+    let absent = 0;
+    let onLeave = 0;
+    let late = 0;
+    let halfDay = 0;
+    let weekends = 0;
+
+    filteredDetailDays.forEach((dayRecord) => {
+      const status =
+        dayRecord?.resolvedStatus ||
+        getResolvedStatus(dayRecord);
+
+      if (status === "Present") present++;
+      if (status === "Absent") absent++;
+      if (status === "On Leave") onLeave++;
+      if (status === "Late") late++;
+      if (status === "Half Day") halfDay++;
+      if (status === "Weekend") weekends++;
+
+      totalHours +=
+        Number(dayRecord?.resolvedHours || 0);
+    });
+
+    const shouldUseDefaultMonthlyTotal =
+      detailsFilter === "Monthly" &&
+      selectedDetailsMonth === defaultDetailsMonth &&
+      selectedAttendance?.totalHours;
+
+    return {
+      totalHours:
+        shouldUseDefaultMonthlyTotal
+          ? selectedAttendance.totalHours
+          : `${totalHours.toFixed(1)} hrs`,
+      present,
+      absent,
+      onLeave,
+      late,
+      halfDay,
+      weekends
+    };
+  }, [
+    filteredDetailDays,
+    selectedAttendance,
+    detailsFilter,
+    selectedDetailsMonth,
+    defaultDetailsMonth
+  ]);
+
+  const filteredWeeklyBreakdown = useMemo(() => {
+    if (detailsFilter !== "Monthly") {
+      return [];
+    }
+
+    const weeklyMap = {};
+
+    filteredDetailDays.forEach((dayRecord) => {
+      const currentDate =
+        dayRecord?.resolvedDate;
+
+      if (!currentDate) {
+        return;
+      }
+
+      const firstDay =
+        new Date(currentDate);
+
+      firstDay.setDate(
+        currentDate.getDate() -
+        currentDate.getDay() + 1
+      );
+
+      const weekKey =
+        firstDay.toDateString();
+
+      if (!weeklyMap[weekKey]) {
+
+        weeklyMap[weekKey] = {
+          week:
+            Object.keys(weeklyMap).length + 18,
+          start: firstDay,
+          end: new Date(firstDay),
+          hours: 0
+        };
+
+        weeklyMap[weekKey].end.setDate(
+          firstDay.getDate() + 6
+        );
+      }
+
+      weeklyMap[weekKey].hours +=
+        Number(dayRecord?.resolvedHours || 0);
+    });
+
+    return Object.values(weeklyMap);
+  }, [filteredDetailDays, detailsFilter]);
+
+  const renderPaginationControls = (
+    currentPage,
+    totalPages,
+    onPrevious,
+    onNext
+  ) => (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "12px",
+        margin: "18px 0 24px 0"
+      }}
+    >
+      <button
+        type="button"
+        onClick={onPrevious}
+        disabled={currentPage === 1}
+        style={{
+          border: "1px solid #d1d5db",
+          background: currentPage === 1 ? "#f8fafc" : "#fff",
+          color: "#334155",
+          padding: "8px 14px",
+          borderRadius: "10px",
+          cursor: currentPage === 1 ? "not-allowed" : "pointer",
+          fontWeight: 600
+        }}
+      >
+        Previous
+      </button>
+
+      <span
+        style={{
+          fontSize: "14px",
+          fontWeight: 600,
+          color: "#334155"
+        }}
+      >
+        Page {currentPage} of {totalPages}
+      </span>
+
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={currentPage === totalPages}
+        style={{
+          border: "1px solid #d1d5db",
+          background: currentPage === totalPages ? "#f8fafc" : "#fff",
+          color: "#334155",
+          padding: "8px 14px",
+          borderRadius: "10px",
+          cursor: currentPage === totalPages ? "not-allowed" : "pointer",
+          fontWeight: 600
+        }}
+      >
+        Next
+      </button>
+    </div>
+  );
+
   const getDayName = (day) => {
     if (!monthNum || !yearNum || !day) return "";
 
@@ -1019,60 +2231,70 @@ function AttendanceTable({
             ) : filteredDailyData.length === 0 ? (
               <p className="attendance-empty">No Data</p>
             ) : (
-              filteredDailyData.map((emp, i) => {
-                const progressWidth = getProgressWidth(emp);
-                const finalStatus = getResolvedStatus(emp);
-                console.log("📌 Employee Attendance:", {
-                  employee: getEmployeeName(emp),
-                  rawCheckIn: getCheckIn(emp),
-                  rawCheckOut: getCheckOut(emp),
-                  formattedCheckIn: formatCheckTime(getCheckIn(emp)),
-                  formattedCheckOut: formatCheckTime(getCheckOut(emp)),
-                  status: finalStatus
-                });
+              <>
+                {paginatedDailyData.map((emp, i) => {
+                  const progressWidth = getProgressWidth(emp);
+                  const finalStatus = getResolvedStatus(emp);
+                  console.log("📌 Employee Attendance:", {
+                    employee: getEmployeeName(emp),
+                    rawCheckIn: getCheckIn(emp),
+                    rawCheckOut: getCheckOut(emp),
+                    formattedCheckIn: formatCheckTime(getCheckIn(emp)),
+                    formattedCheckOut: formatCheckTime(getCheckOut(emp)),
+                    status: finalStatus
+                  });
 
-                return (
-                  <div
-                    key={`${getEmployeeId(emp)}-${getEmployeeName(emp)}-${i}`}
-                    className="attendance-row attendance-row-5"
-                  >
-                    <div className="attendance-employee">
-                      <div className="avatar">
-                        {getEmployeeName(emp).charAt(0).toUpperCase()}
+                  return (
+                    <div
+                      key={`${getEmployeeId(emp)}-${getEmployeeName(emp)}-${i}`}
+                      className="attendance-row attendance-row-5 attendance-clickable-row"
+                      onClick={() => openAttendanceDetails(emp)}
+                    >
+                      <div className="attendance-employee">
+                        <div className="avatar">
+                          {getEmployeeName(emp).charAt(0).toUpperCase()}
+                        </div>
+
+                        <div>
+                          <div className="emp-name" title={getEmployeeName(emp)}>
+                            {getEmployeeName(emp)}
+                          </div>
+                          <div className="emp-dept">{getEmployeeDept(emp)}</div>
+                        </div>
                       </div>
 
                       <div>
-                        <div className="emp-name" title={getEmployeeName(emp)}>
-                          {getEmployeeName(emp)}
+                        <span className={`status-badge ${getStatusClass(finalStatus)}`}>
+                          {finalStatus}
+                        </span>
+                      </div>
+
+                      <div className="time-text">{formatCheckTime(getCheckIn(emp))}</div>
+
+                      <div className="time-text">{formatCheckTime(getCheckOut(emp))}</div>
+
+                      <div className="hours-worked">
+                        <div className="progress-bar">
+                          <div
+                            className="progress progress-blue"
+                            style={{ width: `${progressWidth}%` }}
+                          />
                         </div>
-                        <div className="emp-dept">{getEmployeeDept(emp)}</div>
+                        <span className="hours-text">
+                          {formatHoursWorked(emp)}
+                        </span>
                       </div>
                     </div>
+                  );
+                })}
 
-                    <div>
-                      <span className={`status-badge ${getStatusClass(finalStatus)}`}>
-                        {finalStatus}
-                      </span>
-                    </div>
-
-                    <div className="time-text">{formatCheckTime(getCheckIn(emp))}</div>
-
-                    <div className="time-text">{formatCheckTime(getCheckOut(emp))}</div>
-
-                    <div className="hours-worked">
-                      <div className="progress-bar">
-                        <div
-                          className="progress progress-blue"
-                          style={{ width: `${progressWidth}%` }}
-                        />
-                      </div>
-                      <span className="hours-text">
-                        {formatHoursWorked(emp)}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })
+                {renderPaginationControls(
+                  dailyPage,
+                  dailyTotalPages,
+                  () => setDailyPage((prev) => Math.max(prev - 1, 1)),
+                  () => setDailyPage((prev) => Math.min(prev + 1, dailyTotalPages))
+                )}
+              </>
             )}
           </>
         ) : (
@@ -1278,14 +2500,17 @@ function AttendanceTable({
                       ACTION
                     </div>
 
-                    {filteredMonthlyData.map((emp, index) => {
+                    {paginatedMonthlyData.map((emp, index) => {
                       const counts = emp.__counts || {};
 
                       return (
                         <React.Fragment
                           key={`${getEmployeeId(emp)}-${getEmployeeName(emp)}-${index}`}
                         >
-                          <div className="monthly-employee-cell sticky-col">
+                          <div
+                            className="monthly-employee-cell sticky-col attendance-employee-click"
+                            onClick={() => openAttendanceDetails(emp)}
+                          >
                             <div className="attendance-employee">
                               <div className="avatar">
                                 {getEmployeeName(emp).charAt(0).toUpperCase()}
@@ -1301,8 +2526,13 @@ function AttendanceTable({
 
                           {daysArray.map((day) => {
                             const dayObj = emp.__dayMap?.[day];
-                            const status = normalizeStatus(dayObj?.status);
                             const futureDay = isFutureDay(day);
+
+                            const status =
+                              futureDay &&
+                                normalizeStatus(dayObj?.status) === "Absent"
+                                ? ""
+                                : normalizeStatus(dayObj?.status);
 
                             return (
                               <div
@@ -1344,8 +2574,14 @@ function AttendanceTable({
                                   }
                                 }}
                               >
-                                <span className={getDayCellClass(dayObj)}>
-                                  {getDayCellText(dayObj)}
+                                <span
+                                  className={
+                                    futureDay && !status
+                                      ? "monthly-status empty"
+                                      : getDayCellClass(dayObj, futureDay)
+                                  }
+                                >
+                                  {getDayCellText(dayObj, futureDay)}
                                 </span>
                               </div>
                             );
@@ -1489,13 +2725,21 @@ function AttendanceTable({
                   <span><span className="legend-dot halfday" /> Half Day</span>
                   <span><span className="legend-dot holiday" /> Holiday</span>
                 </div>
+
+                {renderPaginationControls(
+                  monthlyPage,
+                  monthlyTotalPages,
+                  () => setMonthlyPage((prev) => Math.max(prev - 1, 1)),
+                  () => setMonthlyPage((prev) => Math.min(prev + 1, monthlyTotalPages))
+                )}
               </>
             )}
           </div>
         )}
       </div>
 
-      {/* EDIT MODAL */}
+      {/* DETAILS MODAL */}
+
       {editModalOpen && (
         <div className="attendance-modal-overlay">
           <div className="attendance-modal">
@@ -1562,7 +2806,6 @@ function AttendanceTable({
 
                   <div className="time-picker-wheel">
 
-                    {/* HOURS */}
                     <div className="time-wheel-column">
                       <div className="wheel-label">
                         Hour
@@ -1602,7 +2845,6 @@ function AttendanceTable({
                       </div>
                     </div>
 
-                    {/* MINUTES */}
                     <div className="time-wheel-column">
                       <div className="wheel-label">
                         Minute
@@ -1652,7 +2894,6 @@ function AttendanceTable({
 
                   <div className="time-picker-wheel">
 
-                    {/* HOURS */}
                     <div className="time-wheel-column">
                       <div className="wheel-label">
                         Hour
@@ -1692,7 +2933,6 @@ function AttendanceTable({
                       </div>
                     </div>
 
-                    {/* MINUTES */}
                     <div className="time-wheel-column">
                       <div className="wheel-label">
                         Minute
@@ -1751,6 +2991,351 @@ function AttendanceTable({
             </div>
           </div>
         </div>
+      )}
+
+      {/* DETAILS MODAL */}
+
+      {/* DETAILS MODAL */}
+
+      {detailsModalOpen && selectedAttendance && (
+
+        <div className="attendance-details-overlay">
+
+          <div className="attendance-details-modal compact-modal">
+
+            <button
+              className="attendance-details-close"
+              onClick={closeAttendanceDetails}
+            >
+              ×
+            </button>
+
+            {/* HEADER */}
+
+            <div className="attendance-details-header">
+
+              <div className="attendance-details-avatar">
+                {getEmployeeName(
+                  selectedAttendance.employee
+                ).charAt(0).toUpperCase()}
+              </div>
+
+              <div>
+                <h2>
+                  {getEmployeeName(
+                    selectedAttendance.employee
+                  )}
+                </h2>
+
+                <p>
+                  {getEmployeeId(
+                    selectedAttendance.employee
+                  )}
+                </p>
+              </div>
+
+            </div>
+
+            {/* FILTER */}
+
+            <div className="attendance-filter-row">
+
+              <div className="attendance-filter-left">
+
+                <div className="attendance-filter-group">
+
+                  <label>Filter</label>
+
+                  <div className="attendance-filter-buttons">
+
+                    <button
+                      className={
+                        detailsFilter === "Monthly"
+                          ? "active"
+                          : ""
+                      }
+                      onClick={() => setDetailsFilter("Monthly")}
+                    >
+                      Monthly
+                    </button>
+
+                    <button
+                      className={
+                        detailsFilter === "Weekly"
+                          ? "active"
+                          : ""
+                      }
+                      onClick={() => setDetailsFilter("Weekly")}
+                    >
+                      Weekly
+                    </button>
+                  </div>
+
+                </div>
+
+                <div className="attendance-filter-group">
+
+                  <label>Month</label>
+
+                  <div className="attendance-date-picker-box">
+
+                    <select
+                      value={selectedDetailsMonth}
+                      onChange={handleDetailsMonthChange}
+                      style={{
+                        width: "100%",
+                        minWidth: "180px",
+                        padding: "10px 12px",
+                        borderRadius: "12px",
+                        border: "1px solid #d7dee9",
+                        background: "#fff",
+                        color: "#0f172a",
+                        fontSize: "14px",
+                        outline: "none"
+                      }}
+                    >
+                      {availableDetailMonths.map((monthOption) => (
+                        <option
+                          key={monthOption.value}
+                          value={monthOption.value}
+                        >
+                          {monthOption.label}
+                        </option>
+                      ))}
+                    </select>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            {detailsLoading ? (
+
+              <div className="attendance-details-table">
+                <p>Loading attendance...</p>
+              </div>
+
+            ) : (
+
+              <>
+
+                {/* SUMMARY */}
+
+                <div className="attendance-summary-grid">
+
+                  <div className="summary-card blue">
+                    <span>Total Hours</span>
+                    <h3>{detailSummary.totalHours}</h3>
+                  </div>
+
+                  <div className="summary-card green">
+                    <span>Present</span>
+                    <h3>{detailSummary.present}</h3>
+                  </div>
+
+                  <div className="summary-card red">
+                    <span>Absent</span>
+                    <h3>{detailSummary.absent}</h3>
+                  </div>
+
+                  <div className="summary-card purple">
+                    <span>On Leave</span>
+                    <h3>{detailSummary.onLeave}</h3>
+                  </div>
+
+                  <div className="summary-card blue">
+                    <span>Half Day</span>
+                    <h3>{detailSummary.halfDay}</h3>
+                  </div>
+
+                  <div className="summary-card orange">
+                    <span>Late</span>
+                    <h3>{detailSummary.late}</h3>
+                  </div>
+
+                  <div className="summary-card gray">
+                    <span>Weekends</span>
+                    <h3>{detailSummary.weekends}</h3>
+                  </div>
+
+                  <div className="summary-card gray">
+                    <span>Days</span>
+                    <h3>
+                      {detailsFilter === "Weekly"
+                        ? 7
+                        : detailsDaysInSelectedMonth}
+                    </h3>
+                  </div>
+
+                </div>
+
+                {/* WEEKLY BREAKDOWN ONLY MONTHLY */}
+
+                {detailsFilter === "Monthly" && (
+
+                  <div className="attendance-weekly-box">
+
+                    <h4>Weekly Hours Breakdown</h4>
+
+                    <div className="attendance-week-grid">
+
+                      {filteredWeeklyBreakdown.map((week, index) => (
+
+                        <div
+                          className="attendance-week-card"
+                          key={index}
+                        >
+
+                          <span>
+                            Week {week.week}
+                          </span>
+
+                          <p>
+                            {week.start.toLocaleDateString()}
+                          </p>
+
+                          <h3>
+                            <h3>
+                              {Number(week.hours || 0).toFixed(1)}h
+                            </h3>
+                          </h3>
+
+                        </div>
+
+                      ))}
+
+                    </div>
+
+                  </div>
+
+                )}
+
+                {/* TABLE */}
+
+                <div className="attendance-details-table">
+
+                  <table>
+
+                    <thead>
+
+                      <tr>
+                        <th>Date</th>
+                        <th>Day</th>
+                        <th>Status</th>
+                        <th>Hours</th>
+                      </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                      {filteredDetailDays.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={4}
+                            className="attendance-empty"
+                          >
+                            No attendance data available for selected month
+                          </td>
+                        </tr>
+                      )}
+
+                      {filteredDetailDays.map((d, index) => {
+
+                        const status =
+                          d?.resolvedStatus ||
+                          getResolvedStatus(d);
+
+                        const date =
+                          d?.resolvedDate ||
+                          getAttendanceRecordDate(d);
+
+                        const dateLabel =
+                          date
+                            ? date.toLocaleDateString()
+                            : "-";
+
+                        const dayLabel =
+                          date
+                            ? date.toLocaleDateString(
+                              "en-US",
+                              {
+                                weekday: "short"
+                              }
+                            )
+                            : "-";
+
+                        const resolvedHours =
+                          Number(d?.resolvedHours || 0);
+
+                        const checkInLabel =
+                          formatTime(
+                            d?.resolvedCheckIn ||
+                            getCheckIn(d)
+                          );
+
+                        const checkOutLabel =
+                          formatTime(
+                            d?.resolvedCheckOut ||
+                            getCheckOut(d)
+                          );
+
+                        return (
+
+                          <tr
+                            key={index}
+                            title={`Check In: ${checkInLabel} | Check Out: ${checkOutLabel}`}
+                          >
+
+                            <td>
+                              {dateLabel}
+                            </td>
+
+                            <td>
+                              {dayLabel}
+                            </td>
+
+                            <td>
+
+                              <span
+                                className={`status-badge ${getStatusClass(status)}`}
+                              >
+                                {status || "No data"}
+                              </span>
+
+                            </td>
+
+                            <td>
+
+                              {resolvedHours > 0
+                                ? `${resolvedHours.toFixed(1)}h`
+                                : "0h"}
+
+                            </td>
+
+                          </tr>
+
+                        );
+
+                      })}
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+
+              </>
+
+            )}
+
+          </div>
+
+        </div>
+
       )}
     </>
   );

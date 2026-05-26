@@ -176,26 +176,29 @@ namespace EmployeeManagementSystem.Controllers
             // GENERATE JWT TOKEN
             // =========================================
 
+            //var token = _jwtHelper.GenerateToken(
+            //    user,
+            //    role.Name,
+            //    employee.Employee_Id
+            //);
+
+            // =========================================
+            // SAVE LOGIN ACTIVITY
+            // =========================================
+            var istZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
+            var istNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, istZone);
+
+            var activityLog = new ActivityLog
+            {
+                Activity = $"{employee.Name} logged in successfully",
+                CreatedAt = istNow
+            };
+
             var token = _jwtHelper.GenerateToken(
                 user,
                 role.Name,
                 employee.Employee_Id
             );
-
-            // =========================================
-            // SAVE LOGIN ACTIVITY
-            // =========================================
-            var activityLog = new ActivityLog
-            {
-                Activity =
-        $"{employee.Name} logged in successfully",
-
-                CreatedAt = DateTime.Now
-            };
-
-            _context.ActivityLogs.Add(activityLog);
-
-            await _context.SaveChangesAsync();
 
             // =========================================
             // RETURN RESPONSE

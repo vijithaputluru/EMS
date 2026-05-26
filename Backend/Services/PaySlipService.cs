@@ -34,7 +34,9 @@ namespace EmployeeManagementSystem.Services
             int year,
             string month,
             decimal OtherDeductions)
+
         {
+
             var employee = await _context.Employees
                 .AsNoTracking()
                 .Include(e => e.BankDetails)
@@ -215,10 +217,15 @@ namespace EmployeeManagementSystem.Services
                     "Month",
                     $"{month.ToUpper()} {year}");
 
+
                 ReplaceBookmark(
-                    wordDoc,
-                    "Month1",
-                    $"{month} {year}");
+                   wordDoc,
+                   "Gender",
+                   string.IsNullOrWhiteSpace(
+                       personalInfo?.Gender)
+                   ? "-"
+                   : personalInfo.Gender);
+
 
                 ReplaceBookmark(
                     wordDoc,
@@ -317,11 +324,12 @@ namespace EmployeeManagementSystem.Services
                     "ProfessionalTax",
                     professionalTax.ToString("N2"));
 
+
                 ReplaceBookmark(
-     wordDoc,
-     "OtherDeductions",
-     OtherDeductions == 0 ? "0.00" : OtherDeductions.ToString("N2")
- );
+                    wordDoc,
+                    "OtherDeduction",
+                    OtherDeductions.ToString("N2")
+                );
 
                 ReplaceBookmark(
                     wordDoc,

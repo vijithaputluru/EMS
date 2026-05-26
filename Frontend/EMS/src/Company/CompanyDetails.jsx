@@ -231,12 +231,12 @@ function CompanyDetails() {
     let nextValue = value;
 
     if (name === "name") {
-      // Alphabets and spaces only - max 40 chars
+ 
       nextValue = value
         .replace(/[^A-Za-z\s]/g, "")
         .replace(/\s{2,}/g, " ")
         .replace(/^\s+/g, "")
-        .slice(2, 40);
+        .slice(0, 40);
     }
     else if (name === "phone") {
       // Exactly 10 digits only

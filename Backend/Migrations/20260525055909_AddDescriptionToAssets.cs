@@ -5,25 +5,23 @@
 namespace EmployeeManagementSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class AddIsActiveToRolesOnly : Migration
+    public partial class AddDescriptionToAssets : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "IsActive",
-                table: "roles",
-                type: "tinyint(1)",
-                nullable: false,
-                defaultValue: true);
+            migrationBuilder.AddColumn<string>(
+                name: "Description",
+                table: "assets",
+                type: "longtext",
+                nullable: true);
         }
 
-        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "IsActive",
-                table: "roles");
+                name: "Description",
+                table: "assets");
         }
     }
 }

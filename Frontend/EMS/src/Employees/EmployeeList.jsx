@@ -103,6 +103,8 @@ function EmployeeList() {
   const [newDept, setNewDept] = useState("");
   const [newRole, setNewRole] = useState("");
   const [errors, setErrors] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const employeesPerPage = 10;
   const [empForm, setEmpForm] = useState(initialEmployeeForm);
   const {
     ctcValue: employeeCtcValue,
@@ -155,6 +157,10 @@ function EmployeeList() {
 
     return () => clearTimeout(timer);
   }, [message]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [empSearch, departmentFilter, statusFilter, sortBy]);
 
   useEffect(() => {
     if (!isEmployeeSalaryValid && !errors.ctc) {
@@ -553,6 +559,24 @@ function EmployeeList() {
     return "No employees available.";
   }, [departmentFilter, empSearch, statusFilter]);
 
+  const totalPages = Math.ceil(
+    filteredEmployees.length / employeesPerPage
+  );
+
+  const indexOfLastEmployee = currentPage * employeesPerPage;
+
+  const indexOfFirstEmployee =
+    indexOfLastEmployee - employeesPerPage;
+
+  const currentEmployees = filteredEmployees.slice(
+    indexOfFirstEmployee,
+    indexOfLastEmployee
+  );
+
+  const handlePageChange = (pageNumber) => {
+    if (pageNumber < 1 || pageNumber > totalPages) return;
+    setCurrentPage(pageNumber);
+  };
   return (
     <div className="emp-page-unique">
       {message && <div className={`emp-message ${messageType}`}>{message}</div>}
@@ -629,15 +653,15 @@ function EmployeeList() {
         <div className="emp-table-container">
           <table className="emp-table">
             <colgroup>
-              <col style={{ width: "270px" }} />  {/* Employee Name */}
-              <col style={{ width: "130px" }} />  {/* Employee ID */}
-              <col style={{ width: "240px" }} />  {/* Email */}
-              <col style={{ width: "150px" }} />  {/* Department */}
-              <col style={{ width: "130px" }} />  {/* CTC */}
-              <col style={{ width: "150px" }} />  {/* Role */}
-              <col style={{ width: "220px" }} />  {/* Status */}
-              <col style={{ width: "110px" }} />  {/* Joined */}
-              <col style={{ width: "165x" }} />  {/* Action */}
+              <col style={{ width: "270px" }} />
+              <col style={{ width: "130px" }} />
+              <col style={{ width: "240px" }} />
+              <col style={{ width: "150px" }} />
+              <col style={{ width: "130px" }} />
+              <col style={{ width: "150px" }} />
+              <col style={{ width: "220px" }} />
+              <col style={{ width: "110px" }} />
+              <col style={{ width: "165px" }} />
             </colgroup>
             <thead>
               <tr>
@@ -653,14 +677,14 @@ function EmployeeList() {
               </tr>
             </thead>
             <tbody>
-              {filteredEmployees.length === 0 ? (
+              {currentEmployees.length === 0 ? (
                 <tr>
                   <td colSpan="9" className="emp-empty-state app-table-empty-cell">
                     {emptyStateMessage}
                   </td>
                 </tr>
               ) : (
-                filteredEmployees.map((emp) => (
+                currentEmployees.map((emp) => (
                   <tr
                     key={emp.id}
                     className="emp-row-click"
@@ -703,11 +727,11 @@ function EmployeeList() {
                           alignItems: "center",
                         }}
                       >
-                         <button
+                        <button
                           className="edit-btn"
                           style={{
                             width: "70px",
-                            minWidth: "60px",
+                            minWidth: "70px",
                             height: "40px",
                           }}
                           onClick={(event) => {
@@ -717,12 +741,12 @@ function EmployeeList() {
                         >
                           Edit
                         </button>
- 
+
                         <button
                           className="delete-btn"
                           style={{
                             width: "70px",
-                            minWidth: "62px",
+                            minWidth: "70px",
                             height: "40px",
                           }}
                           onClick={(event) => {
@@ -733,7 +757,6 @@ function EmployeeList() {
                         >
                           Delete
                         </button>
- 
                       </div>
                     </td>
                   </tr>
@@ -741,6 +764,73 @@ function EmployeeList() {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="emp-pagination">
+          <button
+            className="emp-page-btn"
+            disabled={currentPage === 1}
+            onClick={() => handlePageChange(currentPage - 1)}
+          >
+            Prev
+          </button>
+
+          {/* First Page */}
+          {currentPage > 3 && (
+            <>
+              <button
+                className="emp-page-btn"
+                onClick={() => handlePageChange(1)}
+              >
+                1
+              </button>
+
+              {currentPage > 4 && (
+                <span className="emp-page-dots">...</span>
+              )}
+            </>
+          )}
+
+          {/* Middle Pages */}
+          {Array.from({ length: totalPages }, (_, index) => index + 1)
+            .filter(
+              (page) =>
+                page >= currentPage - 1 &&
+                page <= currentPage + 1
+            )
+            .map((page) => (
+              <button
+                key={page}
+                className={`emp-page-btn ${currentPage === page ? "active" : ""
+                  }`}
+                onClick={() => handlePageChange(page)}
+              >
+                {page}
+              </button>
+            ))}
+
+          {/* Last Page */}
+          {currentPage < totalPages - 2 && (
+            <>
+              {currentPage < totalPages - 3 && (
+                <span className="emp-page-dots">...</span>
+              )}
+
+              <button
+                className="emp-page-btn"
+                onClick={() => handlePageChange(totalPages)}
+              >
+                {totalPages}
+              </button>
+            </>
+          )}
+
+          <button
+            className="emp-page-btn"
+            disabled={currentPage === totalPages}
+            onClick={() => handlePageChange(currentPage + 1)}
+          >
+            Next
+          </button>
         </div>
       </div>
 

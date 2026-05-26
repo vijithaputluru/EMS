@@ -494,11 +494,11 @@ function UserAttendance() {
         <h1
           style={{
             fontSize: "24px",
-            fontWeight: "800",
+            fontWeight: "700",
             color: "#0f172a",
-            margin: "-20px 0 0 0",
+            margin: "-20px -5px -10px -30px",
             textAlign: "left",
-            transform: "translateX(-30px)"
+            transform: "translateX(0px)"
           }}
         >
           My Attendance

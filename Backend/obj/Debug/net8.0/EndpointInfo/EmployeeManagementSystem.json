@@ -166,6 +166,9 @@
                       "format": "binary"
                     }
                   },
+                  "Description": {
+                    "type": "string"
+                  },
                   "ExistingImages": {
                     "type": "string"
                   }
@@ -185,6 +188,9 @@
                   "style": "form"
                 },
                 "Images": {
+                  "style": "form"
+                },
+                "Description": {
                   "style": "form"
                 },
                 "ExistingImages": {
@@ -263,6 +269,9 @@
                       "format": "binary"
                     }
                   },
+                  "Description": {
+                    "type": "string"
+                  },
                   "ExistingImages": {
                     "type": "string"
                   }
@@ -282,6 +291,9 @@
                   "style": "form"
                 },
                 "Images": {
+                  "style": "form"
+                },
+                "Description": {
                   "style": "form"
                 },
                 "ExistingImages": {
@@ -576,6 +588,44 @@
       "post": {
         "tags": [
           "Attendance"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Attendance/working-hours/{employeeId}": {
+      "get": {
+        "tags": [
+          "Attendance"
+        ],
+        "parameters": [
+          {
+            "name": "employeeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fromDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "toDate",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
         ],
         "responses": {
           "200": {
@@ -4425,6 +4475,16 @@
             "nullable": true
           },
           "otherAllowance": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "professionalTax": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "providentFund": {
             "type": "number",
             "format": "double",
             "nullable": true

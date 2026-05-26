@@ -46,6 +46,25 @@ public class EmployeeLeaveService : IEmployeeLeaveService
 
             return new BadRequestObjectResult("Employee not found");
 
+        var fromDate = dto.FromDate.Date;
+        var toDate = dto.ToDate.Date;
+
+        var alreadyApplied = await _context.EmployeeLeaves
+            .AsNoTracking()
+            .AnyAsync(l =>
+                l.EmployeeId == employee.Employee_Id &&
+                l.Status != "Rejected" &&
+                l.Status != "Cancelled" &&
+                fromDate <= l.ToDate.Date &&
+                toDate >= l.FromDate.Date
+            );
+
+        if (alreadyApplied)
+            return new BadRequestObjectResult(new
+            {
+                message = "You already applied leave for this date"
+            });
+
         var leave = new EmployeeLeave
 
         {
@@ -67,6 +86,7 @@ public class EmployeeLeaveService : IEmployeeLeaveService
             CreatedAt = DateTime.UtcNow
 
         };
+
 
         await _context.EmployeeLeaves.AddAsync(leave);
 

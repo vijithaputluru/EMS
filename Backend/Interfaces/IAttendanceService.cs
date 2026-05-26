@@ -72,6 +72,11 @@ namespace EmployeeManagementSystem.Interfaces
 
         Task<object> GetYearlySummary(int year); // yearly report
 
+        Task<IActionResult> GetEmployeeWorkingHours(
+      string employeeId,
+      DateOnly fromDate,
+      DateOnly toDate);
+
     }
 
 }

@@ -41,375 +41,172 @@ namespace EmployeeManagementSystem.Services
 
             File.Copy(templatePath, outputPath, true);
 
-            // =============================
-            // Salary Calculations
-            // =============================
 
-            //decimal annualCTC = dto.CTC_Annual;
-            //decimal monthlyCTC = annualCTC / 12;
+            //        // ======================================
+            //        // YEARLY VALUES
+            //        // ======================================
 
-            //decimal basic = Math.Round(monthlyCTC * 0.40m, 2);
+            //        decimal annualCTC = dto.CTC_Annual;
+
+            //        decimal monthlyCTC =
+            //            Math.Round(annualCTC / 12, 2);
+
+            //        // ======================================
+            //        // FIXED GROSS FROM CTC
+            //        // ======================================
+
+            //        // Original backend PF calculation basis
+            //        decimal backendBasic =
+            //            Math.Round(monthlyCTC * 0.3817m, 2);
+
+            //        // Fixed employer PF from backend logic
+            //        decimal fixedEmployerPf =
+            //            Math.Round(backendBasic * 0.12m, 2);
+
+            //        // FIXED GROSS
+            //        decimal gross =
+            //            monthlyCTC - fixedEmployerPf;
+
+            //        decimal grossYearly =
+            //            gross * 12;
+
+            //        // ======================================
+            //        // FRONTEND VALUES
+            //        // ======================================
+
+            //        decimal basic =
+            //            dto.Basic ?? backendBasic;
+
+            //        decimal hra =
+            //            dto.HRA ??
+            //            Math.Round(basic * 0.40m, 2);
+
+            //        decimal conveyance =
+            //            dto.Conveyance ?? 1600;
+
+            //        decimal medicalAllowance =
+            //            dto.MedicalAllowance ?? 1250;
+
+            //        // ======================================
+            //        // PF SHOULD CHANGE FROM EDITED BASIC
+            //        // ======================================
+
+            //        decimal employerPfMonthly =
+            //            Math.Round(basic * 0.12m, 2);
+
+            //        decimal employerPfAnnual =
+            //            employerPfMonthly * 12;
+
+            //        // ======================================
+            //        // OTHER ALLOWANCE AUTO BALANCING
+            //        // ======================================
+
+            //        decimal otherAllowance =
+            //            gross -
+            //            (
+            //                basic +
+            //                hra +
+            //                conveyance +
+            //                medicalAllowance
+            //            );
+
+            //        otherAllowance =
+            //            otherAllowance -
+            //            (
+            //                employerPfMonthly -
+            //                fixedEmployerPf
+            //            );
+
+            //        otherAllowance =
+            //            Math.Round(otherAllowance, 2);
+
+            //        // ======================================
+            //        // DEDUCTIONS
+            //        // ======================================
+
+            //        //decimal professionaltaxMonthly = 200;
+
+            //        //decimal professionaltaxAnnual =
+            //        //    professionaltaxMonthly * 12;
+
+            //        //decimal providentfundMonthly =
+            //        //    employerPfMonthly;
+
+            //        //decimal providentfundAnnual =
+            //        //    providentfundMonthly * 12;
+
+
+            //        decimal professionaltaxMonthly =
+            //dto.ProfessionalTax ?? 200;
+
+            //        decimal professionaltaxAnnual =
+            //            professionaltaxMonthly * 12;
+
+            //        decimal providentfundMonthly =
+            //            dto.ProvidentFund ?? employerPfMonthly;
+
+            //        decimal providentfundAnnual =
+            //            providentfundMonthly * 12;
+
+            //        // ======================================
+            //        // NET TAKE HOME
+            //        // ======================================
+
+            //        decimal netMonthly =
+            //            gross -
+            //            (
+            //                providentfundMonthly +
+            //                professionaltaxMonthly
+            //            );
+
+            //        decimal netAnnual =
+            //            netMonthly * 12;
+
+            //        // ======================================
+            //        // YEARLY VALUES
+            //        // ======================================
+
+            //        decimal basicYearly =
+            //            basic * 12;
+
+            //        decimal hraYearly =
+            //            hra * 12;
+
+            //        decimal conveyanceYearly =
+            //            conveyance * 12;
+
+            //        decimal medicalAllowanceYearly =
+            //            medicalAllowance * 12;
+
+            //        decimal otherAllowanceYearly =
+            //            otherAllowance * 12;
+
             //decimal basicYearly = basic * 12;
-
-            //decimal hra = Math.Round(basic * 0.40m, 2);
             //decimal hraYearly = hra * 12;
-
-            //decimal conveyance = 1600;
             //decimal conveyanceYearly = conveyance * 12;
-
-            //decimal medicalAllowance = 1250;
             //decimal medicalAllowanceYearly = medicalAllowance * 12;
-
-            //decimal employerPfMonthly = Math.Round(basic * 0.12m, 2);
-            //decimal employerPfAnnual = employerPfMonthly * 12;
-
-            //decimal gross = monthlyCTC - employerPfMonthly;
-            //decimal grossYearly = gross * 12;
-
-            //decimal otherAllowance = Math.Round(
-            //    gross - (basic + hra + conveyance + medicalAllowance), 2);
-
             //decimal otherAllowanceYearly = otherAllowance * 12;
 
-            //decimal providentfundMonthly = employerPfMonthly;
-            //decimal providentfundAnnual = providentfundMonthly * 12;
 
-            //decimal professionaltaxMonthly = 200;
-            //decimal professionaltaxAnnual = professionaltaxMonthly * 12;
 
-            //decimal netMonthly = gross - (providentfundMonthly + professionaltaxMonthly);
-            //decimal netAnnual = netMonthly * 12;
 
-
-
-            //decimal annualCTC = dto.CTC_Annual;
-            //decimal monthlyCTC = Math.Round(annualCTC / 12, 2);
-
-            //// =======================
-            //// EARNINGS
-            //// =======================
-
-            //// Basic (38.17% of CTC)
-            //decimal basic = Math.Round(monthlyCTC * 0.3817m, 2);
-            //decimal basicYearly = basic * 12;
-
-            //// HRA (40% of Basic)
-            //decimal hra = Math.Round(basic * 0.40m, 2);
-            //decimal hraYearly = hra * 12;
-
-            //// Fixed components
-            //decimal conveyance = 1600;
-            //decimal conveyanceYearly = conveyance * 12;
-
-            //decimal medicalAllowance = 1250;
-            //decimal medicalAllowanceYearly = medicalAllowance * 12;
-
-            //// =======================
-            //// PF (Employer Contribution)
-            //// =======================
-
-            //// 12% of Basic
-            //decimal employerPfMonthly = Math.Round(basic * 0.12m, 2);
-            //decimal employerPfAnnual = employerPfMonthly * 12;
-
-            //// =======================
-            //// GROSS SALARY
-            //// =======================
-
-            //// Gross = CTC - Employer PF
-            //decimal gross = Math.Round(monthlyCTC - employerPfMonthly, 2);
-            //decimal grossYearly = gross * 12;
-
-            //// =======================
-            //// OTHER ALLOWANCE (Balancing)
-            //// =======================
-
-            //decimal otherAllowance = Math.Round(
-            //    gross - (basic + hra + conveyance + medicalAllowance), 2);
-
-            //decimal otherAllowanceYearly = otherAllowance * 12;
-
-            //// =======================
-            //// DEDUCTIONS (for display only)
-            //// =======================
-
-            //// Employee PF (same as employer PF)
-            //decimal providentfundMonthly = employerPfMonthly;
-            //decimal providentfundAnnual = providentfundMonthly * 12;
-
-            //// Professional Tax
-            //decimal professionaltaxMonthly = 200;
-            //decimal professionaltaxAnnual = professionaltaxMonthly * 12;
-
-            //// =======================
-            //// NET TAKE HOME
-            //// =======================
-
-            //decimal netMonthly = gross - (providentfundMonthly + professionaltaxMonthly);
-            //decimal netAnnual = netMonthly * 12;
-
-
-            //decimal annualCTC = dto.CTC_Annual;
-            //decimal monthlyCTC = Math.Round(annualCTC / 12, 2);
-
-            //// ======================================
-            //// TAKE VALUES FROM FRONTEND OR DEFAULTS
-            //// ======================================
-
-            //decimal basic =
-            //    dto.Basic ??
-            //    Math.Round(monthlyCTC * 0.40m, 2);
-
-            //decimal hra =
-            //    dto.HRA ??
-            //    Math.Round(basic * 0.40m, 2);
-
-            //decimal conveyance =
-            //    dto.Conveyance ?? 1600;
-
-            //decimal medicalAllowance =
-            //    dto.MedicalAllowance ?? 1250;
-
-            //// ======================================
-            //// EMPLOYER PF
-            //// ======================================
-
-            //decimal employerPfMonthly =
-            //    Math.Round(basic * 0.12m, 2);
-
-            //decimal employerPfAnnual =
-            //    employerPfMonthly * 12;
-
-            //// ======================================
-            //// EARNINGS WITHOUT OTHER ALLOWANCE
-            //// ======================================
-
-            //decimal earnings =
-            //    basic +
-            //    hra +
-            //    conveyance +
-            //    medicalAllowance;
-
-            //// ======================================
-            //// OTHER ALLOWANCE
-            //// BALANCE TOTAL CTC
-            //// ======================================
-
-            //decimal otherAllowance =
-            //    dto.OtherAllowance ??
-            //    (
-            //        monthlyCTC -
-            //        (
-            //            earnings +
-            //            employerPfMonthly
-            //        )
-            //    );
-
-            //otherAllowance =
-            //    Math.Round(otherAllowance, 2);
-
-            //// ======================================
-            //// FINAL GROSS
-            //// ======================================
-
-            //decimal gross =
-            //    earnings +
-            //    otherAllowance;
-
-            //decimal grossYearly =
-            //    gross * 12;
-
-            //// ======================================
-            //// DEDUCTIONS
-            //// ======================================
-
-            //decimal professionaltaxMonthly = 200;
-
-            //decimal professionaltaxAnnual =
-            //    professionaltaxMonthly * 12;
-
-            //decimal providentfundMonthly =
-            //    employerPfMonthly;
-
-            //decimal providentfundAnnual =
-            //    providentfundMonthly * 12;
-
-            //// ======================================
-            //// NET TAKE HOME
-            //// ======================================
-
-            //decimal netMonthly =
-            //    gross -
-            //    (
-            //        providentfundMonthly +
-            //        professionaltaxMonthly
-            //    );
-
-            //decimal netAnnual =
-            //    netMonthly * 12;
-
-            //// ======================================
-            //// YEARLY VALUES
-            //// ======================================
-
-            //decimal basicYearly =
-            //    basic * 12;
-
-            //decimal hraYearly =
-            //    hra * 12;
-
-            //decimal conveyanceYearly =
-            //    conveyance * 12;
-
-            //decimal medicalAllowanceYearly =
-            //    medicalAllowance * 12;
-
-            //decimal otherAllowanceYearly =
-            //    otherAllowance * 12;
-            //// =======================
-            //// YEARLY VALUES
-            //// =======================
-
-            ////decimal basicYearly = basic * 12;
-            ////decimal hraYearly = hra * 12;
-            ////decimal conveyanceYearly = conveyance * 12;
-            ////decimal medicalAllowanceYearly = medicalAllowance * 12;
-            ////decimal otherAllowanceYearly = otherAllowance * 12;
-            ///
-
-            //decimal annualCTC = dto.CTC_Annual;
-            //decimal monthlyCTC = Math.Round(annualCTC / 12, 2);
-
-            //// ======================================
-            //// TAKE VALUES FROM FRONTEND
-            //// ======================================
-
-            //decimal basic =
-            //    dto.Basic ??
-            //    Math.Round(monthlyCTC * 0.40m, 2);
-
-            //decimal hra =
-            //    dto.HRA ??
-            //    Math.Round(basic * 0.40m, 2);
-
-            //decimal conveyance =
-            //    dto.Conveyance ?? 1600;
-
-            //decimal medicalAllowance =
-            //    dto.MedicalAllowance ?? 1250;
-
-            //// ======================================
-            //// EMPLOYER PF
-            //// ======================================
-
-            //decimal employerPfMonthly =
-            //    Math.Round(basic * 0.12m, 2);
-
-            //decimal employerPfAnnual =
-            //    employerPfMonthly * 12;
-
-            //// ======================================
-            //// FIXED EARNINGS
-            //// ======================================
-
-            //decimal earnings =
-            //    basic +
-            //    hra +
-            //    conveyance +
-            //    medicalAllowance;
-
-            //// ======================================
-            //// AUTO BALANCING OTHER ALLOWANCE
-            //// ======================================
-
-            //decimal otherAllowance =
-            //    monthlyCTC -
-            //    (
-            //        earnings +
-            //        employerPfMonthly
-            //    );
-
-            //otherAllowance =
-            //    Math.Round(otherAllowance, 2);
-
-            //// ======================================
-            //// FINAL GROSS
-            //// ======================================
-
-            //decimal gross =
-            //    earnings +
-            //    otherAllowance;
-
-            //decimal grossYearly =
-            //    gross * 12;
-
-            //// ======================================
-            //// DEDUCTIONS
-            //// ======================================
-
-            //decimal professionaltaxMonthly = 200;
-
-            //decimal professionaltaxAnnual =
-            //    professionaltaxMonthly * 12;
-
-            //decimal providentfundMonthly =
-            //    employerPfMonthly;
-
-            //decimal providentfundAnnual =
-            //    providentfundMonthly * 12;
-
-            //// ======================================
-            //// NET TAKE HOME
-            //// ======================================
-
-            //decimal netMonthly =
-            //    gross -
-            //    (
-            //        providentfundMonthly +
-            //        professionaltaxMonthly
-            //    );
-
-            //decimal netAnnual =
-            //    netMonthly * 12;
-
-            // ======================================
-            // YEARLY VALUES
-            // ======================================
-
+            //------------------------------------------
+            // Salary calculations 
+            //_______________________________________________
             decimal annualCTC = dto.CTC_Annual;
 
             decimal monthlyCTC =
                 Math.Round(annualCTC / 12, 2);
 
-            // ======================================
-            // FIXED GROSS FROM CTC
-            // ======================================
-
-            // Original backend PF calculation basis
-            decimal backendBasic =
-                Math.Round(monthlyCTC * 0.3817m, 2);
-
-            // Fixed employer PF from backend logic
-            decimal fixedEmployerPf =
-                Math.Round(backendBasic * 0.12m, 2);
-
-            // FIXED GROSS
-            decimal gross =
-                monthlyCTC - fixedEmployerPf;
-
-            decimal grossYearly =
-                gross * 12;
-
-            // ======================================
-            // FRONTEND VALUES
-            // ======================================
+            // ================================
+            // EARNINGS - FROM FRONTEND OR DEFAULT
+            // ================================
 
             decimal basic =
-                dto.Basic ?? backendBasic;
+                dto.Basic ?? Math.Round(monthlyCTC * 0.3817m, 2);
 
             decimal hra =
-                dto.HRA ??
-                Math.Round(basic * 0.40m, 2);
+                dto.HRA ?? Math.Round(basic * 0.40m, 2);
 
             decimal conveyance =
                 dto.Conveyance ?? 1600;
@@ -417,92 +214,75 @@ namespace EmployeeManagementSystem.Services
             decimal medicalAllowance =
                 dto.MedicalAllowance ?? 1250;
 
-            // ======================================
-            // PF SHOULD CHANGE FROM EDITED BASIC
-            // ======================================
-
-            decimal employerPfMonthly =
-                Math.Round(basic * 0.12m, 2);
-
-            decimal employerPfAnnual =
-                employerPfMonthly * 12;
-
-            // ======================================
-            // OTHER ALLOWANCE AUTO BALANCING
-            // ======================================
-
-            decimal otherAllowance =
-                gross -
-                (
-                    basic +
-                    hra +
-                    conveyance +
-                    medicalAllowance
-                );
-
-            otherAllowance =
-                otherAllowance -
-                (
-                    employerPfMonthly -
-                    fixedEmployerPf
-                );
-
-            otherAllowance =
-                Math.Round(otherAllowance, 2);
-
-            // ======================================
-            // DEDUCTIONS
-            // ======================================
-
-            decimal professionaltaxMonthly = 200;
-
-            decimal professionaltaxAnnual =
-                professionaltaxMonthly * 12;
+            // ================================
+            // DEDUCTIONS - FROM FRONTEND OR DEFAULT
+            // ================================
 
             decimal providentfundMonthly =
-                employerPfMonthly;
+                dto.ProvidentFund ?? Math.Round(basic * 0.12m, 2);
 
-            decimal providentfundAnnual =
-                providentfundMonthly * 12;
+            decimal professionaltaxMonthly =
+                dto.ProfessionalTax ?? 200;
 
-            // ======================================
+            // Employer PF for CTC calculation
+            decimal employerPfMonthly =
+                providentfundMonthly;
+
+            // ================================
+            // GROSS BALANCED WITH ANNUAL CTC
+            // ================================
+
+            decimal gross =
+                Math.Round(monthlyCTC - employerPfMonthly, 2);
+
+            // ================================
+            // OTHER ALLOWANCE AUTO BALANCING
+            // ================================
+
+            decimal otherAllowance =
+                Math.Round(
+                    gross -
+                    (
+                        basic +
+                        hra +
+                        conveyance +
+                        medicalAllowance
+                    ),
+                    2);
+
+            // ================================
             // NET TAKE HOME
-            // ======================================
+            // ================================
 
             decimal netMonthly =
-                gross -
-                (
-                    providentfundMonthly +
-                    professionaltaxMonthly
-                );
+                Math.Round(
+                    gross -
+                    (
+                        providentfundMonthly +
+                        professionaltaxMonthly
+                    ),
+                    2);
 
-            decimal netAnnual =
-                netMonthly * 12;
-
-            // ======================================
+            // ================================
             // YEARLY VALUES
-            // ======================================
+            // ================================
 
-            decimal basicYearly =
-                basic * 12;
+            decimal basicYearly = basic * 12;
+            decimal hraYearly = hra * 12;
+            decimal conveyanceYearly = conveyance * 12;
+            decimal medicalAllowanceYearly = medicalAllowance * 12;
+            decimal otherAllowanceYearly = otherAllowance * 12;
 
-            decimal hraYearly =
-                hra * 12;
+            decimal grossYearly = gross * 12;
 
-            decimal conveyanceYearly =
-                conveyance * 12;
+            decimal providentfundAnnual = providentfundMonthly * 12;
+            decimal professionaltaxAnnual = professionaltaxMonthly * 12;
 
-            decimal medicalAllowanceYearly =
-                medicalAllowance * 12;
+            decimal employerPfAnnual = employerPfMonthly * 12;
 
-            decimal otherAllowanceYearly =
-                otherAllowance * 12;
+            decimal netAnnual = netMonthly * 12;
 
-            //decimal basicYearly = basic * 12;
-            //decimal hraYearly = hra * 12;
-            //decimal conveyanceYearly = conveyance * 12;
-            //decimal medicalAllowanceYearly = medicalAllowance * 12;
-            //decimal otherAllowanceYearly = otherAllowance * 12;
+
 
             // =============================
             // Replace Bookmarks

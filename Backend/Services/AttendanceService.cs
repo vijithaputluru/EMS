@@ -1213,79 +1213,272 @@ namespace EmployeeManagementSystem.Services
         //ATTENDANCE SUMMARY
 
         public async Task<AttendanceSummaryDto> GetMonthlyAttendanceSummary(string employeeId, int month, int year)
+
         {
+
             var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
+
             var end = start.AddMonths(1);
 
-            var attendances = await _context.Attendance
-                .AsNoTracking()
-                .Where(a => a.Employee_Id == employeeId &&
-                            a.Attendance_Date >= start &&
-                            a.Attendance_Date < end)
-               .AsNoTracking().ToListAsync();
+            // Attendance
 
-            // ✅ Preload
-            var holidays = await _context.Holidays
+            var attendances = await _context.Attendance
+
                 .AsNoTracking()
-                .Where(h => h.Holiday_Date >= start && h.Holiday_Date < end)
-                .AsNoTracking().ToListAsync();
+
+                .Where(a =>
+
+                    a.Employee_Id == employeeId &&
+
+                    a.Attendance_Date >= start &&
+
+                    a.Attendance_Date < end)
+
+                .ToListAsync();
+
+            var attendanceLookup = attendances
+
+                .GroupBy(a => a.Attendance_Date.Date)
+
+                .ToDictionary(g => g.Key, g => g.First());
+
+            // Holidays
+
+            var holidaySet = (await _context.Holidays
+
+                .AsNoTracking()
+
+                .Where(h =>
+
+                    h.Holiday_Date >= start &&
+
+                    h.Holiday_Date < end)
+
+                .Select(h => h.Holiday_Date.Date)
+
+                .ToListAsync())
+
+                .ToHashSet();
+
+            // Leaves
 
             var leaves = await _context.EmployeeLeaves
+
                 .AsNoTracking()
-                .Where(l => l.EmployeeId == employeeId && l.Status == "Approved")
-               .AsNoTracking().ToListAsync();
+
+                .Where(l =>
+
+                    l.EmployeeId == employeeId &&
+
+                    l.Status == "Approved")
+
+                .ToListAsync();
 
             decimal present = 0;
+
             int absent = 0;
 
             int totalDays = DateTime.DaysInMonth(year, month);
 
             for (int day = 1; day <= totalDays; day++)
+
             {
-                var date = new DateTime(year, month, day, 0, 0, 0, DateTimeKind.Utc);
 
-                if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+                var date = new DateTime(
+
+                    year,
+
+                    month,
+
+                    day,
+
+                    0,
+
+                    0,
+
+                    0,
+
+                    DateTimeKind.Utc);
+
+                // Weekend
+
+                if (date.DayOfWeek == DayOfWeek.Saturday ||
+
+                    date.DayOfWeek == DayOfWeek.Sunday)
+
+                {
+
                     continue;
 
-                var isHoliday = holidays.Any(h => h.Holiday_Date.Date == date.Date);
-                if (isHoliday)
+                }
+
+                // Holiday
+
+                if (holidaySet.Contains(date.Date))
+
+                {
+
                     continue;
 
-                var isLeave = leaves.Any(l =>
-                    date >= l.FromDate && date <= l.ToDate);
+                }
+
+                // Leave
+
+                bool isLeave = leaves.Any(l =>
+
+                    date >= l.FromDate &&
+
+                    date <= l.ToDate);
 
                 if (isLeave)
+
                 {
+
                     present++;
+
                     continue;
+
                 }
 
-                var att = attendances
-                    .FirstOrDefault(a => a.Attendance_Date.Date == date.Date);
+                // Attendance
 
-                if (att != null)
+                if (attendanceLookup.TryGetValue(date.Date, out var att))
+
                 {
+
                     if (att.Status == "Half Day")
+
                         present += 0.5m;
+
                     else
-                        present += 1;
+
+                        present += 1m;
+
                 }
+
                 else
+
                 {
+
                     absent++;
+
                 }
+
             }
 
             return new AttendanceSummaryDto
+
             {
+
                 PresentDays = present,
+
                 AbsentDays = absent
+
             };
+
         }
 
 
+        public async Task<IActionResult> GetEmployeeWorkingHours(
+    string employeeId,
+    DateOnly fromDate,
+    DateOnly toDate)
+        {
+            var startDate = DateTime.SpecifyKind(
+                fromDate.ToDateTime(TimeOnly.MinValue),
+                DateTimeKind.Utc);
 
-    }
+            var endDate = DateTime.SpecifyKind(
+                toDate.ToDateTime(TimeOnly.MinValue).AddDays(1),
+                DateTimeKind.Utc);
 
+            // selected date range attendance
+            var attendance = await _context.Attendance
+                .Where(a => a.Employee_Id == employeeId &&
+                            a.Attendance_Date >= startDate &&
+                            a.Attendance_Date < endDate)
+                .OrderBy(a => a.Attendance_Date)
+                .Select(a => new
+                {
+                    a.Attendance_Date,
+                    a.WorkingMinutes,
+                    a.Status
+                })
+                .ToListAsync();
+
+            var totalSelectedMinutes = attendance.Sum(a => a.WorkingMinutes);
+
+            // day-wise data
+            var dailyWorkingHours = attendance
+                .GroupBy(a => a.Attendance_Date.Date)
+                .Select(g => new
+                {
+                    Date = g.Key.ToString("yyyy-MM-dd"),
+                    Day = g.Key.DayOfWeek.ToString(),
+                    Status = g.First().Status,
+                    WorkingHours = Math.Round(g.Sum(x => x.WorkingMinutes) / 60.0, 2)
+                })
+                .ToList();
+
+            // week-wise data
+            var weeklyWorkingHours = attendance
+                .GroupBy(a =>
+                {
+                    var date = a.Attendance_Date.Date;
+                    int diff = (7 + (date.DayOfWeek - DayOfWeek.Monday)) % 7;
+                    return date.AddDays(-diff);
+                })
+                .Select(g => new
+                {
+                    WeekStart = g.Key < startDate.Date
+                        ? startDate.Date.ToString("yyyy-MM-dd")
+                        : g.Key.ToString("yyyy-MM-dd"),
+
+                    WeekEnd = g.Key.AddDays(6) > toDate.ToDateTime(TimeOnly.MinValue).Date
+                        ? toDate.ToString("yyyy-MM-dd")
+                        : g.Key.AddDays(6).ToString("yyyy-MM-dd"),
+
+                    TotalWorkingHours = Math.Round(g.Sum(x => x.WorkingMinutes) / 60.0, 2),
+
+                    Days = g.Select(x => new
+                    {
+                        Date = x.Attendance_Date.ToString("yyyy-MM-dd"),
+                        Day = x.Attendance_Date.DayOfWeek.ToString(),
+                        Status = x.Status,
+                        WorkingHours = Math.Round(x.WorkingMinutes / 60.0, 2)
+                    }).ToList()
+                })
+                .ToList();
+
+            // complete month working hours based on fromDate month
+            var monthStart = new DateTime(fromDate.Year, fromDate.Month, 1, 0, 0, 0, DateTimeKind.Utc);
+            var monthEnd = monthStart.AddMonths(1);
+
+            var monthlyMinutes = await _context.Attendance
+                .Where(a => a.Employee_Id == employeeId &&
+                            a.Attendance_Date >= monthStart &&
+                            a.Attendance_Date < monthEnd)
+                .SumAsync(a => (int?)a.WorkingMinutes) ?? 0;
+
+            return new OkObjectResult(new
+            {
+                EmployeeId = employeeId,
+                FromDate = fromDate.ToString("yyyy-MM-dd"),
+                ToDate = toDate.ToString("yyyy-MM-dd"),
+
+                SelectedRangeWorkingHours = Math.Round(totalSelectedMinutes / 60.0, 2),
+
+                DailyWorkingHours = dailyWorkingHours,
+
+                WeeklyWorkingHours = weeklyWorkingHours,
+
+                Month = fromDate.ToString("MMMM yyyy"),
+                CompleteMonthWorkingHours = Math.Round(monthlyMinutes / 60.0, 2)
+            });
+        }
     }
+}
+
+
+    
 

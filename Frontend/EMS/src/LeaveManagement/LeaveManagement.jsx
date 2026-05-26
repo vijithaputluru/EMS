@@ -10,6 +10,8 @@ function LeaveManagement() {
   const [selectedLeave, setSelectedLeave] = useState(null);
   const [leaveData, setLeaveData] = useState([]);
   const [actionLoading, setActionLoading] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const rowsPerPage = 8;
 
   const getToken = () =>
     localStorage.getItem("token") || sessionStorage.getItem("token");
@@ -35,6 +37,10 @@ function LeaveManagement() {
   useEffect(() => {
     fetchLeaves();
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter]);
 
   /* ================= UPDATE STATUS ================= */
   const updateStatus = async (
@@ -111,6 +117,19 @@ function LeaveManagement() {
     (l) => filter === "All" || l.status?.toLowerCase() === filter.toLowerCase()
   );
 
+  const totalPages = Math.ceil(
+    filteredLeaves.length / rowsPerPage
+  );
+
+  const startIndex =
+    (currentPage - 1) * rowsPerPage;
+
+  const paginatedLeaves =
+    filteredLeaves.slice(
+      startIndex,
+      startIndex + rowsPerPage
+    );
+
   return (
     <div className="leave-page">
       {/* HEADER */}
@@ -159,7 +178,7 @@ function LeaveManagement() {
                   </td>
                 </tr>
               ) : (
-                filteredLeaves.map((leave) => {
+                paginatedLeaves.map((leave) => {
                   const days = calculateDays(leave.fromDate, leave.toDate);
 
                   return (
@@ -240,6 +259,40 @@ function LeaveManagement() {
         </div>
       </div>
 
+      {/* PAGINATION */}
+      <div className="leave-pagination">
+
+        <button
+          onClick={() =>
+            setCurrentPage((prev) =>
+              Math.max(prev - 1, 1)
+            )
+          }
+          disabled={currentPage === 1}
+        >
+          Previous
+        </button>
+
+        <span>
+          Page {currentPage} of {totalPages || 1}
+        </span>
+
+        <button
+          onClick={() =>
+            setCurrentPage((prev) =>
+              Math.min(prev + 1, totalPages)
+            )
+          }
+          disabled={
+            currentPage === totalPages ||
+            totalPages === 0
+          }
+        >
+          Next
+        </button>
+
+      </div>
+
       {/* DETAILS MODAL */}
       {selectedLeave && (
         <div className="leave-details-overlay">
@@ -315,3 +368,4 @@ function LeaveManagement() {
 }
 
 export default LeaveManagement;
+

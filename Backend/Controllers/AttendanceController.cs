@@ -262,6 +262,20 @@ namespace EmployeeManagementSystem.Controllers
 
         }
 
+        [HttpGet("working-hours/{employeeId}")]
+        public async Task<IActionResult> GetEmployeeWorkingHours(
+     string employeeId,
+     [FromQuery] DateOnly fromDate,
+     [FromQuery] DateOnly toDate)
+        {
+            return await _attendanceService.GetEmployeeWorkingHours(
+                employeeId,
+                fromDate,
+                toDate
+            );
+        }
     }
 
-}
+    }
+
+

@@ -94,10 +94,9 @@ namespace EmployeeManagementSystem.Services
             var activities = activityData.Select(n => new RecentActivityDto
             {
                 Activity = n.Message,
-                Time = n.CreatedAt.ToString("o") // send exact datetime
-
+                Time = GetTimeAgo(n.CreatedAt)
             }).ToList();
-
+           
             //---------------------------------------
             // UPCOMING HOLIDAYS
             //---------------------------------------
@@ -131,42 +130,26 @@ namespace EmployeeManagementSystem.Services
             };
         }
 
-        //---------------------------------------
-        // TIME AGO
-        //---------------------------------------
+        private static string GetTimeAgo(DateTime createdAt)
+        {
+            if (createdAt.Kind == DateTimeKind.Unspecified)
+                createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
 
-        //private static string GetTimeAgo(DateTime createdAt)
-        //{
-        //    /*
-        //     IMPORTANT:
-        //     CreatedAt should be saved as DateTime.UtcNow.
-        //     Example:
-        //     CreatedAt = DateTime.UtcNow
-        //    */
+            var timeSpan = DateTime.UtcNow - createdAt;
 
-        //    if (createdAt.Kind == DateTimeKind.Unspecified)
-        //    {
-        //        createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
-        //    }
+            if (timeSpan.TotalSeconds < 0)
+                return "just now";
 
-        //    var timeSpan = DateTime.UtcNow - createdAt;
+            if (timeSpan.TotalSeconds < 60)
+                return "just now";
 
-        //    if (timeSpan.TotalSeconds < 0)
-        //        return "Just now";
+            if (timeSpan.TotalMinutes < 60)
+                return $"{(int)timeSpan.TotalMinutes} minutes ago";
 
-        //    if (timeSpan.TotalSeconds < 60)
-        //        return $"{(int)timeSpan.TotalSeconds} seconds ago";
+            if (timeSpan.TotalHours < 24)
+                return $"{(int)timeSpan.TotalHours} hours ago";
 
-        //    if (timeSpan.TotalMinutes < 60)
-        //        return $"{(int)timeSpan.TotalMinutes} minutes ago";
-
-        //    if (timeSpan.TotalHours < 24)
-        //        return $"{(int)timeSpan.TotalHours} hours ago";
-
-        //    if (timeSpan.TotalDays < 7)
-        //        return $"{(int)timeSpan.TotalDays} days ago";
-
-        //    return createdAt.ToString("dd MMM yyyy");
-        //}
+            return createdAt.ToString("dd MMM yyyy");
+        }
     }
 }

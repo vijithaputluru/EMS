@@ -74,13 +74,10 @@ namespace EmployeeManagementSystem.Services
 
                     .ToListAsync();
 
-                foreach (var item in notifications)
-
+                notifications.ForEach(n =>
                 {
-
-                    item.CreatedAt = EnsureUtc(item.CreatedAt);
-
-                }
+                    n.CreatedAt = EnsureUtc(n.CreatedAt);
+                });
 
                 Console.WriteLine($"📦 Notifications fetched: {notifications.Count}");
 
@@ -233,81 +230,31 @@ namespace EmployeeManagementSystem.Services
         //---------------------------------------
 
         public async Task<bool> MarkAsRead(int id)
-
         {
-
             try
-
             {
-
-                Console.WriteLine("=====================================");
-
-                Console.WriteLine("📥 MarkAsRead called");
-
-                Console.WriteLine($"🔔 Notification ID: {id}");
-
-                Console.WriteLine("=====================================");
-
                 var notification = await _context.UserNotifications
-
                     .FirstOrDefaultAsync(x => x.Id == id);
 
                 if (notification == null)
-
-                {
-
-                    Console.WriteLine($"❌ Notification not found: {id}");
-
                     return false;
 
-                }
-
-                Console.WriteLine($"✅ Notification found: ID={notification.Id}, Employee={notification.Employee_Id}");
-
-                Console.WriteLine($"📌 Current IsRead = {notification.IsRead}");
-
-                Console.WriteLine($"🕒 CreatedAt BEFORE fix = {notification.CreatedAt} | Kind = {notification.CreatedAt.Kind}");
-
                 if (notification.IsRead)
-
-                {
-
-                    Console.WriteLine($"⚠️ Already read: {id}");
-
                     return true;
-
-                }
-
-                notification.CreatedAt = EnsureUtc(notification.CreatedAt);
 
                 notification.IsRead = true;
 
-                _context.UserNotifications.Update(notification);
-
                 var rows = await _context.SaveChangesAsync();
 
-                Console.WriteLine($"✅ Rows affected: {rows}");
-
-                Console.WriteLine($"✅ Marked as read in DB: {id}");
-
                 return rows > 0;
-
             }
-
             catch (Exception ex)
-
             {
-
                 Console.WriteLine("❌ ERROR in MarkAsRead:");
-
                 Console.WriteLine(ex.ToString());
-
                 return false;
-
             }
-
         }
-
         //---------------------------------------
 
         // MARK ALL AS READ
@@ -342,7 +289,7 @@ namespace EmployeeManagementSystem.Services
 
                 {
 
-                    item.CreatedAt = EnsureUtc(item.CreatedAt);
+                    //item.CreatedAt = EnsureUtc(item.CreatedAt);
 
                     item.IsRead = true;
 

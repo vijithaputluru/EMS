@@ -19,5 +19,8 @@
         public decimal? MedicalAllowance { get; set; }
 
         public decimal? OtherAllowance { get; set; }
+
+        public decimal? ProfessionalTax { get; set; }
+        public decimal? ProvidentFund { get; set; }
     }
 }

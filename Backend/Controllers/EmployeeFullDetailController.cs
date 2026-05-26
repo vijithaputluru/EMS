@@ -1,72 +1,115 @@
 ﻿using Microsoft.AspNetCore.Authorization;
+
 using Microsoft.AspNetCore.Mvc;
+
 using Microsoft.EntityFrameworkCore;
+
 using System.Security.Claims;
+
 using EmployeeManagementSystem.Data;
+
 using EmployeeManagementSystem.DTOs;
+
 using EmployeeManagementSystem.Models;
 
 namespace EmployeeManagementSystem.Controllers
+
 {
+
     [Authorize]
+
     [ApiController]
+
     [Route("api/[controller]")]
+
     public class EmployeeFullDetailController : ControllerBase
+
     {
+
         private readonly AppDbContext _context;
 
         public EmployeeFullDetailController(AppDbContext context)
+
         {
+
             _context = context;
+
         }
 
         // 🔹 Helper Method to Extract EmployeeId from JWT Token
+
         private string GetEmployeeId()
+
         {
+
             return User.FindFirst("EmployeeId")?.Value
+
                 ?? User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
         }
 
         // 🔹 GET: api/EmployeeFullDetail/my-details
+
         [HttpGet("my-details")]
+
         public async Task<IActionResult> GetMyDetails()
+
         {
+
             var employeeId = GetEmployeeId();
 
             if (string.IsNullOrEmpty(employeeId))
+
                 return Unauthorized(new { message = "Invalid or missing token." });
 
             var employee = await _context.Employees
+
                 .FirstOrDefaultAsync(e => e.Employee_Id == employeeId);
 
             if (employee == null)
+
                 return NotFound(new { message = "Employee does not exist." });
 
             var personalInfo = await _context.EmployeePersonalInfos
+
                 .FirstOrDefaultAsync(p => p.Employee_Id == employeeId);
 
             var bankDetails = await _context.EmployeeBankDetails
+
                 .FirstOrDefaultAsync(b => b.Employee_Id == employeeId);
 
             var education = await _context.EmployeeEducations
+
                 .Where(e => e.Employee_Id == employeeId)
+
                 .ToListAsync();
 
             var experience = await _context.EmployeeExperiences
+
                 .Where(e => e.Employee_Id == employeeId)
+
                 .ToListAsync();
 
             return Ok(new
+
             {
+
                 employee,
+
                 personalInfo,
+
                 bankDetails,
+
                 education,
+
                 experience
+
             });
+
         }
 
         // 🔹 PUT: api/EmployeeFullDetail/my-details
+
         [HttpPut("my-details")]
 
         public async Task<IActionResult> UpdateMyDetails([FromBody] EmployeeFullDetailDTO dto)
@@ -265,33 +308,54 @@ namespace EmployeeManagementSystem.Controllers
 
 
         [HttpGet("{employeeId}")]
+
         public async Task<IActionResult> GetEmployeeFullDetails(string employeeId)
+
         {
+
             var employee = await _context.Employees
+
                 .FirstOrDefaultAsync(e => e.Employee_Id == employeeId);
 
             var personalInfo = await _context.EmployeePersonalInfos
+
                 .FirstOrDefaultAsync(p => p.Employee_Id == employeeId);
 
             var bankDetails = await _context.EmployeeBankDetails
+
                 .FirstOrDefaultAsync(b => b.Employee_Id == employeeId);
 
             var education = await _context.EmployeeEducations
+
                 .Where(e => e.Employee_Id == employeeId)
+
                 .ToListAsync();
 
             var experience = await _context.EmployeeExperiences
+
                 .Where(e => e.Employee_Id == employeeId)
+
                 .ToListAsync();
 
             return Ok(new
+
             {
+
                 employee,
+
                 personalInfo,
+
                 bankDetails,
+
                 education,
+
                 experience
+
             });
+
         }
+
     }
+
 }
+

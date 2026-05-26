@@ -126,8 +126,9 @@ namespace EmployeeManagementSystem.Services
         public async Task<List<Employee>> GetAllEmployees()
         {
             return await _context.Employees
-                .OrderByDescending(e => e.Id) // 👈 newest first
-                .ToListAsync();
+        .AsNoTracking()
+        .OrderByDescending(e => e.Id)
+        .ToListAsync();
         }
 
         // ✅ UPDATE EMPLOYEE

@@ -13,11 +13,11 @@ import "react-toastify/dist/ReactToastify.css";
 import AppDatePicker from "../components/AppDatePicker";
 import { formatDate, isDateRangeValid } from "../utils/date";
 import { extractCollection, sortByRecency } from "../utils/collections";
- 
+
 function UserLeaveManagement() {
   const getToken = () =>
     localStorage.getItem("token") || sessionStorage.getItem("token");
- 
+
   // ✅ use backend values here
   const [form, setForm] = useState({
     leaveType: "Casual",
@@ -25,7 +25,7 @@ function UserLeaveManagement() {
     toDate: "",
     reason: ""
   });
- 
+
   const [leaveData, setLeaveData] = useState([]);
   const [balance, setBalance] = useState({
     sick: { used: 0, total: 12, remaining: 12 },
@@ -33,63 +33,63 @@ function UserLeaveManagement() {
     casual: { used: 0, total: 10, remaining: 10 }
   });
   const [loading, setLoading] = useState(false);
- 
+
   const handleChange = (e) => {
     setForm({
       ...form,
       [e.target.name]: e.target.value
     });
   };
- 
+
   const fetchBalance = async () => {
     const token = getToken();
     if (!token) {
       console.log("❌ No token found for leave balance");
       return;
     }
- 
+
     try {
       console.log("📡 Fetching leave balance...");
       console.log("🔗 Balance API:", API_ENDPOINTS.leave.balance);
- 
+
       const res = await api.get(API_ENDPOINTS.leave.balance, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         }
       });
- 
+
       console.log("📄 Raw Balance Response:", res.data);
- 
+
       const data = res.data || {};
       console.log("✅ Parsed Balance Data:", data);
- 
+
       const formattedBalance = {
         sick: data?.sick ?? { used: 0, total: 0, remaining: 0 },
         earned: data?.earned ?? { used: 0, total: 0, remaining: 0 },
         casual: data?.casual ?? { used: 0, total: 0, remaining: 0 }
       };
- 
+
       console.log("🎯 Final Balance Set to State:", formattedBalance);
- 
+
       setBalance(formattedBalance);
     } catch (error) {
       console.error("❌ Error fetching leave balance:", error);
       toast.error("Failed to fetch balance");
     }
   };
- 
+
   const fetchLeaves = async () => {
     const token = getToken();
     if (!token) return;
- 
+
     try {
       const res = await api.get(API_ENDPOINTS.leave.list, {
         headers: {
           Authorization: `Bearer ${token}`,
         }
       });
- 
+
       const data = extractCollection(res.data);
       console.log("📥 Leave List:", data);
       setLeaveData(sortByRecency(data));
@@ -98,29 +98,29 @@ function UserLeaveManagement() {
       toast.error("Error fetching leaves");
     }
   };
- 
+
   useEffect(() => {
     fetchLeaves();
     fetchBalance();
   }, []);
- 
+
   const handleSubmit = async () => {
     if (!form.fromDate || !form.toDate || !form.reason.trim()) {
       toast.error("Please fill all fields");
       return;
     }
- 
+
     if (!isDateRangeValid(form.fromDate, form.toDate)) {
       toast.error("From date cannot be after To date");
       return;
     }
- 
+
     const token = getToken();
     if (!token) {
       toast.error("User not authenticated");
       return;
     }
- 
+
     // ✅ safer date formatting for backend
     const payload = {
       leaveType: form.leaveType,
@@ -128,56 +128,68 @@ function UserLeaveManagement() {
       toDate: form.toDate,
       reason: form.reason.trim()
     };
- 
+
     console.log("📤 Sending Leave Payload:", payload);
- 
+
     try {
       setLoading(true);
- 
+
       const res = await api.post(API_ENDPOINTS.leave.list, payload, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         }
       });
- 
+
       console.log("📄 Apply Leave Response:", res.data);
- 
+
       toast.success("Leave applied successfully ✅");
- 
+
       await fetchLeaves();
       await fetchBalance();
- 
+
       setForm({
         leaveType: "Casual",
         fromDate: "",
         toDate: "",
         reason: ""
       });
-    } catch (err) {
-      console.error(err);
-      toast.error("Error applying leave");
+    } catch (error) {
+
+      console.log(
+        "Leave apply error:",
+        error.response?.data
+      );
+
+      const errorMessage =
+        error.response?.data?.message ||
+        error.response?.data ||
+        "Failed to apply leave";
+
+      console.error(error);
+
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
- 
+
   const deleteLeave = async (id) => {
     const confirmDelete = window.confirm("Delete this leave request?");
     if (!confirmDelete) return;
- 
+
     const token = getToken();
     if (!token) return;
- 
+
     try {
       await api.delete(API_ENDPOINTS.leave.byId(id), {
         headers: {
           Authorization: `Bearer ${token}`,
         }
       });
- 
+
       toast.success("Leave deleted successfully 🗑️");
- 
+
       await fetchLeaves();
       await fetchBalance();
     } catch (err) {
@@ -185,7 +197,7 @@ function UserLeaveManagement() {
       toast.error("Error deleting leave");
     }
   };
- 
+
   // ✅ show proper label in cards/history if backend sends enum values
   const formatLeaveType = (type) => {
     if (type === "Sick") return "Sick Leave";
@@ -193,7 +205,7 @@ function UserLeaveManagement() {
     if (type === "Earned") return "Earned Leave";
     return type;
   };
- 
+
   const leaveCards = [
     {
       title: "Sick Leave",
@@ -220,7 +232,7 @@ function UserLeaveManagement() {
       className: "casual"
     }
   ];
- 
+
   return (
     <div
       className="leave-page"
@@ -230,7 +242,7 @@ function UserLeaveManagement() {
       }}
     >
       <ToastContainer position="top-right" autoClose={3000} />
- 
+
       <h2
         className="leave-main-title"
         style={{
@@ -240,12 +252,12 @@ function UserLeaveManagement() {
       >
         Leave Management
       </h2>
- 
+
       <div className="leave-top-cards">
         {leaveCards.map((card, index) => {
           const progress =
             card.total > 0 ? Math.min((card.used / card.total) * 100, 100) : 0;
- 
+
           return (
             <div className="leave-summary-card" key={index}>
               <div className="leave-card-header">
@@ -254,14 +266,14 @@ function UserLeaveManagement() {
                 </div>
                 <h4>{card.title}</h4>
               </div>
- 
+
               <div className="leave-card-info">
                 <span>
                   Used {card.used} / {card.total}
                 </span>
                 <span>{card.remaining} left</span>
               </div>
- 
+
               <div className="leave-progress">
                 <div
                   className={`leave-progress-fill ${card.className}`}
@@ -272,10 +284,10 @@ function UserLeaveManagement() {
           );
         })}
       </div>
- 
+
       <div className="apply-card">
         <h2>Apply Leave</h2>
- 
+
         <label>Leave Type</label>
         <select
           name="leaveType"
@@ -287,7 +299,7 @@ function UserLeaveManagement() {
           <option value="Sick">Sick Leave</option>
           <option value="Earned">Earned Leave</option>
         </select>
- 
+
         <div
           className="date-row"
           style={{
@@ -303,14 +315,14 @@ function UserLeaveManagement() {
             }}
           >
             <label>From</label>
- 
+
             <AppDatePicker
               name="fromDate"
               value={form.fromDate}
               onChange={handleChange}
             />
           </div>
- 
+
           <div
             style={{
               overflow: "visible",
@@ -318,7 +330,7 @@ function UserLeaveManagement() {
             }}
           >
             <label>To</label>
- 
+
             <AppDatePicker
               name="toDate"
               value={form.toDate}
@@ -326,7 +338,7 @@ function UserLeaveManagement() {
             />
           </div>
         </div>
- 
+
         <label>Reason</label>
         <textarea
           name="reason"
@@ -334,7 +346,7 @@ function UserLeaveManagement() {
           onChange={handleChange}
           placeholder="Enter reason for leave..."
         />
- 
+
         <button
           className="submit-btn"
           onClick={handleSubmit}
@@ -343,10 +355,10 @@ function UserLeaveManagement() {
           {loading ? "Submitting..." : "Submit Application"}
         </button>
       </div>
- 
+
       <div className="leave-history">
         <h3>My Leave Requests</h3>
- 
+
         <table>
           <thead>
             <tr>
@@ -358,7 +370,7 @@ function UserLeaveManagement() {
               <th>Action</th>
             </tr>
           </thead>
- 
+
           <tbody>
             {leaveData.length === 0 ? (
               <tr>
@@ -373,13 +385,13 @@ function UserLeaveManagement() {
                   <td>{formatDate(leave.fromDate)}</td>
                   <td>{formatDate(leave.toDate)}</td>
                   <td>{leave.reason}</td>
- 
+
                   <td>
                     <span className={`status ${leave.status?.toLowerCase()}`}>
                       {leave.status}
                     </span>
                   </td>
- 
+
                   <td>
                     {leave.status === "Pending" && (
                       <button
@@ -399,7 +411,6 @@ function UserLeaveManagement() {
     </div>
   );
 }
- 
+
 export default UserLeaveManagement;
- 
- 
+

@@ -52,7 +52,8 @@ namespace EmployeeManagementSystem.Services
                 Status = dto.Status ?? "Available",
                 AssignedTo = dto.AssignedTo,
                 CreatedAt = DateTime.UtcNow,
-                ImagePaths = string.Join(",", imagePaths)
+                ImagePaths = string.Join(",", imagePaths),
+                Description = dto.Description
             };
 
             _context.Assets.Add(asset);
@@ -118,6 +119,7 @@ namespace EmployeeManagementSystem.Services
             asset.AssetName = dto.AssetName;
             asset.SerialNo = dto.SerialNo;
             asset.Status = dto.Status ?? "Available";
+            asset.Description = dto.Description;
 
             // Only changed this logic:
             // Previously employee id was saved only for Assigned status.

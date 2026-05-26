@@ -42,6 +42,10 @@ namespace EmployeeManagementSystem.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext")
+                        .HasColumnName("Description");
+
                     b.Property<string>("ImagePaths")
                         .HasColumnType("longtext");
 

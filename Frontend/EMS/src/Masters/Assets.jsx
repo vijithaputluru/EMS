@@ -12,6 +12,7 @@ const EMPTY_ASSET = {
   serial: "",
   assigned: "",
   status: "Assigned",
+  description: "",
   images: [],
 };
 
@@ -268,6 +269,7 @@ export default function Assets() {
 
   const [previewImages, setPreviewImages] = useState([]);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [showRepairPopup, setShowRepairPopup] = useState(false);
   const [selectedImages, setSelectedImages] = useState([]);
 
   const [newAsset, setNewAsset] = useState(EMPTY_ASSET);
@@ -438,6 +440,11 @@ export default function Assets() {
             ),
 
             status: normalizeText(item.status ?? item.Status ?? ""),
+            description: normalizeText(
+              item.description ??
+              item.Description ??
+              ""
+            ),
 
             images: normalizeImagePaths(
               item.imagePaths ??
@@ -659,6 +666,27 @@ export default function Assets() {
       status: validateField("status", draft),
     };
 
+    if (
+      draft.status === "Under Repair" &&
+      previewImages.length === 0 &&
+      draft.images.length === 0
+    ) {
+
+      nextErrors.images =
+        "Image is required for Under Repair assets";
+
+    }
+
+    if (
+      draft.status === "Under Repair" &&
+      !draft.description?.trim()
+    ) {
+
+      nextErrors.description =
+        "Description is required for Under Repair assets";
+
+    }
+
     const cleanedErrors = Object.fromEntries(
       Object.entries(nextErrors).filter(([, value]) => value)
     );
@@ -742,7 +770,18 @@ export default function Assets() {
       name === "status" &&
       value === "Available"
     ) {
+
       draft.assigned = "";
+
+    }
+
+    if (
+      name === "status" &&
+      value === "Under Repair"
+    ) {
+
+      setShowRepairPopup(true);
+
     }
 
     setNewAsset(draft);
@@ -862,6 +901,10 @@ export default function Assets() {
       formData.append("AssetName", trimmedAsset.name);
       formData.append("SerialNo", trimmedAsset.serial);
       formData.append("Status", trimmedAsset.status);
+      formData.append(
+        "Description",
+        trimmedAsset.description || ""
+      );
 
       if (
         trimmedAsset.status === "Assigned" ||
@@ -948,6 +991,7 @@ export default function Assets() {
       serial: asset.serialNo,
       assigned: asset.assignedTo,
       status: asset.status,
+      description: asset.description || "",
       images: [],
     });
 
@@ -1269,8 +1313,14 @@ export default function Assets() {
                         className="assets-view-images-btn"
                         type="button"
                         onClick={() => {
-                          setSelectedImages(asset.images);
+
+                          setSelectedImages({
+                            images: asset.images,
+                            description: asset.description || "",
+                          });
+
                           setShowImageModal(true);
+
                         }}
                       >
                         View Images ({asset.images.length})
@@ -1501,8 +1551,28 @@ export default function Assets() {
 
             {/* IMAGES */}
 
+            {/* IMAGES */}
+
+            {/* IMAGES */}
+
             <div className="asset-field-group">
-              <label htmlFor="asset-image-input">Images</label>
+
+              <label htmlFor="asset-image-input">
+
+                Images
+
+                {newAsset.status === "Under Repair" && (
+                  <span
+                    style={{
+                      color: "red",
+                      marginLeft: "4px",
+                    }}
+                  >
+                    *
+                  </span>
+                )}
+
+              </label>
 
               <input
                 id="asset-image-input"
@@ -1511,6 +1581,13 @@ export default function Assets() {
                 multiple
                 onChange={handleImageChange}
               />
+
+              {errors.images && (
+                <p className="asset-error">
+                  {errors.images}
+                </p>
+              )}
+
             </div>
 
             <div className="image-preview">
@@ -1525,6 +1602,42 @@ export default function Assets() {
                 ) : null
               )}
             </div>
+
+            {/* UNDER REPAIR DESCRIPTION */}
+
+            {newAsset.status === "Under Repair" && (
+              <div className="asset-field-group">
+
+                <label>
+                  Repair Description
+                </label>
+
+                <textarea
+                  name="description"
+                  value={newAsset.description || ""}
+                  onChange={(e) =>
+                    setNewAsset((prev) => ({
+                      ...prev,
+                      description: e.target.value
+                        .replace(/^\s+/g, "")
+                        .slice(0, 250),
+                    }))
+                  }
+                  placeholder="Enter repair issue description"
+                  rows={4}
+                  style={{
+                    resize: "none",
+                  }}
+                />
+
+                {errors.description && (
+                  <p className="asset-error">
+                    {errors.description}
+                  </p>
+                )}
+
+              </div>
+            )}
 
             <div className="asset-modal-actions">
               <button
@@ -1546,6 +1659,45 @@ export default function Assets() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {showRepairPopup && (
+        <div className="asset-delete-overlay">
+
+          <div className="asset-delete-modal">
+
+            <h3>
+              Under Repair Asset
+            </h3>
+
+            <p
+              style={{
+                margin: "14px 0",
+              }}
+            >
+              Please upload image and add
+              repair description.
+            </p>
+
+            <div
+              className="asset-delete-actions"
+            >
+
+              <button
+                type="button"
+                className="asset-delete-cancel-btn"
+                onClick={() =>
+                  setShowRepairPopup(false)
+                }
+              >
+                OK
+              </button>
+
+            </div>
+
+          </div>
+
         </div>
       )}
 
@@ -1579,9 +1731,25 @@ export default function Assets() {
         <div className="image-modal-overlay">
           <div className="image-modal">
             <h3>Asset Images</h3>
+            {selectedImages?.description && (
+              <div
+                style={{
+                  marginBottom: "16px",
+                  padding: "12px",
+                  background: "#f8fafc",
+                  borderRadius: "10px",
+                  fontSize: "14px",
+                  color: "#334155",
+                  lineHeight: "1.5",
+                }}
+              >
+                <strong>Description:</strong>{" "}
+                {selectedImages.description}
+              </div>
+            )}
 
             <div className="image-grid">
-              {selectedImages.map((image, index) => (
+              {selectedImages?.images?.map((image, index) => (
                 <a
                   key={index}
                   href={buildServerUrl(image)}

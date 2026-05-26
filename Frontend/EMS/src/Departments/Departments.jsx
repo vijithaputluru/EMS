@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { FaUsers } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+
 import "./Departments.css";
+
 import api from "../api/axiosInstance";
 import { API_ENDPOINTS } from "../api/endpoints";
 import { extractCollection } from "../utils/collections";
@@ -20,72 +22,182 @@ const normalizeDepartmentName = (value) =>
     .toLowerCase();
 
 function Departments() {
-  const [departments, setDepartments] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [selectedDept, setSelectedDept] = useState(null);
 
-  const [showModal, setShowModal] = useState(false);
-  const [editId, setEditId] = useState(null);
-  const [activeMenu, setActiveMenu] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState({});
+  const [departments, setDepartments] =
+    useState([]);
 
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deptToDelete, setDeptToDelete] = useState(null);
-  const [headSearch, setHeadSearch] = useState("");
+  const [employees, setEmployees] =
+    useState([]);
 
-  const [newDept, setNewDept] = useState(EMPTY_DEPARTMENT_FORM);
+  const [selectedDept, setSelectedDept] =
+    useState(null);
+
+  const [showModal, setShowModal] =
+    useState(false);
+
+  const [editId, setEditId] =
+    useState(null);
+
+  const [activeMenu, setActiveMenu] =
+    useState(null);
+
+  const [saving, setSaving] =
+    useState(false);
+
+  const [errors, setErrors] =
+    useState({});
+
+  const [showDeleteModal, setShowDeleteModal] =
+    useState(false);
+
+  const [deptToDelete, setDeptToDelete] =
+    useState(null);
+
+  const [headSearch, setHeadSearch] =
+    useState("");
+
+  const [newDept, setNewDept] =
+    useState(EMPTY_DEPARTMENT_FORM);
+
+  //--------------------------------------------------
+  // FETCH DEPARTMENTS
+  //--------------------------------------------------
 
   const fetchDepartments = async () => {
+
     try {
-      const res = await api.get(API_ENDPOINTS.departments.list);
-      const cleaned = extractCollection(res.data).map((dept) => ({
+
+      const res = await api.get(
+        API_ENDPOINTS.departments.list
+      );
+
+      const cleaned = extractCollection(
+        res.data
+      ).map((dept) => ({
         ...dept,
-        membersCount: Math.max(0, Number(dept.membersCount || 0)),
+        membersCount: Math.max(
+          0,
+          Number(dept.membersCount || 0)
+        ),
       }));
+
       setDepartments(cleaned);
-    } catch (err) {
-      console.error("Error fetching departments:", err);
-      toast.error("Failed to load departments.");
+
     }
+
+    catch (err) {
+
+      console.error(
+        "Error fetching departments:",
+        err
+      );
+
+      toast.error(
+        "Failed to load departments."
+      );
+
+    }
+
   };
+
+  //--------------------------------------------------
+  // FETCH EMPLOYEES
+  //--------------------------------------------------
 
   const fetchEmployees = async () => {
+
     try {
-      const res = await api.get(API_ENDPOINTS.employees.list);
-      const empData = extractCollection(res.data);
+
+      const res = await api.get(
+        API_ENDPOINTS.employees.list
+      );
+
+      const empData = extractCollection(
+        res.data
+      );
+
       setEmployees(empData);
-    } catch (err) {
-      console.error("Employee fetch error:", err);
-      toast.error("Failed to load employees.");
+
     }
+
+    catch (err) {
+
+      console.error(
+        "Employee fetch error:",
+        err
+      );
+
+      toast.error(
+        "Failed to load employees."
+      );
+
+    }
+
   };
 
+  //--------------------------------------------------
+  // EFFECTS
+  //--------------------------------------------------
+
   useEffect(() => {
+
     fetchDepartments();
     fetchEmployees();
+
   }, []);
 
   useEffect(() => {
+
     const closeMenu = (event) => {
-      if (!event.target.closest(".dept-menu-wrapper")) {
+
+      if (
+        !event.target.closest(
+          ".dept-menu-wrapper"
+        )
+      ) {
+
         setActiveMenu(null);
+
       }
+
     };
 
-    window.addEventListener("click", closeMenu);
-    return () => window.removeEventListener("click", closeMenu);
+    window.addEventListener(
+      "click",
+      closeMenu
+    );
+
+    return () =>
+      window.removeEventListener(
+        "click",
+        closeMenu
+      );
+
   }, []);
+
+  //--------------------------------------------------
+  // EMPLOYEE OPTIONS
+  //--------------------------------------------------
 
   const normalizedEmployees = useMemo(
     () =>
       employees.map((emp) => ({
-        id: emp.employee_Id || emp.employee_id || emp.id,
+        id:
+          emp.employee_Id ||
+          emp.employee_id ||
+          emp.id,
+
         label:
           emp.name ||
-          `${emp.firstName || ""} ${emp.lastName || ""}`.trim() ||
+          `${emp.firstName || ""} ${
+            emp.lastName || ""
+          }`.trim() ||
           "Employee",
-        department: emp.department || emp.dept || "",
+
+        department:
+          emp.department ||
+          emp.dept ||
+          "",
       })),
     [employees]
   );
@@ -99,545 +211,1238 @@ function Departments() {
     [normalizedEmployees]
   );
 
-  const selectedDepartmentMembers = useMemo(() => {
-    const activeDepartment = normalizeDepartmentName(selectedDept?.departmentName);
+  //--------------------------------------------------
+  // SELECTED DEPARTMENT MEMBERS
+  //--------------------------------------------------
 
-    if (!activeDepartment) {
-      return [];
-    }
+  const selectedDepartmentMembers =
+    useMemo(() => {
 
-    return normalizedEmployees.filter(
-      (employee) =>
-        normalizeDepartmentName(employee.department) === activeDepartment
-    );
-  }, [selectedDept, normalizedEmployees]);
+      const activeDepartment =
+        normalizeDepartmentName(
+          selectedDept?.departmentName
+        );
 
-  const validateField = (name, draft = newDept) => {
-    const value = String(draft[name] ?? "").trim();
+      if (!activeDepartment) {
+
+        return [];
+
+      }
+
+      return normalizedEmployees.filter(
+        (employee) =>
+          normalizeDepartmentName(
+            employee.department
+          ) === activeDepartment
+      );
+
+    }, [
+      selectedDept,
+      normalizedEmployees,
+    ]);
+
+  //--------------------------------------------------
+  // VALIDATION
+  //--------------------------------------------------
+
+  const validateField = (
+    name,
+    draft = newDept
+  ) => {
+
+    const value = String(
+      draft[name] ?? ""
+    ).trim();
+
+    //--------------------------------------
+    // NAME
+    //--------------------------------------
 
     if (name === "name") {
-      if (!value) return "Department Name is required";
+
+      if (!value)
+        return "Department Name is required";
 
       if (value.length > 25) {
+
         return "Department Name cannot exceed 25 characters";
+
       }
 
-      if (!/^(?=.*[A-Za-z])[A-Za-z\s-]+$/.test(value)) {
+      if (
+        !/^(?=.*[A-Za-z])[A-Za-z\s-]+$/.test(
+          value
+        )
+      ) {
+
         return "Department Name must contain only alphabets and hyphen";
+
       }
 
-      if ((value.match(/-/g) || []).length > 1) {
+      if (
+        (value.match(/-/g) || []).length > 1
+      ) {
+
         return "Only 1 hyphen (-) is allowed";
+
       }
 
       return "";
+
     }
+
+    //--------------------------------------
+    // HEAD
+    //--------------------------------------
 
     if (name === "head") {
-      return value ? "" : "Department Head is required";
+
+      return value
+        ? ""
+        : "Department Head is required";
+
     }
 
+    //--------------------------------------
+    // BUILDING
+    //--------------------------------------
+
     if (name === "building") {
-      if (!value) return "Building is required";
+
+      if (!value)
+        return "Building is required";
 
       if (value.length > 25) {
+
         return "Building cannot exceed 25 characters";
+
       }
 
-      if (!/^(?=.*[A-Za-z])[A-Za-z\s-]+$/.test(value)) {
+      if (
+        !/^(?=.*[A-Za-z])[A-Za-z\s-]+$/.test(
+          value
+        )
+      ) {
+
         return "Building must contain only alphabets and hyphen";
+
       }
 
-      if ((value.match(/-/g) || []).length > 1) {
-        return "Only 1 hyphens (-) are allowed";
+      if (
+        (value.match(/-/g) || []).length > 1
+      ) {
+
+        return "Only 1 hyphen (-) is allowed";
+
       }
 
       return "";
+
     }
 
+    //--------------------------------------
+    // STATUS
+    //--------------------------------------
+
     if (name === "status") {
-      return value ? "" : "Status is required";
+
+      return value
+        ? ""
+        : "Status is required";
+
     }
 
     return "";
+
   };
 
-  const validateForm = (draft = newDept) => {
+  //--------------------------------------------------
+  // VALIDATE FORM
+  //--------------------------------------------------
+
+  const validateForm = (
+    draft = newDept
+  ) => {
+
     const nextErrors = {
-      name: validateField("name", draft),
-      head: validateField("head", draft),
-      building: validateField("building", draft),
-      status: validateField("status", draft),
+
+      name: validateField(
+        "name",
+        draft
+      ),
+
+      head: validateField(
+        "head",
+        draft
+      ),
+
+      building: validateField(
+        "building",
+        draft
+      ),
+
+      status: validateField(
+        "status",
+        draft
+      ),
+
     };
 
-    const cleanedErrors = Object.fromEntries(
-      Object.entries(nextErrors).filter(([, value]) => value)
-    );
+    const cleanedErrors =
+      Object.fromEntries(
+        Object.entries(nextErrors).filter(
+          ([, value]) => value
+        )
+      );
 
     setErrors(cleanedErrors);
-    return Object.keys(cleanedErrors).length === 0;
+
+    return (
+      Object.keys(cleanedErrors)
+        .length === 0
+    );
+
   };
 
+  //--------------------------------------------------
+  // HANDLE CHANGE
+  //--------------------------------------------------
+
   const handleChange = (event) => {
-    const { name, value } = event.target;
+
+    const { name, value } =
+      event.target;
 
     const draft = {
+
       ...newDept,
+
       [name]:
-        name === "name" || name === "building"
+        name === "name" ||
+        name === "building"
           ? value.replace(/^\s+/g, "")
           : value,
+
     };
 
     setNewDept(draft);
+
     setErrors((prev) => {
+
       const nextErrors = {
+
         ...prev,
-        [name]: validateField(name, draft),
+
+        [name]: validateField(
+          name,
+          draft
+        ),
+
       };
 
       return Object.fromEntries(
-        Object.entries(nextErrors).filter(([, error]) => error)
+        Object.entries(nextErrors).filter(
+          ([, error]) => error
+        )
       );
+
     });
+
   };
+
+  //--------------------------------------------------
+  // OPEN MODAL
+  //--------------------------------------------------
 
   const openCreateModal = () => {
+
     setEditId(null);
+
     setErrors({});
+
     setHeadSearch("");
-    setNewDept(EMPTY_DEPARTMENT_FORM);
+
+    setNewDept(
+      EMPTY_DEPARTMENT_FORM
+    );
+
     setShowModal(true);
+
   };
+
+  //--------------------------------------------------
+  // CLOSE MODAL
+  //--------------------------------------------------
 
   const closeModal = () => {
+
     if (saving) return;
+
     setShowModal(false);
+
     setEditId(null);
+
     setErrors({});
-    setNewDept(EMPTY_DEPARTMENT_FORM);
+
+    setNewDept(
+      EMPTY_DEPARTMENT_FORM
+    );
+
   };
 
+  //--------------------------------------------------
+  // HANDLE SUBMIT
+  //--------------------------------------------------
+
   const handleSubmit = async () => {
+
     const trimmed = {
+
       ...newDept,
-      name: newDept.name.trim().replace(/\s+/g, " "),
+
+      name: newDept.name
+        .trim()
+        .replace(/\s+/g, " "),
+
       head: newDept.head.trim(),
-      building: newDept.building.trim().replace(/\s+/g, " "),
+
+      building: newDept.building
+        .trim()
+        .replace(/\s+/g, " "),
+
       status: newDept.status.trim(),
+
     };
-    const trimmedDepartmentMembers = normalizedEmployees.filter(
-      (employee) =>
-        normalizeDepartmentName(employee.department) ===
-        normalizeDepartmentName(trimmed.name)
-    );
+
+    const trimmedDepartmentMembers =
+      normalizedEmployees.filter(
+        (employee) =>
+          normalizeDepartmentName(
+            employee.department
+          ) ===
+          normalizeDepartmentName(
+            trimmed.name
+          )
+      );
 
     setNewDept(trimmed);
 
-    if (!validateForm(trimmed)) return;
+    if (!validateForm(trimmed))
+      return;
 
     const payload = {
-      departmentName: trimmed.name,
-      departmentHead: trimmed.head,
-      membersCount: trimmedDepartmentMembers.length,
-      building: trimmed.building,
-      status: trimmed.status,
-      department_Id: editId ? undefined : crypto.randomUUID(),
+
+      departmentName:
+        trimmed.name,
+
+      departmentHead:
+        trimmed.head,
+
+      membersCount:
+        trimmedDepartmentMembers.length,
+
+      building:
+        trimmed.building,
+
+      status:
+        trimmed.status,
+
+      department_Id: editId
+        ? undefined
+        : crypto.randomUUID(),
+
     };
 
     try {
+
       setSaving(true);
 
       if (editId) {
-        await api.put(API_ENDPOINTS.departments.byId(editId), { ...payload, id: editId });
-      } else {
-        await api.post(API_ENDPOINTS.departments.list, payload, {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
+
+        await api.put(
+          API_ENDPOINTS.departments.byId(
+            editId
+          ),
+          {
+            ...payload,
+            id: editId,
+          }
+        );
+
       }
 
-      toast.success(editId ? "Department updated successfully." : "Department added successfully.");
+      else {
+
+        await api.post(
+          API_ENDPOINTS.departments.list,
+          payload,
+          {
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+          }
+        );
+
+      }
+
+      toast.success(
+        editId
+          ? "Department updated successfully."
+          : "Department added successfully."
+      );
+
       closeModal();
+
       await fetchDepartments();
-    } catch (error) {
-      console.error("Error saving department:", error);
-      toast.error(error.response?.data?.message || "Unable to save department.");
-    } finally {
-      setSaving(false);
+
     }
+
+    catch (error) {
+
+      console.error(
+        "Error saving department:",
+        error
+      );
+
+      toast.error(
+        error.response?.data
+          ?.message ||
+          "Unable to save department."
+      );
+
+    }
+
+    finally {
+
+      setSaving(false);
+
+    }
+
   };
+
+  //--------------------------------------------------
+  // EDIT
+  //--------------------------------------------------
 
   const handleEdit = (dept) => {
+
     setEditId(dept.id);
+
     setErrors({});
+
     setNewDept({
-      name: dept.departmentName || "",
-      head: dept.departmentHead || "",
-      building: dept.building || "",
-      status: dept.status || "",
+
+      name:
+        dept.departmentName || "",
+
+      head:
+        dept.departmentHead || "",
+
+      building:
+        dept.building || "",
+
+      status:
+        dept.status || "",
+
     });
-    setHeadSearch(dept.departmentHead || "");
+
+    setHeadSearch(
+      dept.departmentHead || ""
+    );
+
     setShowModal(true);
+
     setActiveMenu(null);
+
   };
 
-  const handleDeleteClick = (dept) => {
+  //--------------------------------------------------
+  // DELETE
+  //--------------------------------------------------
+
+  const handleDeleteClick = (
+    dept
+  ) => {
+
     setDeptToDelete(dept);
+
     setShowDeleteModal(true);
+
     setActiveMenu(null);
+
   };
 
   const confirmDelete = async () => {
+
     if (!deptToDelete) return;
 
     try {
-      await api.delete(API_ENDPOINTS.departments.byId(deptToDelete.id));
-      toast.success("Department deleted successfully.");
+
+      await api.delete(
+        API_ENDPOINTS.departments.byId(
+          deptToDelete.id
+        )
+      );
+
+      toast.success(
+        "Department deleted successfully."
+      );
+
       setShowDeleteModal(false);
+
       setDeptToDelete(null);
+
       await fetchDepartments();
-    } catch (error) {
-      console.error("Error deleting department:", error);
-      toast.error("Unable to delete department.");
+
     }
+
+    catch (error) {
+
+      console.error(
+        "Error deleting department:",
+        error
+      );
+
+      toast.error(
+        "Unable to delete department."
+      );
+
+    }
+
   };
 
+  //--------------------------------------------------
+  // UI
+  //--------------------------------------------------
+
   return (
+
     <div className="dept-page">
-      <ToastContainer position="top-right" autoClose={2400} />
+
+      <ToastContainer
+        position="top-right"
+        autoClose={2400}
+      />
+
+      {/* HEADER */}
 
       <div className="dept-header">
+
         <div>
-          <h2>Departments</h2>
-          <p>Manage company departments</p>
+
+          <h2>
+            Departments
+          </h2>
+
+          <p>
+            Manage company departments
+          </p>
+
         </div>
 
-        <button className="add-btn" onClick={openCreateModal}>
+        <button
+          className="add-btn"
+          onClick={openCreateModal}
+        >
           + Add Department
         </button>
+
       </div>
 
+      {/* GRID */}
+
       <div className="dept-grid">
+
         {departments.map((dept) => {
-          const deptEmployees = normalizedEmployees.filter(
-            (emp) =>
-              normalizeDepartmentName(emp.department) ===
-              normalizeDepartmentName(dept.departmentName)
-          );
+
+          const deptEmployees =
+            normalizedEmployees.filter(
+              (emp) =>
+                normalizeDepartmentName(
+                  emp.department
+                ) ===
+                normalizeDepartmentName(
+                  dept.departmentName
+                )
+            );
 
           return (
+
             <div
               className="dept-card"
               key={dept.id}
-              onClick={() => setSelectedDept(dept)}
+              onClick={() =>
+                setSelectedDept(dept)
+              }
             >
+
               <div className="dept-menu-wrapper">
+
                 <button
                   className="dept-menu-btn"
                   onClick={(event) => {
+
                     event.stopPropagation();
-                    setActiveMenu(activeMenu === dept.id ? null : dept.id);
+
+                    setActiveMenu(
+                      activeMenu === dept.id
+                        ? null
+                        : dept.id
+                    );
+
                   }}
                 >
                   ⋮
                 </button>
 
                 {activeMenu === dept.id && (
+
                   <div
                     className="dept-popup-menu"
-                    onClick={(event) => event.stopPropagation()}
+                    onClick={(event) =>
+                      event.stopPropagation()
+                    }
                   >
-                    <button onClick={() => handleEdit(dept)}>Edit</button>
+
+                    <button
+                      onClick={() =>
+                        handleEdit(dept)
+                      }
+                    >
+                      Edit
+                    </button>
+
                     <button
                       className="delete"
-                      onClick={() => handleDeleteClick(dept)}
+                      onClick={() =>
+                        handleDeleteClick(
+                          dept
+                        )
+                      }
                     >
                       Delete
                     </button>
+
                   </div>
+
                 )}
+
               </div>
 
               <div className="dept-top">
+
                 <div className="dept-icon">
                   <FaUsers />
                 </div>
 
                 <span
                   className={
-                    dept.status === "Active"
+                    dept.status ===
+                    "Active"
                       ? "dept-status active"
                       : "dept-status inactive"
                   }
                 >
                   {dept.status}
                 </span>
+
               </div>
 
-              <h3 title={dept.departmentName}>{dept.departmentName}</h3>
-              <p className="dept-head" title={dept.departmentHead}>
-                Head: {dept.departmentHead}
+              <h3
+                title={
+                  dept.departmentName
+                }
+              >
+                {dept.departmentName}
+              </h3>
+
+              <p
+                className="dept-head"
+                title={
+                  dept.departmentHead
+                }
+              >
+                Head:
+                {" "}
+                {
+                  dept.departmentHead
+                }
               </p>
 
               <div className="dept-footer">
-                <span>👤 {deptEmployees.length} members</span>
-                <span title={dept.building}>📍 {dept.building}</span>
+
+                <span>
+                  👤 {
+                    deptEmployees.length
+                  }{" "}
+                  members
+                </span>
+
+                <span
+                  title={
+                    dept.building
+                  }
+                >
+                  📍 {dept.building}
+                </span>
+
               </div>
+
             </div>
+
           );
+
         })}
+
       </div>
 
+      {/* ADD / EDIT MODAL */}
+
       {showModal && (
-        <div className="dept-modal-overlay" onClick={closeModal}>
-          <div className="dept-modal-box" onClick={(event) => event.stopPropagation()}>
-            <h3>{editId ? "Edit Department" : "Add Department"}</h3>
+
+        <div
+          className="dept-modal-overlay"
+          onClick={closeModal}
+        >
+
+          <div
+            className="dept-modal-box"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            <h3>
+              {editId
+                ? "Edit Department"
+                : "Add Department"}
+            </h3>
+
+            {/* NAME */}
 
             <div className="dept-field-group">
-              <label htmlFor="dept-name-input">Department Name</label>
+
+              <label htmlFor="dept-name-input">
+                Department Name
+              </label>
+
               <input
                 id="dept-name-input"
                 name="name"
                 value={newDept.name}
                 onChange={handleChange}
-                aria-invalid={Boolean(errors.name)}
-                className={errors.name ? "field-error" : ""}
+                aria-invalid={Boolean(
+                  errors.name
+                )}
+                className={
+                  errors.name
+                    ? "field-error"
+                    : ""
+                }
               />
-              {errors.name && <p className="dept-error">{errors.name}</p>}
+
+              {errors.name && (
+                <p className="dept-error">
+                  {errors.name}
+                </p>
+              )}
+
             </div>
 
+            {/* HEAD */}
+
             <div className="dept-field-group">
-              <label htmlFor="dept-head-select">Department Head</label>
+
+              <label htmlFor="dept-head-select">
+                Department Head
+              </label>
 
               <input
                 type="text"
                 placeholder="Search by name, email, or ID..."
                 className="dept-head-search"
                 value={headSearch}
-                onChange={(e) => setHeadSearch(e.target.value)}
+                onChange={(e) =>
+                  setHeadSearch(
+                    e.target.value
+                  )
+                }
               />
 
               {newDept.head && (
+
                 <div
                   style={{
                     marginTop: "10px",
-                    marginBottom: "10px",
-                    padding: "10px 12px",
-                    borderRadius: "10px",
-                    background: "#ECFEFF",
-                    border: "1px solid #22D3EE",
-                    color: "#0F172A",
-                    fontSize: "14px",
-                    fontWeight: "600",
+                    marginBottom:
+                      "10px",
+                    padding:
+                      "10px 12px",
+                    borderRadius:
+                      "10px",
+                    background:
+                      "#ECFEFF",
+                    border:
+                      "1px solid #22D3EE",
+                    color:
+                      "#0F172A",
+                    fontSize:
+                      "14px",
+                    fontWeight:
+                      "600",
                   }}
                 >
-                  Selected Head: {newDept.head}
+                  Selected Head:
+                  {" "}
+                  {newDept.head}
                 </div>
+
               )}
 
               <div
-                className={`dept-head-dropdown ${errors.head ? "field-error" : ""
-                  }`}
+                className={`dept-head-dropdown ${
+                  errors.head
+                    ? "field-error"
+                    : ""
+                }`}
               >
+
                 {employeeOptions
                   .filter((employee) => {
-                    const search = headSearch.toLowerCase();
+
+                    const search =
+                      headSearch.toLowerCase();
 
                     return (
-                      employee.label.toLowerCase().includes(search) ||
-                      String(employee.id || "")
+
+                      employee.label
                         .toLowerCase()
-                        .includes(search)
+                        .includes(
+                          search
+                        ) ||
+
+                      String(
+                        employee.id || ""
+                      )
+                        .toLowerCase()
+                        .includes(
+                          search
+                        )
+
                     );
+
                   })
+
                   .map((employee) => {
-                    const isSelected = newDept.head === employee.label;
+
+                    const isSelected =
+                      newDept.head ===
+                      employee.label;
 
                     return (
+
                       <div
                         key={employee.id}
                         onClick={() => {
 
-                          setNewDept((prev) => ({
-                            ...prev,
-                            head: employee.label,
-                          }));
+                          setNewDept(
+                            (prev) => ({
+                              ...prev,
+                              head:
+                                employee.label,
+                            })
+                          );
 
-                          // THIS WILL SHOW SELECTED VALUE INSIDE INPUT
-                          setHeadSearch(employee.label);
+                          setHeadSearch(
+                            employee.label
+                          );
 
-                          setErrors((prev) => ({
-                            ...prev,
-                            head: "",
-                          }));
+                          setErrors(
+                            (prev) => ({
+                              ...prev,
+                              head: "",
+                            })
+                          );
+
                         }}
-                style={{
-                  padding: "10px 12px",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  marginBottom: "6px",
-                  background: isSelected
-                    ? "#2563EB"
-                    : "#FFFFFF",
-                  color: isSelected
-                    ? "#FFFFFF"
-                    : "#0F172A",
-                  border: isSelected
-                    ? "1px solid #2563EB"
-                    : "1px solid transparent",
-                }}
-                      >
-                <div
-                  style={{
-                    fontSize: "14px",
-                    fontWeight: "500",
-                  }}
-                >
-                  {employee.label}
-                </div>
 
-                <div
-                  style={{
-                    fontSize: "12px",
-                    opacity: 0.8,
-                    marginTop: "2px",
-                  }}
-                >
-                  Employee ID: {employee.id || "N/A"}
-                </div>
-              </div>
-              );
+                        style={{
+                          padding:
+                            "10px 12px",
+
+                          borderRadius:
+                            "8px",
+
+                          cursor:
+                            "pointer",
+
+                          marginBottom:
+                            "6px",
+
+                          background:
+                            isSelected
+                              ? "#2563EB"
+                              : "#FFFFFF",
+
+                          color:
+                            isSelected
+                              ? "#FFFFFF"
+                              : "#0F172A",
+
+                          border:
+                            isSelected
+                              ? "1px solid #2563EB"
+                              : "1px solid transparent",
+                        }}
+                      >
+
+                        <div
+                          style={{
+                            fontSize:
+                              "14px",
+
+                            fontWeight:
+                              "500",
+                          }}
+                        >
+                          {
+                            employee.label
+                          }
+                        </div>
+
+                        <div
+                          style={{
+                            fontSize:
+                              "12px",
+
+                            opacity:
+                              0.8,
+
+                            marginTop:
+                              "2px",
+                          }}
+                        >
+                          Employee ID:
+                          {" "}
+                          {employee.id ||
+                            "N/A"}
+                        </div>
+
+                      </div>
+
+                    );
+
                   })}
+
+              </div>
+
+              {errors.head && (
+                <p className="dept-error">
+                  {errors.head}
+                </p>
+              )}
+
             </div>
 
-            {errors.head && (
-              <p className="dept-error">{errors.head}</p>
-            )}
+            {/* BUILDING */}
+
+            <div className="dept-field-group">
+
+              <label htmlFor="dept-building-input">
+                Building
+              </label>
+
+              <input
+                id="dept-building-input"
+                name="building"
+                value={
+                  newDept.building
+                }
+                onChange={
+                  handleChange
+                }
+                aria-invalid={Boolean(
+                  errors.building
+                )}
+                className={
+                  errors.building
+                    ? "field-error"
+                    : ""
+                }
+              />
+
+              {errors.building && (
+                <p className="dept-error">
+                  {
+                    errors.building
+                  }
+                </p>
+              )}
+
+            </div>
+
+            {/* STATUS */}
+
+            <div className="dept-field-group">
+
+              <label htmlFor="dept-status-select">
+                Status
+              </label>
+
+              <select
+                id="dept-status-select"
+                name="status"
+                value={newDept.status}
+                onChange={
+                  handleChange
+                }
+                aria-invalid={Boolean(
+                  errors.status
+                )}
+                className={
+                  errors.status
+                    ? "field-error"
+                    : ""
+                }
+              >
+
+                <option value="">
+                  Select Status
+                </option>
+
+                <option value="Active">
+                  Active
+                </option>
+
+                <option value="Inactive">
+                  Inactive
+                </option>
+
+              </select>
+
+              {errors.status && (
+                <p className="dept-error">
+                  {errors.status}
+                </p>
+              )}
+
+            </div>
+
+            {/* BUTTONS */}
+
+            <div className="dept-modal-btns">
+
+              <button
+                onClick={
+                  closeModal
+                }
+                disabled={saving}
+              >
+                Cancel
+              </button>
+
+              <button
+                className="dept-save-btn"
+                onClick={
+                  handleSubmit
+                }
+                disabled={saving}
+              >
+
+                {saving
+                  ? editId
+                    ? "Updating..."
+                    : "Saving..."
+                  : editId
+                    ? "Update"
+                    : "Save"}
+
+              </button>
+
+            </div>
+
           </div>
 
-          <div className="dept-field-group">
-            <label htmlFor="dept-building-input">Building</label>
-            <input
-              id="dept-building-input"
-              name="building"
-              value={newDept.building}
-              onChange={handleChange}
-              aria-invalid={Boolean(errors.building)}
-              className={errors.building ? "field-error" : ""}
-            />
-            {errors.building && <p className="dept-error">{errors.building}</p>}
-          </div>
-
-          <div className="dept-field-group">
-            <label htmlFor="dept-status-select">Status</label>
-            <select
-              id="dept-status-select"
-              name="status"
-              value={newDept.status}
-              onChange={handleChange}
-              aria-invalid={Boolean(errors.status)}
-              className={errors.status ? "field-error" : ""}
-            >
-              <option value="">Select Status</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-            {errors.status && <p className="dept-error">{errors.status}</p>}
-          </div>
-
-          <div className="dept-modal-btns">
-            <button onClick={closeModal} disabled={saving}>
-              Cancel
-            </button>
-            <button className="dept-save-btn" onClick={handleSubmit} disabled={saving}>
-              {saving ? (editId ? "Updating..." : "Saving...") : editId ? "Update" : "Save"}
-            </button>
-          </div>
         </div>
-        </div>
-  )
-}
 
-{
-  showDeleteModal && (
-    <div className="delete-overlay">
-      <div className="delete-modal">
-        <h3>Confirm Delete</h3>
-        <p>
-          Are you sure you want to delete{" "}
-          <strong>{deptToDelete?.departmentName || "this department"}</strong>?
-        </p>
+      )}
 
-        <div className="delete-actions">
-          <button
-            className="cancel-btn"
-            onClick={() => setShowDeleteModal(false)}
-          >
-            Cancel
-          </button>
+      {/* DELETE MODAL */}
 
-          <button
-            className="confirm-delete-btn"
-            onClick={confirmDelete}
-          >
-            Delete
-          </button>
-        </div>
-      </div>
-    </div>
-  )
-}
+      {showDeleteModal && (
 
-{
-  selectedDept && (
-    <div className="dept-members-overlay" onClick={() => setSelectedDept(null)}>
-      <div
-        className="dept-members-modal"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="dept-members-modal-header">
-          <div>
-            <h3>{selectedDept.departmentName}</h3>
-            <p>{selectedDepartmentMembers.length} assigned members</p>
-          </div>
+        <div className="delete-overlay">
 
-          <button
-            type="button"
-            className="dept-members-close"
-            onClick={() => setSelectedDept(null)}
-            aria-label="Close department members"
-          >
-            x
-          </button>
-        </div>
+          <div className="delete-modal">
 
-        <div className="dept-members-list">
-          {selectedDepartmentMembers.length > 0 ? (
-            selectedDepartmentMembers.map((member) => (
-              <div className="dept-member-row" key={member.id || member.label}>
-                <span className="dept-member-avatar">
-                  {member.label.substring(0, 2).toUpperCase()}
-                </span>
-                <div>
-                  <strong>{member.label}</strong>
-                  <p>{member.id || "No employee code"}</p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="dept-members-empty-state">
-              No employees are assigned to this department yet.
+            <h3>
+              Confirm Delete
+            </h3>
+
+            <p>
+
+              Are you sure you want to delete{" "}
+
+              <strong>
+                {deptToDelete
+                  ?.departmentName ||
+                  "this department"}
+              </strong>
+
+              ?
+
             </p>
-          )}
+
+            <div className="delete-actions">
+
+              <button
+                className="cancel-btn"
+                onClick={() =>
+                  setShowDeleteModal(
+                    false
+                  )
+                }
+              >
+                Cancel
+              </button>
+
+              <button
+                className="confirm-delete-btn"
+                onClick={
+                  confirmDelete
+                }
+              >
+                Delete
+              </button>
+
+            </div>
+
+          </div>
+
         </div>
-      </div>
+
+      )}
+
+      {/* MEMBERS MODAL */}
+
+      {selectedDept && (
+
+        <div
+          className="dept-members-overlay"
+          onClick={() =>
+            setSelectedDept(null)
+          }
+        >
+
+          <div
+            className="dept-members-modal"
+            onClick={(event) =>
+              event.stopPropagation()
+            }
+          >
+
+            <div className="dept-members-modal-header">
+
+              <div>
+
+                <h3>
+                  {
+                    selectedDept.departmentName
+                  }
+                </h3>
+
+                <p>
+                  {
+                    selectedDepartmentMembers.length
+                  }{" "}
+                  assigned members
+                </p>
+
+              </div>
+
+              <button
+                type="button"
+                className="dept-members-close"
+                onClick={() =>
+                  setSelectedDept(
+                    null
+                  )
+                }
+                aria-label="Close department members"
+              >
+                ×
+              </button>
+
+            </div>
+
+            <div className="dept-members-list">
+
+              {selectedDepartmentMembers.length >
+              0 ? (
+
+                selectedDepartmentMembers.map(
+                  (member) => (
+
+                    <div
+                      className="dept-member-row"
+                      key={
+                        member.id ||
+                        member.label
+                      }
+                    >
+
+                      <span className="dept-member-avatar">
+
+                        {member.label
+                          .substring(0, 2)
+                          .toUpperCase()}
+
+                      </span>
+
+                      <div>
+
+                        <strong>
+                          {
+                            member.label
+                          }
+                        </strong>
+
+                        <p>
+                          {member.id ||
+                            "No employee code"}
+                        </p>
+
+                      </div>
+
+                    </div>
+
+                  )
+                )
+
+              ) : (
+
+                <p className="dept-members-empty-state">
+
+                  No employees are assigned
+                  to this department yet.
+
+                </p>
+
+              )}
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
     </div>
-  )
-}
-    </div >
+
   );
+
 }
 
 export default Departments;

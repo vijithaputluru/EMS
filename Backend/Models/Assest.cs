@@ -25,6 +25,9 @@ public class Asset
     public string? AssignedTo { get; set; }
     public string? ImagePaths { get; set; }
 
+    [Column("Description")]
+    public string? Description { get; set; }
+
     [JsonIgnore]
     public DateTime CreatedAt { get; set; }
 }

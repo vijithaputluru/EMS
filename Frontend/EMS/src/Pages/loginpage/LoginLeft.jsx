@@ -225,10 +225,10 @@ export default function LoginLeft() {
       <div className="auth-card-head">
         <p className="auth-eyebrow">Welcome Back</p>
         <h2 className="auth-card-title">Sign in to PIRNAV HRMS</h2>
-        <p className="auth-card-subtitle">
+        {/* <p className="auth-card-subtitle">
           Access your secure workspace for people operations, approvals,
           payroll, and reporting.
-        </p>
+        </p> */}
       </div>
 
       {error ? <div className="auth-status auth-status-error">{error}</div> : null}

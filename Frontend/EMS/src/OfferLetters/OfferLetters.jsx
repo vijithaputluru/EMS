@@ -20,17 +20,25 @@ import { isValidEmail } from "../utils/validation";
 
 function OfferLetters() {
   const [formData, setFormData] = useState({
+    title: "Mr.",
     candidate_Name: "",
     email: "",
     address: "",
     position: "",
     joining_Date: "",
     ctc_Annual: "",
+    monthlyCTC: "",
+
     basic: "",
     hra: "",
     conveyance: "",
     medicalAllowance: "",
     otherAllowance: "",
+
+    providentFund: "",
+    professionalTax: "",
+    gross: "",
+    netTakeHome: "",
   });
 
   const [letters, setLetters] = useState([]);
@@ -287,6 +295,10 @@ function OfferLetters() {
             annualCTC
           ),
 
+          monthlyCTC: new Intl.NumberFormat("en-IN").format(
+            data.monthlyCTC || 0
+          ),
+
           basic: new Intl.NumberFormat("en-IN").format(
             data.basic || 0
           ),
@@ -306,7 +318,24 @@ function OfferLetters() {
           otherAllowance: new Intl.NumberFormat("en-IN").format(
             data.otherAllowance || 0
           ),
+
+          providentFund: new Intl.NumberFormat("en-IN").format(
+            data.providentFund || 0
+          ),
+
+          professionalTax: new Intl.NumberFormat("en-IN").format(
+            data.professionalTax || 0
+          ),
+
+          gross: new Intl.NumberFormat("en-IN").format(
+            data.gross || 0
+          ),
+
+          netTakeHome: new Intl.NumberFormat("en-IN").format(
+            data.netTakeHome || 0
+          ),
         }));
+
       } catch (error) {
         console.error("Salary Structure API Error =>", error);
       }
@@ -574,6 +603,18 @@ function OfferLetters() {
         otherAllowance: Number(
           formData.otherAllowance.replace(/,/g, "")
         ),
+
+        providentFund: Number(
+          (formData.providentFund || "0")
+            .toString()
+            .replace(/,/g, "")
+        ),
+
+        professionalTax: Number(
+          (formData.professionalTax || "0")
+            .toString()
+            .replace(/,/g, "")
+        )
       };
 
       await api.post(
@@ -697,7 +738,7 @@ function OfferLetters() {
           display: "flex",
           flexDirection: "column",
           alignItems: "flex-start",
-          marginBottom: "8px",
+          marginBottom: "0px",
           paddingBottom: "0px",
           marginTop: "-15px",
         }}
@@ -741,14 +782,30 @@ function OfferLetters() {
               <FaUser /> Candidate Name
             </label>
 
-            <input
-              ref={fieldRefs.candidate_Name}
-              type="text"
-              name="candidate_Name"
-              value={formData.candidate_Name}
-              onChange={handleChange}
-              placeholder="Enter candidate name"
-            />
+            <div className="candidate-name-wrapper">
+
+              <select
+                name="title"
+                value={formData.title || "Mr"}
+                onChange={handleChange}
+                className="candidate-title-select"
+              >
+                <option value="Mr.">Mr.</option>
+                <option value="Mrs.">Mrs.</option>
+                <option value="Ms.">Ms.</option>
+              </select>
+
+              <input
+                ref={fieldRefs.candidate_Name}
+                type="text"
+                name="candidate_Name"
+                value={formData.candidate_Name}
+                onChange={handleChange}
+                placeholder="Enter candidate name"
+                className="candidate-name-input"
+              />
+
+            </div>
 
             <p
               style={{
@@ -790,7 +847,12 @@ function OfferLetters() {
           </div>
 
           {/* Address */}
-          <div className="form-group full-width">
+          <div
+            className="form-group full-width"
+            style={{
+              marginTop: "-35px",
+            }}
+          >
             <label>
               <FaMapMarkerAlt /> Address
             </label>
@@ -953,35 +1015,21 @@ function OfferLetters() {
 
             <div className="compensation-box">
 
-              {/* Basic */}
+              {/* Monthly CTC */}
               <div className="comp-row">
                 <div className="comp-label">
-                  Basic
+                  Monthly CTC
                 </div>
 
                 <div className="comp-input">
                   <input
-                    ref={fieldRefs.basic}
                     type="text"
-                    name="basic"
-                    value={formData.basic}
+                    name="monthlyCTC"
+                    value={formData.monthlyCTC}
                     onChange={handleChange}
-                    placeholder="Enter Basic"
+                    placeholder="Enter Monthly CTC"
                     disabled={!isEditMode}
                   />
-
-                  {errors.basic && (
-                    <p
-                      style={{
-                        color: "red",
-                        fontSize: "12px",
-                        marginTop: "3px",
-                        minHeight: "16px",
-                      }}
-                    >
-                      {errors.basic || ""}
-                    </p>
-                  )}
                 </div>
               </div>
 
@@ -1113,6 +1161,77 @@ function OfferLetters() {
                 </div>
               </div>
 
+              {/* Provident Fund */}
+              <div className="comp-row">
+                <div className="comp-label">
+                  Provident Fund
+                </div>
+
+                <div className="comp-input">
+                  <input
+                    type="text"
+                    name="providentFund"
+                    value={formData.providentFund}
+                    onChange={handleChange}
+                    placeholder="Enter Provident Fund"
+                    disabled={!isEditMode}
+                  />
+                </div>
+              </div>
+
+              {/* Professional Tax */}
+              <div className="comp-row">
+                <div className="comp-label">
+                  Professional Tax
+                </div>
+
+                <div className="comp-input">
+                  <input
+                    type="text"
+                    name="professionalTax"
+                    value={formData.professionalTax}
+                    onChange={handleChange}
+                    placeholder="Enter Professional Tax"
+                    disabled={!isEditMode}
+                  />
+                </div>
+              </div>
+
+              {/* Gross Salary */}
+              <div className="comp-row">
+                <div className="comp-label">
+                  Gross Salary
+                </div>
+
+                <div className="comp-input">
+                  <input
+                    type="text"
+                    name="gross"
+                    value={formData.gross}
+                    onChange={handleChange}
+                    placeholder="Enter Gross Salary"
+                    disabled={!isEditMode}
+                  />
+                </div>
+              </div>
+
+              {/* Net Take Home */}
+              <div className="comp-row">
+                <div className="comp-label">
+                  Net Take Home
+                </div>
+
+                <div className="comp-input">
+                  <input
+                    type="text"
+                    name="netTakeHome"
+                    value={formData.netTakeHome}
+                    onChange={handleChange}
+                    placeholder="Enter Net Take Home"
+                    disabled={!isEditMode}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -1211,10 +1330,13 @@ function OfferLetters() {
           </table>
         </div>
 
+
+
         {/* PAGINATION */}
         {totalPages > 1 && (
           <div className="assets-pagination">
 
+            {/* PREVIOUS */}
             <button
               disabled={currentPage === 1}
               onClick={() =>
@@ -1224,24 +1346,63 @@ function OfferLetters() {
               Prev
             </button>
 
-            {[...Array(totalPages)].map(
-              (_, i) => (
+            {/* FIRST PAGE */}
+            {currentPage > 3 && (
+              <>
+                <button onClick={() => setCurrentPage(1)}>
+                  1
+                </button>
+
+                {currentPage > 4 && (
+                  <span className="pagination-dots">...</span>
+                )}
+              </>
+            )}
+
+            {/* PAGE NUMBERS */}
+            {Array.from(
+              { length: totalPages },
+              (_, i) => i + 1
+            )
+              .filter(
+                (page) =>
+                  page >= currentPage - 2 &&
+                  page <= currentPage + 2
+              )
+              .map((page) => (
                 <button
-                  key={i}
+                  key={page}
                   className={
-                    currentPage === i + 1
+                    currentPage === page
                       ? "active-page"
                       : ""
                   }
                   onClick={() =>
-                    setCurrentPage(i + 1)
+                    setCurrentPage(page)
                   }
                 >
-                  {i + 1}
+                  {page}
                 </button>
-              )
+              ))}
+
+            {/* LAST PAGE */}
+            {currentPage < totalPages - 2 && (
+              <>
+                {currentPage < totalPages - 3 && (
+                  <span className="pagination-dots">...</span>
+                )}
+
+                <button
+                  onClick={() =>
+                    setCurrentPage(totalPages)
+                  }
+                >
+                  {totalPages}
+                </button>
+              </>
             )}
 
+            {/* NEXT */}
             <button
               disabled={
                 currentPage === totalPages

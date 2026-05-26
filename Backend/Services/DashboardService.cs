@@ -19,39 +19,24 @@ namespace EmployeeManagementSystem.Services
         public async Task<DashboardResponseDto> GetDashboardData()
         {
             var utcNow = DateTime.UtcNow;
-            var istZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
-            var istNow = TimeZoneInfo.ConvertTimeFromUtc(utcNow, istZone);
-            var today = istNow.Date;
+            var today = utcNow.Date;
 
-
-
-            // Total Employees
             var totalEmployees = await _context.Employees.CountAsync();
-
-            // Total Departments
             var totalDepartments = await _context.Departments.CountAsync();
 
-            // Active Projects
             var activeProjects = await _context.Projects
                 .Where(p => p.Status == "Active")
                 .CountAsync();
 
-            // Attendance Today
             var totalAttendance = await _context.Attendance
                 .Where(a => a.Attendance_Date == today)
                 .CountAsync();
 
-            double attendancePercentage = 0;
+            double attendancePercentage = totalEmployees > 0
+                ? (double)totalAttendance / totalEmployees * 100
+                : 0;
 
-            if (totalEmployees > 0)
-            {
-                attendancePercentage = (double)totalAttendance / totalEmployees * 100;
-            }
-
-
-
-            // Last 2 hours only
-            var activityExpiry = DateTime.UtcNow.AddHours(-2);
+            var activityExpiry = utcNow.AddHours(-2);
 
             var activityLogs = await _context.ActivityLogs
                 .Where(a => a.CreatedAt >= activityExpiry)
@@ -65,14 +50,13 @@ namespace EmployeeManagementSystem.Services
                 .ToListAsync();
 
             var recentActivities = activityLogs
-    .Select(a => new RecentActivityDto
-    {
-        Activity = a.Activity,
-        Time = a.CreatedAt.ToString("o") // exact ISO datetime
-    })
-    .ToList();
+                .Select(a => new RecentActivityDto
+                {
+                    Activity = a.Activity,
+                    Time = GetTimeAgo(a.CreatedAt)
+                })
+                .ToList();
 
-            // Upcoming Holidays
             var upcomingHolidays = await _context.Holidays
                 .Where(h => h.Holiday_Date >= today)
                 .OrderBy(h => h.Holiday_Date)
@@ -93,38 +77,27 @@ namespace EmployeeManagementSystem.Services
                 RecentActivities = recentActivities,
                 UpcomingHolidays = upcomingHolidays
             };
+            }
+            private static string GetTimeAgo(DateTime createdAt)
+        {
+            if (createdAt.Kind == DateTimeKind.Unspecified)
+                createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
+
+            var timeSpan = DateTime.UtcNow - createdAt;
+
+            if (timeSpan.TotalSeconds < 0)
+                return "just now";
+
+            if (timeSpan.TotalSeconds < 60)
+                return "just now";
+
+            if (timeSpan.TotalMinutes < 60)
+                return $"{(int)timeSpan.TotalMinutes} minutes ago";
+
+            if (timeSpan.TotalHours < 24)
+                return $"{(int)timeSpan.TotalHours} hours ago";
+
+            return createdAt.ToString("dd MMM yyyy");
         }
-
-        //private static string GetTimeAgo(DateTime createdAt)
-        //{
-        //    var now = DateTime.UtcNow;
-
-        //    // If CreatedAt is saved as local/IST but Kind is Unspecified,
-        //    // convert it safely
-        //    if (createdAt.Kind == DateTimeKind.Unspecified)
-        //    {
-        //        createdAt = DateTime.SpecifyKind(createdAt, DateTimeKind.Utc);
-        //    }
-
-        //    var timeSpan = now - createdAt;
-
-        //    // prevent negative seconds
-        //    if (timeSpan.TotalSeconds < 0)
-        //        return "Just now";
-
-        //    if (timeSpan.TotalSeconds < 60)
-        //        return $"{(int)timeSpan.TotalSeconds} seconds ago";
-
-        //    if (timeSpan.TotalMinutes < 60)
-        //        return $"{(int)timeSpan.TotalMinutes} minutes ago";
-
-        //    if (timeSpan.TotalHours < 24)
-        //        return $"{(int)timeSpan.TotalHours} hours ago";
-
-        //    if (timeSpan.TotalDays < 7)
-        //        return $"{(int)timeSpan.TotalDays} days ago";
-
-        //    return createdAt.ToString("dd MMM yyyy");
-        //}
     }
-}
+    }

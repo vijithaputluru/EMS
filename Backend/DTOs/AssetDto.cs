@@ -21,6 +21,7 @@ namespace EmployeeManagementSystem.DTOs
         // new uploaded files
 
         public List<IFormFile>? Images { get; set; }
+        public string? Description { get; set; }
 
         // old images kept during edit
 

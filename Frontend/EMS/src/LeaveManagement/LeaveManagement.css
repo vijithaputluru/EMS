@@ -149,7 +149,7 @@ body {
 .apply-card select:focus,
 .apply-card input:focus,
 .apply-card textarea:focus {
-  border-color: #14b8a6;
+  border-color: rgb(18, 199, 199);;
 }
  
 .apply-card textarea {
@@ -178,7 +178,7 @@ body {
   margin-top: 18px;
   width: 100%;
   padding: 14px;
-  background: #2bb596;
+  background: #2563eb;
   color: white;
   border: none;
   border-radius: 10px;
@@ -189,7 +189,7 @@ body {
 }
  
 .submit-btn:hover {
-  background: #23a085;
+  background: #2563eb;
 }
  
 .submit-btn:disabled {
@@ -297,7 +297,7 @@ body {
 }
  
 .apply-btn {
-  background: #14b8a6;
+  background: rgb(18, 199, 199);;
   border: none;
   padding: 8px 16px;
   color: #fff;
@@ -307,7 +307,7 @@ body {
 }
  
 .apply-btn:hover {
-  background: #0f9f93;
+  background: rgb(18, 199, 199);
 }
  
 .tabs {
@@ -324,7 +324,7 @@ body {
 }
  
 .tab.active {
-  background: #14b8a6;
+  background: rgb(18, 199, 199);;
   color: white;
 }
  
@@ -337,6 +337,22 @@ body {
 .table-scroll {
   width: 100%;
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: 500px;
+  border-radius: 12px;
+}
+ 
+.leave-table table {
+  min-width: 1200px;
+  width: 100%;
+  border-collapse: collapse;
+}
+ 
+.leave-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f3f4f6;
+  z-index: 10;
 }
  
 .leave-table table {
@@ -379,28 +395,44 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 8px;
-  margin-top: 5px;
+  gap: 10px;
+  flex-wrap: nowrap; /* prevent down */
 }
  
 .approve-btn {
-  background: #22c55e;
-  border: none;
-  color: white;
-  padding: 4px 10px;
-  border-radius: 4px;
+  background: #e8f9ee;
+  border: 1px solid #b7ebc6;
+  color: #16a34a;
+  padding: 8px 16px;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+ 
+.leave-table td {
+  white-space: nowrap;
+}
+ 
+.approve-btn:hover {
+  background: #d8f5e3;
 }
  
 .reject-btn {
-  background: #ef4444;
-  border: none;
-  color: white;
-  padding: 4px 10px;
-  border-radius: 4px;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
+  color: #dc2626;
+  padding: 8px 16px;
+  border-radius: 10px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+ 
+.reject-btn:hover {
+  background: #ffe4e6;
 }
  
 .no-action {
@@ -538,7 +570,7 @@ body {
 .apply-modal-box input:focus,
 .apply-modal-box select:focus,
 .apply-modal-box textarea:focus {
-  border-color: #14b8a6;
+  border-color: rgb(18, 199, 199);;
   outline: none;
 }
  
@@ -549,7 +581,7 @@ body {
 }
  
 .apply-submit-btn {
-  background: #16a085;
+  background: #2563eb;
   color: white;
   border: none;
   padding: 8px 16px;
@@ -558,7 +590,7 @@ body {
 }
  
 .apply-submit-btn:hover {
-  background: #138d75;
+  background: #1d4ed8;
 }
  
 .apply-cancel-btn {
@@ -723,45 +755,48 @@ body {
   background: rgba(255, 255, 255, 0.7);
 }
  
- /* ===== TABLE HEADER ALIGNMENT FIX ===== */
-
-.leave-table th:nth-child(1),
-.leave-table td:nth-child(1) {
+ .leave-table th {
   text-align: center;
 }
-
-.leave-table th:nth-child(2),
-.leave-table td:nth-child(2) {
-  text-align: left;
-  padding-left: 26px;
-}
-
-.leave-table th:nth-child(3),
-.leave-table td:nth-child(3) {
+ 
+.leave-table td {
   text-align: center;
 }
+ 
+/* ================= PAGINATION ================= */
 
-.leave-table th:nth-child(4),
-.leave-table td:nth-child(4) {
-  text-align: center;
+.leave-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 10px 4px;
 }
 
-.leave-table th:nth-child(5),
-.leave-table td:nth-child(5) {
-  text-align: center;
+.leave-pagination button {
+  background: #14b8a6;
+  color: #fff;
+  border: none;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
 }
 
-.leave-table th:nth-child(6),
-.leave-table td:nth-child(6) {
-  text-align: left;
+.leave-pagination button:hover:not(:disabled) {
+  background: #0f9f93;
 }
 
-.leave-table th:nth-child(7),
-.leave-table td:nth-child(7) {
-  text-align: center;
+.leave-pagination button:disabled {
+  background: #cbd5e1;
+  cursor: not-allowed;
 }
 
-.leave-table th:nth-child(8),
-.leave-table td:nth-child(8) {
-  text-align: center;
+.leave-pagination span {
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
 }

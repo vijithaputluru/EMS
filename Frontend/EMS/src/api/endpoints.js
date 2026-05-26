@@ -49,6 +49,9 @@ export const API = {
     STATS_YEAR: "/Attendance/stats/year",
     RUN_ABSENT: "/Attendance/run/absent-check",
     RUN_MISSING: "/Attendance/run/missing-checkout",
+
+    WORKING_HOURS: (employeeId) =>
+      `/Attendance/working-hours/${employeeId}`,
   },
 
   // ================= ADMIN NOTIFICATIONS =================
@@ -349,7 +352,7 @@ export const API_ENDPOINTS = {
       byId: API.PROJECTS.UPDATE,
     },
   },
-  
+
   masters: {
     roles: {
       list: API.ROLES.LIST,
@@ -373,6 +376,8 @@ export const API_ENDPOINTS = {
     today: API.ATTENDANCE.TODAY,
     monthly: API.ATTENDANCE.MONTHLY,
     adminUpdate: API.ATTENDANCE.UPDATE,
+
+    workingHours: API.ATTENDANCE.WORKING_HOURS,
   },
   leave: {
     list: API.LEAVE.LIST,

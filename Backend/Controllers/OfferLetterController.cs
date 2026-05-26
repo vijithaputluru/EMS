@@ -135,14 +135,35 @@ namespace EmployeeManagementSystem.Controllers
                     ),
                     2);
 
+            decimal professionalTax = 200;
+
+            decimal providentFund = employerPf;
+
+            decimal netTakeHome =
+                Math.Round(
+                    gross - (
+                        providentFund +
+                        professionalTax
+                    ),
+                    2);
+
             return Ok(new
             {
+                monthlyCTC,
                 basic,
                 hra,
                 conveyance,
                 medicalAllowance,
-                otherAllowance
+                otherAllowance,
+
+                // deductions
+                providentFund,
+                professionalTax,
+
+                // totals
+                gross,
+                netTakeHome
             });
         }
     }
-}
+    }

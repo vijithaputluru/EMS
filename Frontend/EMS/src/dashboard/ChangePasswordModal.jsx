@@ -301,10 +301,10 @@ function ChangePasswordModal({ open, onClose, role, email }) {
           <div>
             <p className="change-password-kicker">Security Settings</p>
             <h2 id="change-password-title">Change Password</h2>
-            <p className="change-password-copy">
+            {/* <p className="change-password-copy">
               Update your credentials with a stronger password that matches the
               PIRNAV security theme.
-            </p>
+            </p> */}
           </div>
         </div>
 

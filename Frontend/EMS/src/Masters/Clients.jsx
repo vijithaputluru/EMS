@@ -293,9 +293,14 @@ function Clients() {
       nextValue = value.replace(/\D/g, "").slice(0, 10);
     }
 
-    if (name === "email") {
-      nextValue = value.slice(0, 40);
-    }
+   if (name === "email") {
+
+  nextValue = value
+    .toLowerCase() // convert uppercase to lowercase
+    .replace(/\s/g, "") // remove spaces
+    .slice(0, 40);
+
+}
 
     const draft = {
       ...newClient,

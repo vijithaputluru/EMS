@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EmployeeManagementSystem.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260520071710_AddIsActiveToRolesOnly")]
-    partial class AddIsActiveToRolesOnly
+    [Migration("20260525055909_AddDescriptionToAssets")]
+    partial class AddDescriptionToAssets
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -44,6 +44,10 @@ namespace EmployeeManagementSystem.Migrations
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("longtext")
+                        .HasColumnName("Description");
 
                     b.Property<string>("ImagePaths")
                         .HasColumnType("longtext");

@@ -446,7 +446,7 @@ function TaskManagement() {
 
       <div
         className="ems-task-horizontal-scroll-wrapper"
-        
+
       >
 
         {/* SCROLL NOTICE */}
@@ -475,7 +475,7 @@ function TaskManagement() {
             cursor: "grab"
           }}
         >
-           <table
+          <table
             className="ems-task-data-main-table"
             style={{
               width: "100%",
@@ -483,7 +483,6 @@ function TaskManagement() {
               borderCollapse: "collapse",
               tableLayout: "auto"
             }}
-          
           >
             <thead>
               <tr>
@@ -526,8 +525,10 @@ function TaskManagement() {
                 emsFilteredTaskData.map((task) => (
                   <tr
                     key={task.emsTaskId}
+                    onClick={() => setViewTask(task)}
                     style={{
-                      borderBottom: "1px solid #edf2f7"
+                      borderBottom: "1px solid #edf2f7",
+                      cursor: "pointer"
                     }}
                   >
                     {/* TASK */}
@@ -667,7 +668,8 @@ function TaskManagement() {
                     >
                       <button
                         className="ems-task-edit-btn"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setEmsTaskSelected(task);
                           setEmsTaskShowPopup(true);
                         }}
@@ -688,7 +690,10 @@ function TaskManagement() {
 
                       <button
                         className="ems-task-delete-btn"
-                        onClick={() => setDeleteTaskId(task.emsTaskId)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteTaskId(task.emsTaskId);
+                        }}
                         style={{
                           border: "1px solid #fecdd3",
                           background: "#fff1f2",
@@ -711,6 +716,83 @@ function TaskManagement() {
           </table>
         </div>
       </div>
+
+      {/* VIEW TASK POPUP */}
+
+      {viewTask && (
+
+        <div
+          className="ems-task-view-overlay"
+          onClick={() => setViewTask(null)}
+        >
+
+          <div
+            className="ems-task-view-popup"
+            onClick={(e) => e.stopPropagation()}
+          >
+
+            <div className="ems-task-view-header">
+
+              <h3>
+                Task Details
+              </h3>
+
+              <button
+                type="button"
+                className="ems-task-view-close"
+                onClick={() => setViewTask(null)}
+              >
+                ×
+              </button>
+
+            </div>
+
+            <div className="ems-task-view-content">
+
+              <div className="ems-task-view-row">
+                <strong>Task</strong>
+                <span>{viewTask.emsTaskTitle}</span>
+              </div>
+
+              <div className="ems-task-view-row">
+                <strong>Assignee</strong>
+                <span>{viewTask.emsTaskUser}</span>
+              </div>
+
+              <div className="ems-task-view-row">
+                <strong>Project</strong>
+                <span>{viewTask.emsTaskProject}</span>
+              </div>
+
+              <div className="ems-task-view-row">
+                <strong>Description</strong>
+                <span>{viewTask.emsTaskDescription}</span>
+              </div>
+
+              <div className="ems-task-view-row">
+                <strong>Priority</strong>
+                <span>{viewTask.emsTaskPriority}</span>
+              </div>
+
+              <div className="ems-task-view-row">
+                <strong>Due Date</strong>
+                <span>
+                  {formatTaskDate(viewTask.emsTaskDue)}
+                </span>
+              </div>
+
+              <div className="ems-task-view-row">
+                <strong>Status</strong>
+                <span>{viewTask.emsTaskState}</span>
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
 
       {/* MODAL */}
 

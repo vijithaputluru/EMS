@@ -13,6 +13,7 @@ const PROJECT_STATUSES = [
   "In Progress",
   "Completed",
   "On Hold",
+  "Go Live",
 ];
 
 const EMPTY_PROJECT_FORM = {
@@ -255,10 +256,19 @@ function Projects() {
         return "";
 
       case "endDate":
-        if (!trimmedValue) return "End Date is required";
-        if (draftForm.startDate && trimmedValue < draftForm.startDate) {
+
+        // optional field
+
+        if (
+          trimmedValue &&
+          draftForm.startDate &&
+          trimmedValue < draftForm.startDate
+        ) {
+
           return "End Date cannot be before Start Date";
+
         }
+
         return "";
 
       case "team": {
@@ -374,7 +384,9 @@ function Projects() {
       client: selectedClient?.name || "",
       clientId: Number(trimmedForm.client),
       start_Date: toIsoDateString(trimmedForm.startDate),
-      end_Date: toIsoDateString(trimmedForm.endDate),
+      end_Date: trimmedForm.endDate
+        ? toIsoDateString(trimmedForm.endDate)
+        : null,
       team_Members: String(trimmedForm.team),
       status: trimmedForm.status,
     };
@@ -786,7 +798,7 @@ function Projects() {
 
                 <div className="projects-field">
                   <label htmlFor="project-end-date">
-                    End Date <span aria-hidden="true">*</span>
+                    End Date
                   </label>
                   <AppDatePicker
                     id="project-end-date"
