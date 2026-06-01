@@ -31,6 +31,7 @@ namespace EmployeeManagementSystem.Controllers
         private readonly IEmailService _emailService;
 
         private readonly JwtHelper _jwtHelper;
+        private readonly IAdminNotificationService _notificationService;
 
         public UserController(
 
@@ -38,7 +39,8 @@ namespace EmployeeManagementSystem.Controllers
 
             IEmailService emailService,
 
-            JwtHelper jwtHelper)
+            JwtHelper jwtHelper,
+             IAdminNotificationService notificationService)
 
         {
 
@@ -47,94 +49,66 @@ namespace EmployeeManagementSystem.Controllers
             _emailService = emailService;
 
             _jwtHelper = jwtHelper;
+            _notificationService = notificationService;
 
         }
 
         // ================= REGISTER =================
-
         [HttpPost("register")]
-
         public async Task<IActionResult> Register(RegisterDto dto)
-
         {
-
             if (!ModelState.IsValid)
-
                 return BadRequest(ModelState);
 
             if (dto.Password != dto.ConfirmPassword)
-
                 return BadRequest("Passwords do not match");
 
             if (await _context.Users.AnyAsync(x => x.Email == dto.Email))
-
                 return BadRequest("Email already exists");
 
-            // ✅ CHECK IF EMAIL EXISTS IN EMPLOYEE TABLE
-
             var employeeExists = await _context.Employees
-
                 .AnyAsync(e => e.Email == dto.Email);
 
             if (!employeeExists)
-
             {
-
                 return NotFound(new
-
                 {
-
                     message = "Email does not exist in the employee list"
-
                 });
-
             }
 
-            // 🔹 Fetch the default role (Employee)
-
             var defaultRole = await _context.Roles
-
                 .FirstOrDefaultAsync(r => r.Name.ToLower() == "employee");
 
             if (defaultRole == null)
-
                 return StatusCode(500, "Default role 'Employee' not found. Please seed the Roles table.");
 
-            // 🔹 Create the user with the default role
-
             var user = new Register
-
             {
-
                 FirstName = dto.FirstName,
-
                 LastName = dto.LastName,
-
                 Email = dto.Email,
-
                 Password = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-
                 RoleId = defaultRole.RoleId
-
             };
 
             _context.Users.Add(user);
-
             await _context.SaveChangesAsync();
 
+            // SEND NOTIFICATION TO ADMIN
+            await _notificationService.CreateNotification(
+                "New User Registered",
+                $"{dto.FirstName} {dto.LastName} has registered successfully."
+            );
+
             return Ok(new
-
             {
-
                 message = "Registered successfully",
-
                 roleAssigned = defaultRole.Name
-
             });
-
         }
 
-        // ================= LOGIN =================
+        /// ================= LOGIN =================
         [HttpPost("login")]
         public async Task<IActionResult> Login(LoginDto dto)
         {
@@ -160,10 +134,6 @@ namespace EmployeeManagementSystem.Controllers
                 return Unauthorized("Role not found");
             }
 
-            // =========================================
-            // FETCH EMPLOYEE
-            // =========================================
-
             var employee = await _context.Employees
                 .FirstOrDefaultAsync(e => e.Email == user.Email);
 
@@ -172,37 +142,26 @@ namespace EmployeeManagementSystem.Controllers
                 return Unauthorized("Employee not found");
             }
 
-            // =========================================
-            // GENERATE JWT TOKEN
-            // =========================================
+            var employeeName = employee.Name;
 
-            //var token = _jwtHelper.GenerateToken(
-            //    user,
-            //    role.Name,
-            //    employee.Employee_Id
-            //);
-
-            // =========================================
-            // SAVE LOGIN ACTIVITY
-            // =========================================
-            var istZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
-            var istNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, istZone);
-
-            var activityLog = new ActivityLog
+            if (string.IsNullOrWhiteSpace(employeeName))
             {
-                Activity = $"{employee.Name} logged in successfully",
-                CreatedAt = istNow
-            };
+                employeeName = employee.Email;
+            }
+
+            _context.ActivityLogs.Add(new ActivityLog
+            {
+                Activity = $"{employeeName} logged in",
+                CreatedAt = DateTime.UtcNow
+            });
+            await _context.SaveChangesAsync();
+
 
             var token = _jwtHelper.GenerateToken(
                 user,
                 role.Name,
                 employee.Employee_Id
             );
-
-            // =========================================
-            // RETURN RESPONSE
-            // =========================================
 
             return Ok(new
             {

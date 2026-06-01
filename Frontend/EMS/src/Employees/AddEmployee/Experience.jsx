@@ -4,9 +4,10 @@ import api from "../../api/axiosInstance";
 import { API_ENDPOINTS } from "../../api/endpoints";
 import AppDatePicker from "../../components/AppDatePicker";
 import { toIsoDateString } from "../../utils/date";
-
+ 
 function Experience({ employeeId, viewMode, data, onNext, onBack }) {
   const emptyExperience = {
+    id: 0,
     company: "",
     designation: "",
     from: "",
@@ -15,18 +16,19 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
     reason: "",
     description: "",
   };
-
+ 
   const [experiences, setExperiences] = useState([emptyExperience]);
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const isEditMode = data && data.length > 0;
-
+ 
   useEffect(() => {
     if (!data || data.length === 0) return;
-
+ 
     console.log("📥 Incoming data:", data);
-
+ 
     const mapped = data.map((exp) => ({
+      id: exp.id || 0,
       company: exp.companyName || "",
       designation: exp.designation || "",
       from: exp.fromDate ? exp.fromDate.split("T")[0] : "",
@@ -35,46 +37,46 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
       reason: exp.reasonForLeaving || "",
       description: exp.description || "",
     }));
-
+ 
     setExperiences(mapped);
   }, [data]);
-
+ 
   const handleChange = (index, e) => {
     const updated = [...experiences];
     updated[index][e.target.name] = e.target.value;
     setExperiences(updated);
   };
-
+ 
   const addExperience = () => {
     setExperiences([...experiences, { ...emptyExperience }]);
   };
-
+ 
   // ✅ REMOVE = DELETE API + UI UPDATE
   const removeExperience = async (index) => {
     console.log("🗑️ Remove clicked:", index);
-
+ 
     if (!employeeId) {
       alert("Employee ID missing");
       return;
     }
-
+ 
     if (!window.confirm("Delete experience?")) return;
-
+ 
     try {
       setLoading(true);
-
+ 
       const response = await api.delete(
         API_ENDPOINTS.employeeExperience.byEmployeeId(employeeId)
       );
-
+ 
       console.log("📥 Delete Response:", response.data);
-
+ 
       console.log("✅ Deleted from backend");
-
+ 
       // ✅ Update UI
       const updated = experiences.filter((_, i) => i !== index);
       setExperiences(updated.length ? updated : [emptyExperience]);
-
+ 
     } catch (err) {
       console.error("🔥 Delete error:", err);
       alert("Something went wrong");
@@ -82,20 +84,28 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
       setLoading(false);
     }
   };
-
-  const handleSave = async () => {
-    console.log("🚀 Save clicked");
-
-    if (!employeeId) {
-      alert("Employee ID missing");
-      return;
+ 
+ const handleSave = async () => {
+  console.log("🚀 Save clicked");
+ 
+  if (!employeeId) {
+    alert("Employee ID missing");
+    return;
+  }
+ 
+  try {
+    setLoading(true);
+ 
+    // ✅ DELETE old experiences first (only in edit mode)
+    if (isEditMode) {
+      await api.delete(
+        API_ENDPOINTS.employeeExperience.byEmployeeId(employeeId)
+      );
     }
-
-    try {
-      setLoading(true);
-
-      const exp = experiences[0] || {};
-
+ 
+    // ✅ Save all experiences one by one
+    const requests = experiences.map((exp) => {
+ 
       const payload = {
         Employee_Id: employeeId,
         CompanyName: exp.company?.trim() || "",
@@ -106,48 +116,50 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
         ReasonForLeaving: exp.reason?.trim() || "",
         Description: exp.description?.trim() || "",
       };
-
+ 
       console.log("📤 Payload:", payload);
-
-      // ✅ CHECK: if data already exists → UPDATE else INSERT
-      const method = isEditMode ? "PUT" : "POST";
-
-      const response = isEditMode
-        ? await api.put(
-          API_ENDPOINTS.employeeExperience.byEmployeeId(employeeId),
-          payload,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        )
-        : await api.post(API_ENDPOINTS.employeeExperience.list, payload, {
+ 
+      return api.post(
+        API_ENDPOINTS.employeeExperience.list,
+        payload,
+        {
           headers: {
             "Content-Type": "application/json",
           },
-        });
-
-      console.log(`📥 ${method} Response:`, response.data);
-
-      setSuccessMsg(`${isEditMode ? "Updated" : "Added"} successfully!`);
-    } catch (err) {
-      console.error("🔥 Save error:", err);
-      alert("Something went wrong");
-    } finally {
-      setLoading(false);
+        }
+      );
+    });
+ 
+    // ✅ Wait all inserts complete
+    const responses = await Promise.all(requests);
+ 
+    console.log("📥 All Responses:", responses);
+ 
+    setSuccessMsg(
+      `${isEditMode ? "Updated" : "Added"} successfully!`
+    );
+ 
+    if (onNext) {
+      onNext();
     }
-  };
-
+ 
+  } catch (err) {
+    console.error("🔥 Save error:", err);
+    alert("Something went wrong");
+  } finally {
+    setLoading(false);
+  }
+};
+ 
   return (
     <div className="form-section">
       <h3>Add Previous Work Experience</h3>
-
+ 
       {experiences.map((exp, index) => (
         <div className="form-card" key={index}>
           <div className="card-header">
             <h4>Experience {index + 1}</h4>
-
+ 
             {!viewMode && experiences.length > 1 && (
               <button
                 type="button"
@@ -158,7 +170,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
               </button>
             )}
           </div>
-
+ 
           <div className="form-grid">
             <div className="form-group">
               <label>Company Name</label>
@@ -170,7 +182,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
                 disabled={viewMode}
               />
             </div>
-
+ 
             <div className="form-group">
               <label>Designation</label>
               <input
@@ -181,7 +193,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
                 disabled={viewMode}
               />
             </div>
-
+ 
             <div className="form-group">
               <label>From Date</label>
               <AppDatePicker
@@ -191,7 +203,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
                 disabled={viewMode}
               />
             </div>
-
+ 
             <div className="form-group">
               <label>To Date</label>
               <AppDatePicker
@@ -201,7 +213,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
                 disabled={viewMode}
               />
             </div>
-
+ 
             <div className="form-group">
               <label>Years of Experience</label>
               <input
@@ -212,7 +224,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
                 disabled={viewMode}
               />
             </div>
-
+ 
             <div className="form-group">
               <label>Reason for Leaving</label>
               <input
@@ -223,7 +235,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
                 disabled={viewMode}
               />
             </div>
-
+ 
             <div className="form-group full">
               <label>Description</label>
               <textarea
@@ -236,13 +248,13 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
           </div>
         </div>
       ))}
-
+ 
       {!viewMode && (
         <button type="button" className="add-btn" onClick={addExperience}>
           + Add Another Experience
         </button>
       )}
-
+ 
       <div className="step-actions">
         <button
           type="button"
@@ -267,7 +279,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
             {successMsg}
           </p>
         )}
-
+ 
         <button
           type="button"
           className="btn success"
@@ -294,7 +306,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
               ? "Update & Next"
               : "Save & Next"}
         </button>
-
+ 
         {!viewMode && (
           <button
             type="button"
@@ -302,7 +314,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
             onClick={() => {
               console.log("⏭️ Skipped Experience");
               setSuccessMsg("Skipped");
-
+ 
               setTimeout(() => {
                 if (onNext) {
                   onNext(); // ✅ FIX
@@ -317,5 +329,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
     </div>
   );
 }
-
+ 
 export default Experience;
+ 
+ 

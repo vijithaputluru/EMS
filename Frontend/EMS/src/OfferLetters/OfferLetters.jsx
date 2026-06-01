@@ -569,8 +569,8 @@ function OfferLetters() {
       }
 
       const payload = {
-        candidate_Name:
-          formData.candidate_Name.trim(),
+  candidate_Title: formData.title,
+  candidate_Name: formData.candidate_Name.trim(),
 
         email: formData.email.trim(),
 
@@ -631,19 +631,44 @@ function OfferLetters() {
         "Offer Letter Generated Successfully"
       );
 
-      setFormData({
-        candidate_Name: "",
-        email: "",
-        address: "",
-        position: "",
-        joining_Date: "",
-        ctc_Annual: "",
-        basic: "",
-        hra: "",
-        conveyance: "",
-        medicalAllowance: "",
-        otherAllowance: "",
-      });
+     setFormData({
+
+  title: "Mr.",
+ 
+  candidate_Name: "",
+
+  email: "",
+
+  address: "",
+
+  position: "",
+
+  joining_Date: "",
+
+  ctc_Annual: "",
+ 
+  monthlyCTC: "",
+ 
+  basic: "",
+
+  hra: "",
+
+  conveyance: "",
+
+  medicalAllowance: "",
+
+  otherAllowance: "",
+ 
+  providentFund: "",
+
+  professionalTax: "",
+
+  gross: "",
+
+  netTakeHome: "",
+
+});
+ 
 
       setErrors({});
 
@@ -786,7 +811,7 @@ function OfferLetters() {
 
               <select
                 name="title"
-                value={formData.title || "Mr"}
+                value={formData.title}
                 onChange={handleChange}
                 className="candidate-title-select"
               >
@@ -1280,53 +1305,37 @@ function OfferLetters() {
                 </th>
               </tr>
             </thead>
+<tbody>
+  {currentLetters.length > 0 ? (
+    currentLetters.map((item, index) => (
+      <tr key={item.id}>
+        <td>{indexOfFirst + index + 1}</td>
 
-            <tbody>
-              {currentLetters.length > 0 ? (
-                currentLetters.map((item) => (
-                  <tr key={item.id}>
-                    <td>{item.id}</td>
+        <td>{item.candidate_Name}</td>
 
-                    <td>
-                      {item.candidate_Name}
-                    </td>
+        <td>{item.email}</td>
+        <td>{item.position}</td>
 
-                    <td>{item.email}</td>
-
-                    <td>{item.position}</td>
-
-                    <td>
-                      <button
-                        className="download-btn"
-                        onClick={() =>
-                          handleDownload(item.id)
-                        }
-                        disabled={
-                          downloadingId === item.id
-                        }
-                      >
-                        <FaDownload />
-
-                        {downloadingId === item.id
-                          ? " Downloading..."
-                          : " Download"}
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan="5"
-                    style={{
-                      textAlign: "center",
-                    }}
-                  >
-                    No offer letters found
-                  </td>
-                </tr>
-              )}
-            </tbody>
+        <td>
+          <button
+            className="download-btn"
+            onClick={() => handleDownload(item.id)}
+            disabled={downloadingId === item.id}
+          >
+            <FaDownload />
+            {downloadingId === item.id ? " Downloading..." : " Download"}
+          </button>
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="5" style={{ textAlign: "center" }}>
+        No offer letters found
+      </td>
+    </tr>
+  )}
+</tbody>
           </table>
         </div>
 

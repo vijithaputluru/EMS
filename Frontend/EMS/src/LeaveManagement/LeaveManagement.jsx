@@ -336,12 +336,13 @@ function LeaveManagement() {
             </div>
 
             {/* ✅ FULL reason stays in popup */}
-            <div className="leave-details-row">
-              <span className="leave-details-label">Reason</span>
-              <span className="leave-details-value">
-                {selectedLeave.reason || "-"}
-              </span>
-            </div>
+            <div className="leave-details-reason">
+  <span className="leave-details-label">Reason</span>
+
+  <div className="leave-details-reason-text">
+    {selectedLeave.reason || "-"}
+  </div>
+</div>
 
             <div className="leave-details-row">
               <span className="leave-details-label">Status</span>

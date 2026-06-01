@@ -217,6 +217,69 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "EmployeeManagementSystem.Controllers.AssetsController",
+    "Method": "ExportAssets",
+    "RelativePath": "api/Assets/export-assets",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
+    "Method": "DownloadDailyAttendance",
+    "RelativePath": "api/Attendance/admin/download-daily",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "date",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
+    "Method": "DownloadMonthlyAttendance",
+    "RelativePath": "api/Attendance/admin/download-monthly",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "month",
+        "Type": "System.Int32",
+        "IsRequired": false
+      },
+      {
+        "Name": "year",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
+    "Method": "DownloadWeeklyAttendance",
+    "RelativePath": "api/Attendance/admin/download-weekly",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "weekStartDate",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
     "Method": "AdminUpdateAttendance",
     "RelativePath": "api/Attendance/admin/update-attendance",
@@ -1274,6 +1337,16 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "EmployeeManagementSystem.Controllers.EmployeesController",
+    "Method": "DownloadFullMaster",
+    "RelativePath": "api/Employees/download-full-master",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "EmployeeManagementSystem.Controllers.ExperienceOfferLetterController",
     "Method": "GetAllOfferLetters",
     "RelativePath": "api/ExperienceOfferLetter/all",
@@ -1695,6 +1768,27 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.PaySlipController",
+    "Method": "DownloadSalaryRegister",
+    "RelativePath": "api/PaySlip/salary-register",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "month",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "year",
+        "Type": "System.Int32",
+        "IsRequired": false
+      }
+    ],
     "ReturnTypes": []
   },
   {

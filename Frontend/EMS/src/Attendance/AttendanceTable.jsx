@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback, useRef } from "react";
+import React, { memo, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import "./AttendanceTable.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -6,12 +6,143 @@ import api from "../api/axiosInstance";
 import { API_ENDPOINTS } from "../api/endpoints";
 import AppDatePicker from "../components/AppDatePicker";
 import {
+  downloadMonthlyAttendanceReport,
+  downloadWeeklyAttendanceReport,
+  getDownloadErrorMessage,
+} from "./attendanceDownloads";
+import {
   formatMonthYear,
   formatTime,
   getInputDateValue,
   getTodayInputValue,
 } from "../utils/date";
 import { getStoredToken } from "../utils/authStorage";
+import {
+  endPerformanceTimer,
+  logPerformanceError,
+  startPerformanceTimer,
+} from "../utils/performance";
+
+const reportMonthFormatter =
+  new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+const reportMonthNameFormatter =
+  new Intl.DateTimeFormat("en-US", {
+    month: "long",
+  });
+
+const getReportMonthValue = (yearValue, monthValue) =>
+  `${yearValue}-${String(monthValue).padStart(2, "0")}`;
+
+const parseReportMonthValue = (monthValue) => {
+  const [selectedYear, selectedMonth] =
+    String(monthValue || "")
+      .split("-")
+      .map(Number);
+
+  if (!selectedYear || !selectedMonth) {
+    return null;
+  }
+
+  return {
+    year: selectedYear,
+    month: selectedMonth,
+  };
+};
+
+const getReportMonthLabel = (yearValue, monthValue) =>
+  reportMonthFormatter.format(
+    new Date(yearValue, monthValue - 1, 1)
+  );
+
+const getReportMonthName = (yearValue, monthValue) =>
+  reportMonthNameFormatter.format(
+    new Date(yearValue, monthValue - 1, 1)
+  );
+
+const getReportDateLabel = (dateValue) =>
+  `${reportMonthNameFormatter.format(dateValue)} ${dateValue.getDate()}`;
+
+const getReportDateFilePart = (dateValue) =>
+  `${reportMonthNameFormatter.format(dateValue)}-${String(
+    dateValue.getDate()
+  ).padStart(2, "0")}`;
+
+// Optimization: ignore aborted duplicate/stale requests without showing error toasts.
+const isCanceledRequest = (error) =>
+  error?.code === "ERR_CANCELED" ||
+  error?.name === "CanceledError";
+
+const buildReportMonthOptions = (yearValue) =>
+  Array.from({ length: 12 }, (item, monthIndex) => {
+    const monthValue = monthIndex + 1;
+
+    return {
+      value: getReportMonthValue(yearValue, monthValue),
+      label: getReportMonthLabel(yearValue, monthValue),
+    };
+  });
+
+const buildReportWeeks = (monthValue) => {
+  const selectedMonthMeta =
+    parseReportMonthValue(monthValue);
+
+  if (!selectedMonthMeta) {
+    return [];
+  }
+
+  const { year: selectedYear, month: selectedMonth } =
+    selectedMonthMeta;
+
+  const daysInSelectedMonth =
+    new Date(selectedYear, selectedMonth, 0).getDate();
+
+  const weeks = [];
+  let startDay = 1;
+
+  while (startDay <= daysInSelectedMonth) {
+    const startDate =
+      new Date(selectedYear, selectedMonth - 1, startDay);
+
+    const daysUntilMonday =
+      (1 - startDate.getDay() + 7) % 7;
+
+    const endDay =
+      Math.min(
+        daysInSelectedMonth,
+        startDay + daysUntilMonday
+      );
+
+    const endDate =
+      new Date(selectedYear, selectedMonth - 1, endDay);
+
+    const fromDate =
+      getInputDateValue(startDate);
+
+    const toDate =
+      getInputDateValue(endDate);
+
+    weeks.push({
+      id: `${fromDate}-${toDate}`,
+      week: weeks.length + 1,
+      start: startDate,
+      end: endDate,
+      fromDate,
+      toDate,
+      rangeLabel:
+        `${getReportDateLabel(startDate)} - ${getReportDateLabel(endDate)}`,
+      fallbackFileName:
+        `weekly-attendance-${getReportDateFilePart(startDate)}-to-${getReportDateFilePart(endDate)}.xlsx`,
+    });
+
+    startDay = endDay + 1;
+  }
+
+  return weeks;
+};
 
 function AttendanceTable({
   viewMode = "daily",
@@ -22,6 +153,15 @@ function AttendanceTable({
 }) {
   const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [downloadingReport, setDownloadingReport] = useState("");
+  const [isDailyDownloading, setIsDailyDownloading] = useState(false);
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
+  const [downloadReportType, setDownloadReportType] = useState("Monthly");
+  const [downloadReportMonth, setDownloadReportMonth] = useState("");
+  const [downloadReportYear, setDownloadReportYear] = useState(
+    new Date().getFullYear()
+  );
+  const [selectedReportWeekId, setSelectedReportWeekId] = useState("");
   const [, setLiveTimer] = useState(0);
   const [dailyPage, setDailyPage] = useState(1);
   const [monthlyPage, setMonthlyPage] = useState(1);
@@ -608,7 +748,7 @@ function AttendanceTable({
 
     } catch (error) {
 
-      console.error(
+      logPerformanceError(
         "Hours Calculate Error:",
         error
       );
@@ -668,7 +808,7 @@ function AttendanceTable({
     }
     catch (error) {
 
-      console.error(
+      logPerformanceError(
         "❌ Time Format Error:",
         error
       );
@@ -900,11 +1040,16 @@ function AttendanceTable({
   // =========================
   // FETCH DAILY / MONTHLY
   // =========================
-  const fetchTodayAttendance = useCallback(async (requestId) => {
+  const fetchTodayAttendance = useCallback(async (requestId, signal) => {
+    let canceled = false;
+    const timerLabel = "attendance:daily-fetch";
+
     try {
       setLoading(true);
+      startPerformanceTimer(timerLabel);
 
       const res = await api.get(API_ENDPOINTS.attendance.today, {
+        signal,
         headers: {
           Authorization: `Bearer ${token}`,
         }
@@ -922,25 +1067,38 @@ function AttendanceTable({
 
       setAttendanceData(raw);
     } catch (err) {
+      canceled = isCanceledRequest(err);
+
+      if (canceled) {
+        return;
+      }
+
       if (requestId !== activeRequestRef.current) {
         return;
       }
 
-      console.error("Daily Error:", err?.response?.data || err.message);
+      logPerformanceError("Daily Error:", err?.response?.data || err.message);
       setAttendanceData([]);
       toast.error("Failed to fetch daily attendance");
     } finally {
-      if (requestId === activeRequestRef.current) {
+      endPerformanceTimer(timerLabel);
+
+      if (!canceled && requestId === activeRequestRef.current) {
         setLoading(false);
       }
     }
   }, [token]);
 
-  const fetchMonthlyAttendance = useCallback(async (requestId) => {
+  const fetchMonthlyAttendance = useCallback(async (requestId, signal) => {
+    let canceled = false;
+    const timerLabel = "attendance:monthly-fetch";
+
     try {
       setLoading(true);
+      startPerformanceTimer(timerLabel);
 
       const res = await api.get(API_ENDPOINTS.attendance.monthly, {
+        signal,
         params: { month: monthNum, year: yearNum },
         headers: {
           Authorization: `Bearer ${token}`,
@@ -959,15 +1117,23 @@ function AttendanceTable({
 
       setAttendanceData(raw);
     } catch (err) {
+      canceled = isCanceledRequest(err);
+
+      if (canceled) {
+        return;
+      }
+
       if (requestId !== activeRequestRef.current) {
         return;
       }
 
-      console.error("Monthly Error:", err?.response?.data || err.message);
+      logPerformanceError("Monthly Error:", err?.response?.data || err.message);
       setAttendanceData([]);
       toast.error("Failed to fetch monthly attendance");
     } finally {
-      if (requestId === activeRequestRef.current) {
+      endPerformanceTimer(timerLabel);
+
+      if (!canceled && requestId === activeRequestRef.current) {
         setLoading(false);
       }
     }
@@ -975,17 +1141,20 @@ function AttendanceTable({
 
   useEffect(() => {
     const requestId = ++activeRequestRef.current;
+    const controller = new AbortController();
 
     if (viewMode === "daily") {
-      fetchTodayAttendance(requestId);
+      fetchTodayAttendance(requestId, controller.signal);
     }
     else if (
       viewMode === "monthly" &&
       monthNum &&
       yearNum
     ) {
-      fetchMonthlyAttendance(requestId);
+      fetchMonthlyAttendance(requestId, controller.signal);
     }
+
+    return () => controller.abort();
 
   }, [
     fetchMonthlyAttendance,
@@ -998,16 +1167,21 @@ function AttendanceTable({
   // =========================
   // FAST FILTERING
   // =========================
+  const normalizedSearch = useMemo(
+    () => search.toLowerCase().trim(),
+    [search]
+  );
+
   const matchesSearch = useCallback(
     (emp) => {
       const name = getEmployeeName(emp).toLowerCase();
       const id = String(getEmployeeId(emp)).toLowerCase();
-      const searchText = search.toLowerCase().trim();
 
-      if (!searchText) return true;
-      return name.includes(searchText) || id.includes(searchText);
+      // Optimization: reuse normalized search text across every row filter pass.
+      if (!normalizedSearch) return true;
+      return name.includes(normalizedSearch) || id.includes(normalizedSearch);
     },
-    [search]
+    [normalizedSearch]
   );
 
   // =========================
@@ -1130,74 +1304,6 @@ function AttendanceTable({
         return false;
       }
 
-      // ===========================
-      // CURRENT DATE FILTER LOGIC
-      // ===========================
-
-      const today = new Date();
-
-      const currentDay =
-        today.getDate();
-
-      const currentMonth =
-        today.getMonth() + 1;
-
-      const currentYear =
-        today.getFullYear();
-
-      // IF VIEWING CURRENT MONTH
-      const isCurrentMonthView =
-        currentMonth === monthNum &&
-        currentYear === yearNum;
-
-      // GET CURRENT DAY STATUS
-      if (isCurrentMonthView) {
-
-        const todayRecord =
-          emp?.__dayMap?.[currentDay];
-
-        const todayStatus =
-          normalizeStatus(
-            todayRecord?.status
-          );
-
-        // PRESENT FILTER
-        if (
-          normalizedFilter === "Present"
-        ) {
-          return todayStatus === "Present";
-        }
-
-        // ABSENT FILTER
-        if (
-          normalizedFilter === "Absent"
-        ) {
-          return todayStatus === "Absent";
-        }
-
-        // LATE FILTER
-        if (
-          normalizedFilter === "Late"
-        ) {
-          return todayStatus === "Late";
-        }
-
-        // HALF DAY FILTER
-        if (
-          normalizedFilter === "Half Day"
-        ) {
-          return todayStatus === "Half Day";
-        }
-
-        // ON LEAVE FILTER
-        if (
-          normalizedFilter === "On Leave"
-        ) {
-          return todayStatus === "On Leave";
-        }
-      }
-
-      // FALLBACK OLD LOGIC
       const monthlyStatusCountKeyMap = {
         Present: "present",
         Absent: "absent",
@@ -1330,6 +1436,155 @@ function AttendanceTable({
     [employeeDirectory]
   );
 
+  const defaultReportMonth = useMemo(() => {
+    const currentDate = new Date();
+
+    return getReportMonthValue(
+      yearNum || currentDate.getFullYear(),
+      monthNum || currentDate.getMonth() + 1
+    );
+  }, [
+    monthNum,
+    yearNum,
+  ]);
+
+  const reportMonthOptions = useMemo(() => {
+    return buildReportMonthOptions(downloadReportYear);
+  }, [downloadReportYear]);
+
+  const reportYearOptions = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+
+    return Array.from({ length: 5 }, (_, index) => {
+      const year = currentYear - index;
+
+      return {
+        value: year,
+        label: year,
+      };
+    });
+  }, []);
+
+  const selectedReportMonthMeta = useMemo(() => {
+    return parseReportMonthValue(downloadReportMonth);
+  }, [downloadReportMonth]);
+
+  const reportWeeks = useMemo(() => {
+    return buildReportWeeks(downloadReportMonth);
+  }, [downloadReportMonth]);
+
+  const selectedReportWeek = useMemo(() => {
+    return reportWeeks.find(
+      (week) => week.id === selectedReportWeekId
+    ) || null;
+  }, [
+    reportWeeks,
+    selectedReportWeekId,
+  ]);
+
+  useEffect(() => {
+    if (!downloadModalOpen) {
+      setDownloadReportMonth(
+        getReportMonthValue(
+          downloadReportYear,
+          new Date().getMonth() + 1
+        )
+      );
+    }
+  }, [
+    defaultReportMonth,
+    downloadModalOpen,
+  ]);
+
+  useEffect(() => {
+    setSelectedReportWeekId("");
+  }, [
+    downloadReportMonth,
+    downloadReportType,
+  ]);
+
+  const openDownloadModal = useCallback(() => {
+    setDownloadReportType("Monthly");
+    setDownloadReportMonth(defaultReportMonth);
+    setSelectedReportWeekId("");
+    setDownloadModalOpen(true);
+  }, [defaultReportMonth]);
+
+  const closeDownloadModal = useCallback(() => {
+    if (downloadingReport) {
+      return;
+    }
+
+    setDownloadModalOpen(false);
+  }, [downloadingReport]);
+
+  const handleAttendanceReportDownload = useCallback(async () => {
+    if (!selectedReportMonthMeta) {
+      toast.warning("Select a month to download attendance.");
+      return;
+    }
+
+    if (
+      downloadReportType === "Weekly" &&
+      !selectedReportWeek
+    ) {
+      toast.warning("Select a week to download attendance.");
+      return;
+    }
+
+    try {
+      setDownloadingReport(downloadReportType.toLowerCase());
+
+      if (downloadReportType === "Monthly") {
+        await downloadMonthlyAttendanceReport({
+          month: selectedReportMonthMeta.month,
+          year: selectedReportMonthMeta.year,
+          token,
+          fallbackFileName:
+            `monthly-attendance-${getReportMonthName(
+              selectedReportMonthMeta.year,
+              selectedReportMonthMeta.month
+            )}-${selectedReportMonthMeta.year}.xlsx`,
+        });
+
+        toast.success("Monthly attendance downloaded successfully.");
+      } else {
+        await downloadWeeklyAttendanceReport({
+          token,
+          params: {
+            weekStartDate: selectedReportWeek.fromDate,
+          },
+          fallbackFileName:
+            `weekly-attendance-${selectedReportWeek.fromDate}.xlsx`,
+          forceFallbackFileName: true,
+        });
+
+        toast.success("Weekly attendance downloaded successfully.");
+      }
+
+      setDownloadModalOpen(false);
+    } catch (error) {
+      logPerformanceError(
+        "Attendance report download failed:",
+        error?.response?.data || error.message
+      );
+
+      toast.error(
+        await getDownloadErrorMessage(
+          error,
+          "Failed to download attendance report."
+        )
+      );
+    } finally {
+      setDownloadingReport("");
+    }
+  }, [
+    downloadReportType,
+    selectedReportMonthMeta,
+    selectedReportWeek,
+    token,
+  ]);
+
   // =========================
   // ADMIN UPDATE ATTENDANCE
   // =========================
@@ -1461,7 +1716,7 @@ function AttendanceTable({
         return;
       }
 
-      console.error(
+      logPerformanceError(
         "Working Hours API Error:",
         error
       );
@@ -1574,7 +1829,7 @@ function AttendanceTable({
         await fetchMonthlyAttendance(requestId);
       }
     } catch (err) {
-      console.error(
+      logPerformanceError(
         "Update Attendance Error:",
         err?.response?.data || err.message
       );
@@ -2216,6 +2471,103 @@ function AttendanceTable({
       />
 
       <div className="attendance-table">
+        <div className="attendance-table-actions">
+
+          <button
+            type="button"
+            className="attendance-download-btn attendance-primary-report-btn"
+            disabled={isDailyDownloading}
+            onClick={async () => {
+              try {
+
+                setIsDailyDownloading(true);
+
+                const now = new Date();
+
+                const todayDate =
+                  `${now.getFullYear()}-${String(
+                    now.getMonth() + 1
+                  ).padStart(2, "0")}-${String(
+                    now.getDate()
+                  ).padStart(2, "0")}`;
+
+                const response = await api.get(
+                  API_ENDPOINTS.attendance.downloadDaily,
+                  {
+                    params: {
+                      date: todayDate,
+                    },
+                    responseType: "arraybuffer",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                    },
+                  }
+                );
+
+                const blob = new Blob(
+                  [response.data],
+                  {
+                    type:
+                      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                  }
+                );
+
+                const downloadUrl =
+                  window.URL.createObjectURL(blob);
+
+                const link =
+                  document.createElement("a");
+
+                link.href = downloadUrl;
+
+                link.download =
+                  `daily-attendance-${todayDate}.xlsx`;
+
+                document.body.appendChild(link);
+
+                link.click();
+
+                document.body.removeChild(link);
+
+                window.URL.revokeObjectURL(downloadUrl);
+
+                toast.success(
+                  "Daily attendance downloaded successfully."
+                );
+
+              } catch (error) {
+
+                logPerformanceError(
+                  "Daily attendance download error:",
+                  error
+                );
+
+                toast.error(
+                  "Failed to download daily attendance."
+                );
+
+              } finally {
+
+                setIsDailyDownloading(false);
+
+              }
+            }}
+          >
+            {isDailyDownloading
+              ? "Downloading..."
+              : "Download Daily"}
+          </button>
+
+          <button
+            type="button"
+            className="attendance-download-btn attendance-primary-report-btn"
+            onClick={openDownloadModal}
+          >
+            Download Attendance
+          </button>
+
+        </div>
+
         {viewMode === "daily" ? (
           <>
             <div className="attendance-table-header attendance-table-header-5">
@@ -2235,15 +2587,6 @@ function AttendanceTable({
                 {paginatedDailyData.map((emp, i) => {
                   const progressWidth = getProgressWidth(emp);
                   const finalStatus = getResolvedStatus(emp);
-                  console.log("📌 Employee Attendance:", {
-                    employee: getEmployeeName(emp),
-                    rawCheckIn: getCheckIn(emp),
-                    rawCheckOut: getCheckOut(emp),
-                    formattedCheckIn: formatCheckTime(getCheckIn(emp)),
-                    formattedCheckOut: formatCheckTime(getCheckOut(emp)),
-                    status: finalStatus
-                  });
-
                   return (
                     <div
                       key={`${getEmployeeId(emp)}-${getEmployeeName(emp)}-${i}`}
@@ -2738,6 +3081,173 @@ function AttendanceTable({
         )}
       </div>
 
+      {downloadModalOpen && (
+        <div className="attendance-report-overlay">
+          <div className="attendance-report-modal">
+            <div className="attendance-report-header">
+              <div>
+                <h3>Download Attendance Report</h3>
+              </div>
+
+              <button
+                type="button"
+                className="attendance-report-close"
+                onClick={closeDownloadModal}
+                disabled={Boolean(downloadingReport)}
+                aria-label="Close download attendance report"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="attendance-report-body">
+              <div className="attendance-report-section">
+                <label className="attendance-report-label">
+                  Download Type
+                </label>
+
+                <div className="attendance-report-type-grid">
+                  {["Monthly", "Weekly"].map((reportType) => (
+                    <button
+                      type="button"
+                      key={reportType}
+                      className={`attendance-report-type-btn ${downloadReportType === reportType
+                        ? "active"
+                        : ""
+                        }`}
+                      onClick={() => setDownloadReportType(reportType)}
+                      disabled={Boolean(downloadingReport)}
+                    >
+                      {reportType}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="attendance-report-section">
+                <label className="attendance-report-label">
+                  Month & Year
+                </label>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 140px",
+                    gap: "12px",
+                  }}
+                >
+                  {/* MONTH */}
+                  <select
+                    id="attendance-report-month"
+                    className="attendance-report-select"
+                    value={downloadReportMonth}
+                    onChange={(event) =>
+                      setDownloadReportMonth(event.target.value)
+                    }
+                    disabled={Boolean(downloadingReport)}
+                  >
+                    {reportMonthOptions.map((monthOption) => (
+                      <option
+                        key={monthOption.value}
+                        value={monthOption.value}
+                      >
+                        {monthOption.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  {/* YEAR */}
+                  <select
+                    className="attendance-report-select"
+                    value={downloadReportYear}
+                    onChange={(event) => {
+                      const selectedYear = Number(event.target.value);
+
+                      setDownloadReportYear(selectedYear);
+
+                      const currentMonth =
+                        parseReportMonthValue(downloadReportMonth);
+
+                      setDownloadReportMonth(
+                        getReportMonthValue(
+                          selectedYear,
+                          currentMonth?.month || 1
+                        )
+                      );
+                    }}
+                    disabled={Boolean(downloadingReport)}
+                  >
+                    {reportYearOptions.map((yearOption) => (
+                      <option
+                        key={yearOption.value}
+                        value={yearOption.value}
+                      >
+                        {yearOption.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {downloadReportType === "Weekly" && (
+                <div className="attendance-report-section">
+                  <label className="attendance-report-label">
+                    Select Week
+                  </label>
+
+                  <div className="attendance-report-week-list">
+                    {reportWeeks.map((week) => (
+                      <button
+                        type="button"
+                        key={week.id}
+                        className={`attendance-report-week-card ${selectedReportWeekId === week.id
+                          ? "active"
+                          : ""
+                          }`}
+                        onClick={() => setSelectedReportWeekId(week.id)}
+                        disabled={Boolean(downloadingReport)}
+                      >
+                        <span className="attendance-report-week-check" />
+
+                        <span>
+                          Week {week.week}
+                        </span>
+
+                        <strong>
+                          {week.rangeLabel}
+                        </strong>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="attendance-report-footer">
+              <button
+                type="button"
+                className="attendance-report-cancel-btn"
+                onClick={closeDownloadModal}
+                disabled={Boolean(downloadingReport)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="attendance-report-download-btn"
+                onClick={handleAttendanceReportDownload}
+                disabled={Boolean(downloadingReport)}
+              >
+                {downloadingReport
+                  ? "Downloading..."
+                  : "Download"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* DETAILS MODAL */}
 
       {editModalOpen && (
@@ -3003,35 +3513,45 @@ function AttendanceTable({
 
           <div className="attendance-details-modal compact-modal">
 
-            <button
-              className="attendance-details-close"
-              onClick={closeAttendanceDetails}
-            >
-              ×
-            </button>
-
             {/* HEADER */}
 
             <div className="attendance-details-header">
 
-              <div className="attendance-details-avatar">
-                {getEmployeeName(
-                  selectedAttendance.employee
-                ).charAt(0).toUpperCase()}
-              </div>
+              <div className="attendance-details-profile">
 
-              <div>
-                <h2>
+                <div className="attendance-details-avatar">
                   {getEmployeeName(
                     selectedAttendance.employee
-                  )}
-                </h2>
+                  ).charAt(0).toUpperCase()}
+                </div>
 
-                <p>
-                  {getEmployeeId(
-                    selectedAttendance.employee
-                  )}
-                </p>
+                <div>
+                  <h2>
+                    {getEmployeeName(
+                      selectedAttendance.employee
+                    )}
+                  </h2>
+
+                  <p>
+                    {getEmployeeId(
+                      selectedAttendance.employee
+                    )}
+                  </p>
+                </div>
+
+              </div>
+
+              <div className="attendance-details-header-actions">
+
+                <button
+                  type="button"
+                  className="attendance-details-close"
+                  onClick={closeAttendanceDetails}
+                  aria-label="Close attendance details"
+                >
+                  ×
+                </button>
+
               </div>
 
             </div>
@@ -3189,18 +3709,17 @@ function AttendanceTable({
                           key={index}
                         >
 
-                          <span>
+                          <span className="attendance-week-label">
                             Week {week.week}
                           </span>
 
                           <p>
-                            {week.start.toLocaleDateString()}
+                            {week.start.toLocaleDateString()} -{" "}
+                            {week.end.toLocaleDateString()}
                           </p>
 
                           <h3>
-                            <h3>
-                              {Number(week.hours || 0).toFixed(1)}h
-                            </h3>
+                            {Number(week.hours || 0).toFixed(1)}h
                           </h3>
 
                         </div>
@@ -3341,4 +3860,5 @@ function AttendanceTable({
   );
 }
 
-export default AttendanceTable;
+// Optimization: memoize the table so unrelated parent renders do not redraw large attendance grids.
+export default memo(AttendanceTable);

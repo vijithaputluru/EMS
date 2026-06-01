@@ -23,6 +23,7 @@ namespace EmployeeManagementSystem.Interfaces
         Task<string> ReturnAsset(int id);
 
         Task<string> DeleteAsset(int id);
+        Task<byte[]> ExportAssetsExcel();
 
     }
 

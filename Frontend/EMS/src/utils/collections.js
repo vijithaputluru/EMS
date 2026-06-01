@@ -80,6 +80,13 @@ const getFallbackIdValue = (record) => {
   return matchingEntry?.[1];
 };
 
+const hasRecencySortKey = (record) =>
+  isSortableRecord(record) &&
+  (
+    DATE_FIELD_PRIORITY.some((keys) => getFirstPresentValue(record, keys) !== undefined) ||
+    getFallbackIdValue(record) !== undefined
+  );
+
 const compareIdDesc = (leftValue, rightValue) => {
   const leftNumber = Number(leftValue);
   const rightNumber = Number(rightValue);
@@ -189,7 +196,16 @@ export const stableSort = (items, compare) =>
     })
     .map(({ item }) => item);
 
-export const sortByRecency = (items) => stableSort(Array.isArray(items) ? items : [], compareByRecency);
+export const sortByRecency = (items) => {
+  const safeItems = Array.isArray(items) ? items : [];
+
+  // Optimization: skip stable sorting when records have no date/id fields, preserving current order.
+  if (!safeItems.some(hasRecencySortKey)) {
+    return safeItems;
+  }
+
+  return stableSort(safeItems, compareByRecency);
+};
 
 export const sortByDateDesc = (items, selector) =>
   stableSort(items, (left, right) =>

@@ -261,46 +261,57 @@ function Clients() {
   };
 
   const handleChange = (event) => {
+
     const { name, value } = event.target;
 
     let nextValue = value;
 
     if (name === "client_Name") {
+
       nextValue = value
         .replace(/[^A-Za-z\s]/g, "")
         .replace(/\s+/g, " ")
         .replace(/^\s+/g, "")
         .slice(0, 25);
+
     }
 
     if (name === "description") {
+
       nextValue = value
         .replace(/[^A-Za-z\s]/g, "")
         .replace(/\s+/g, " ")
         .replace(/^\s+/g, "")
         .slice(0, 30);
+
     }
 
     if (name === "location") {
+
       nextValue = value
         .replace(/[^A-Za-z\s]/g, "")
         .replace(/\s+/g, " ")
         .replace(/^\s+/g, "")
         .slice(0, 15);
+
     }
 
     if (name === "phone") {
-      nextValue = value.replace(/\D/g, "").slice(0, 10);
+
+      nextValue = value
+        .replace(/\D/g, "")
+        .slice(0, 10);
+
     }
 
-   if (name === "email") {
+    if (name === "email") {
 
-  nextValue = value
-    .toLowerCase() // convert uppercase to lowercase
-    .replace(/\s/g, "") // remove spaces
-    .slice(0, 40);
+      nextValue = value
+        .toLowerCase()
+        .replace(/\s/g, "")
+        .slice(0, 40);
 
-}
+    }
 
     const draft = {
       ...newClient,
@@ -310,15 +321,19 @@ function Clients() {
     setNewClient(draft);
 
     setErrors((prev) => {
+
       const nextErrors = {
         ...prev,
         [name]: validateField(name, draft),
       };
 
       return Object.fromEntries(
-        Object.entries(nextErrors).filter(([, error]) => error)
+        Object.entries(nextErrors)
+          .filter(([, error]) => error)
       );
+
     });
+
   };
 
   const closeModal = () => {

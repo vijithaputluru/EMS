@@ -1,7 +1,29 @@
 import React from "react";
 
-function Stepper({ step, setStep, maxStep }) {
+const steps = [
+  {
+    id: 1,
+    label: "Personal Info",
+  },
+  {
+    id: 2,
+    label: "Bank Info",
+  },
+  {
+    id: 3,
+    label: "Education",
+  },
+  {
+    id: 4,
+    label: "Experience",
+  },
+  {
+    id: 5,
+    label: "Review",
+  },
+];
 
+function Stepper({ step, setStep, maxStep }) {
   const handleStepClick = (targetStep) => {
     if (targetStep <= maxStep) {
       setStep(targetStep);
@@ -10,35 +32,15 @@ function Stepper({ step, setStep, maxStep }) {
 
   return (
     <div className="stepper">
-
-      <div
-        className={`step ${step === 1 ? "active" : ""}`}
-        onClick={() => handleStepClick(1)}
-      >
-        Personal Info
-      </div>
-
-      <div
-        className={`step ${step === 2 ? "active" : ""} ${maxStep < 2 ? "disabled" : ""}`}
-        onClick={() => handleStepClick(2)}
-      >
-        Bank Info
-      </div>
-
-      <div
-        className={`step ${step === 3 ? "active" : ""} ${maxStep < 3 ? "disabled" : ""}`}
-        onClick={() => handleStepClick(3)}
-      >
-        Education
-      </div>
-
-      <div
-        className={`step ${step === 4 ? "active" : ""} ${maxStep < 4 ? "disabled" : ""}`}
-        onClick={() => handleStepClick(4)}
-      >
-        Experience
-      </div>
-
+      {steps.map((item) => (
+        <div
+          key={item.id}
+          className={`step ${step === item.id ? "active" : ""} ${maxStep < item.id ? "disabled" : ""}`.trim()}
+          onClick={() => handleStepClick(item.id)}
+        >
+          {item.label}
+        </div>
+      ))}
     </div>
   );
 }

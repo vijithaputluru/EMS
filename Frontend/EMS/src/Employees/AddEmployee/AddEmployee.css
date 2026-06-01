@@ -140,6 +140,11 @@
   box-shadow: 0 6px 18px rgba(15, 23, 42, 0.05);
 }
 
+.step.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 /* ================= FORM WRAPPER ================= */
 
 .form-container {
@@ -361,6 +366,100 @@
   border: 1px solid #fda29b;
 }
 
+.review-intro {
+  margin: 0 0 20px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.review-section-card {
+  padding: 20px;
+}
+
+.review-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.review-section-header h4,
+.review-section-subtitle {
+  margin: 0;
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.review-section-subtitle {
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+
+.review-edit-btn {
+  min-width: 92px;
+}
+
+.review-item-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.review-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #e5edf4;
+}
+
+.review-item-full {
+  grid-column: span 2;
+}
+
+.review-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.review-value {
+  font-size: 14px;
+  color: #0f172a;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.review-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.review-list-card {
+  padding: 16px;
+  border-radius: 16px;
+  border: 1px solid #dbe5ee;
+  background: #ffffff;
+}
+
+.review-empty-state {
+  margin: 0;
+  color: #64748b;
+  font-size: 14px;
+  text-align: center;
+  padding: 18px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 14px;
+}
+
 /* ================= RESPONSIVE ================= */
 
 @media (max-width: 768px) {
@@ -373,6 +472,19 @@
   }
 
   .stepper {
+    flex-direction: column;
+  }
+
+  .review-item-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .review-item-full {
+    grid-column: span 1;
+  }
+
+  .review-section-header {
+    align-items: flex-start;
     flex-direction: column;
   }
 }

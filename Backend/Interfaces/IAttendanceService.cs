@@ -77,6 +77,11 @@ namespace EmployeeManagementSystem.Interfaces
       DateOnly fromDate,
       DateOnly toDate);
 
-    }
 
+        Task<byte[]> ExportMonthlyAttendance(int month, int year);
+
+        Task<byte[]> ExportWeeklyAttendance(DateTime weekStartDate);
+        Task<byte[]> ExportDailyAttendance(DateTime date);
+
+    }
 }

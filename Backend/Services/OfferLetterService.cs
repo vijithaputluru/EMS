@@ -287,6 +287,8 @@ namespace EmployeeManagementSystem.Services
             // =============================
             // Replace Bookmarks
             // =============================
+            var candidateFullName =
+    $"{dto.Candidate_Title} {dto.Candidate_Name}".Trim();
 
             using (WordprocessingDocument wordDoc =
                 WordprocessingDocument.Open(outputPath, true))
@@ -294,7 +296,7 @@ namespace EmployeeManagementSystem.Services
                 var joiningDate = dto.Joining_Date.ToString("dd MMM yyyy");
 
                 ReplaceBookmark(wordDoc, "Date", DateTime.Now.ToString("dd MMM yyyy"));
-                ReplaceBookmark(wordDoc, "CandidateName", dto.Candidate_Name);
+                ReplaceBookmark(wordDoc, "CandidateName", candidateFullName);
                 ReplaceBookmark(wordDoc, "Address", dto.Address); // ✅ multi-line supported
                 ReplaceBookmark(wordDoc, "JoiningDate", joiningDate);
                 ReplaceBookmark(wordDoc, "DateOfJoining", joiningDate);
@@ -434,6 +436,7 @@ if (process.ExitCode != 0)
 
             var offerLetter = new OfferLetter
             {
+                Candidate_Title = dto.Candidate_Title,
                 Candidate_Name = dto.Candidate_Name,
                 Email = dto.Email,
                 Address = dto.Address,

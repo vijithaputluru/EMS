@@ -9,6 +9,7 @@
         public string Position {  get; set; }
         public DateTime Joining_Date { get; set; }
         public decimal CTC_Annual { get; set; }
+        public string? Candidate_Title { get; set; }
 
         public decimal? Basic { get; set; }
 

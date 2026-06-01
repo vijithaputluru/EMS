@@ -19,13 +19,13 @@ import { NavLink, useLocation } from "react-router-dom";
 import "./Sidebar.css";
 import pirnavLogo from "../assets/pirnav.png";
 import { getStoredPermissions, getStoredRole } from "../utils/authStorage";
- 
+
 const normalize = (name) =>
   (name || "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "")
     .trim();
- 
+
 const EXPANDABLE_MENUS = [
   {
     key: "employees",
@@ -103,24 +103,24 @@ const EXPANDABLE_MENUS = [
     ],
   },
 ];
- 
+
 const EXPANDABLE_MENU_PATHS = EXPANDABLE_MENUS.reduce((acc, menu) => {
   acc[menu.key] = menu.items.map((item) => item.to);
   return acc;
 }, {});
- 
+
 const pathMatchesMenu = (pathname, menuKey) => {
   const menuPaths = EXPANDABLE_MENU_PATHS[menuKey] || [];
- 
+
   return menuPaths.some((path) => {
     if (pathname === path) {
       return true;
     }
- 
+
     return path === "/add-employee" && pathname.startsWith("/add-employee/");
   });
 };
- 
+
 const STATIC_MENUS_BEFORE_DROPDOWNS = [
   {
     getTo: (roleName) => (roleName === "admin" ? "/dashboard" : "/user-dashboard"),
@@ -134,7 +134,7 @@ const STATIC_MENUS_BEFORE_DROPDOWNS = [
     permission: "User Holidays",
   },
 ];
- 
+
 const STATIC_MENUS_AFTER_DROPDOWNS = [
   {
     to: "/payroll",
@@ -209,7 +209,7 @@ const STATIC_MENUS_AFTER_DROPDOWNS = [
     permission: "User Notifications",
   },
 ];
- 
+
 const getMenuKeyFromPath = (pathname) =>
   Object.entries(EXPANDABLE_MENU_PATHS).find(([, paths]) =>
     paths.some((path) =>
@@ -217,35 +217,35 @@ const getMenuKeyFromPath = (pathname) =>
       (path === "/add-employee" && pathname.startsWith("/add-employee/"))
     )
   )?.[0] || null;
- 
+
 const getMenuLinkClassName = ({ isActive }) =>
   `menu-item ${isActive ? "active" : ""}`;
- 
+
 const getSubmenuLinkClassName = ({ isActive }) =>
   `submenu-item ${isActive ? "active" : ""}`;
- 
+
 const hasPermission = (module) => {
   const role = getStoredRole();
   const permissions = getStoredPermissions();
   const normalizedModule = normalize(module);
- 
+
   if (role === "admin") {
     return true;
   }
- 
+
   if (!permissions || permissions.length === 0) {
     return false;
   }
- 
+
   const allowedModules = permissions.map((permission) =>
     normalize(permission.moduleName)
   );
- 
+
   return (
     allowedModules.includes(normalizedModule) || allowedModules.includes("all")
   );
 };
- 
+
 function SidebarLink({ to, icon, label, compact, onClick }) {
   return (
     <NavLink
@@ -259,7 +259,7 @@ function SidebarLink({ to, icon, label, compact, onClick }) {
     </NavLink>
   );
 }
- 
+
 function SubmenuLink({ to, icon, label, onClick }) {
   return (
     <NavLink to={to} className={getSubmenuLinkClassName} onClick={onClick}>
@@ -268,7 +268,7 @@ function SubmenuLink({ to, icon, label, onClick }) {
     </NavLink>
   );
 }
- 
+
 function Sidebar({ collapsed, isMobile = false, mobileOpen = false, onClose }) {
   const location = useLocation();
   const roleName = getStoredRole();
@@ -283,60 +283,60 @@ function Sidebar({ collapsed, isMobile = false, mobileOpen = false, onClose }) {
     : menuState.interactionPath === location.pathname
       ? menuState.active
       : routeMenu;
- 
+
   useEffect(() => {
     if (!isMobile || !mobileOpen) {
       return undefined;
     }
- 
+
     const handleEscape = (event) => {
       if (event.key === "Escape") {
         onClose?.();
       }
     };
- 
+
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
   }, [isMobile, mobileOpen, onClose]);
- 
+
   useEffect(() => {
     if (isMobile) {
       onClose?.();
     }
   }, [isMobile, location.pathname, onClose]);
- 
+
   const toggleMenu = (menuKey) => {
     if (isCompact) {
       return;
     }
- 
+
     setMenuState({
       active: activeMenu === menuKey ? null : menuKey,
       interactionPath: location.pathname,
     });
   };
- 
+
   const closeMenus = () => {
     setMenuState({
       active: null,
       interactionPath: location.pathname,
     });
   };
- 
+
   const handleLinkClick = () => {
     closeMenus();
- 
+
     if (isMobile) {
       onClose?.();
     }
   };
- 
+
   const isMenuExpanded = (menuKey) => !isCompact && activeMenu === menuKey;
   const isMenuActive = (menuKey) =>
     pathMatchesMenu(location.pathname, menuKey) || isMenuExpanded(menuKey);
- 
+
   const renderStaticMenu = (item) => {
- 
+
     // Hide user menus for admin
     const adminHiddenMenus = [
       "Add Details",
@@ -347,18 +347,18 @@ function Sidebar({ collapsed, isMobile = false, mobileOpen = false, onClose }) {
       "My Tasks",
       "My Notifications",
     ];
- 
+
     if (roleName === "admin" && adminHiddenMenus.includes(item.label)) {
       return null;
     }
- 
+
     if (item.permission && !hasPermission(item.permission)) {
       return null;
     }
- 
+
     const targetPath =
       typeof item.getTo === "function" ? item.getTo(roleName) : item.to;
- 
+
     return (
       <SidebarLink
         key={item.label}
@@ -370,14 +370,21 @@ function Sidebar({ collapsed, isMobile = false, mobileOpen = false, onClose }) {
       />
     );
   };
- 
+
   const renderExpandableMenu = (menu) => {
-    const visibleItems = menu.items.filter((item) => hasPermission(item.permission));
- 
+    const visibleItems = menu.items.filter((item) => {
+      // Hide Add Details for Admin
+      if (roleName === "admin" && item.label === "Add Details") {
+        return false;
+      }
+
+      return hasPermission(item.permission);
+    });
+
     if (visibleItems.length === 0) {
       return null;
     }
- 
+
     return (
       <div className="menu-section" key={menu.key}>
         <button
@@ -389,7 +396,7 @@ function Sidebar({ collapsed, isMobile = false, mobileOpen = false, onClose }) {
           title={isCompact ? menu.label : undefined}
         >
           <span className="menu-item-icon">{React.createElement(menu.icon)}</span>
- 
+
           <span className="menu-item-label">{menu.label}</span>
           <span className="menu-arrow-wrap">
             <FaChevronDown
@@ -398,7 +405,7 @@ function Sidebar({ collapsed, isMobile = false, mobileOpen = false, onClose }) {
             />
           </span>
         </button>
- 
+
         {!isCompact && (
           <div className={`submenu-shell ${isMenuExpanded(menu.key) ? "open" : ""}`}>
             <div className="submenu">
@@ -417,7 +424,7 @@ function Sidebar({ collapsed, isMobile = false, mobileOpen = false, onClose }) {
       </div>
     );
   };
- 
+
   return (
     <>
       {isMobile && (
@@ -428,7 +435,7 @@ function Sidebar({ collapsed, isMobile = false, mobileOpen = false, onClose }) {
           aria-label="Close sidebar"
         />
       )}
- 
+
       <aside
         className={`sidebar ${isCompact ? "collapsed" : ""} ${isMobile ? "mobile-sidebar" : ""
           } ${isMobile && mobileOpen ? "mobile-open" : ""}`}
@@ -436,7 +443,7 @@ function Sidebar({ collapsed, isMobile = false, mobileOpen = false, onClose }) {
         <div className="logo">
           <img src={pirnavLogo} alt="Pirnav Logo" className="sidebar-logo-img" />
         </div>
- 
+
         <nav className="menu">
           {STATIC_MENUS_BEFORE_DROPDOWNS.map(renderStaticMenu)}
           {EXPANDABLE_MENUS.map(renderExpandableMenu)}
@@ -446,7 +453,6 @@ function Sidebar({ collapsed, isMobile = false, mobileOpen = false, onClose }) {
     </>
   );
 }
- 
+
 export default Sidebar;
- 
- 
+

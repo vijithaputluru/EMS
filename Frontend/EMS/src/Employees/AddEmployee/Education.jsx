@@ -1,208 +1,330 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import "./AddEmployee.css";
 import api from "../../api/axiosInstance";
 import { API_ENDPOINTS } from "../../api/endpoints";
-
+ 
+const degreeOptions = [
+  "10th (SSC)",
+  "Intermediate (12th)",
+  "Diploma",
+  "B.Tech / BE",
+  "B.Sc",
+  "BCA",
+  "B.Com",
+  "M.Tech / ME",
+  "M.Sc",
+  "MCA",
+  "M.Com",
+  "MBA",
+  "PhD",
+  "Other",
+];
+ 
+const createEmptyEducation = () => ({
+  Graduation: "",
+  customGraduation: "",
+  university: "",
+  year: "",
+  percentage: "",
+  specialization: "",
+});
+ 
+const getEducationDegree = (education) =>
+  education.Graduation === "Other"
+    ? String(education.customGraduation || "").trim()
+    : String(education.Graduation || "").trim();
+ 
+const isEducationRowEmpty = (education) =>
+  [
+    getEducationDegree(education),
+    education.university,
+    education.year,
+    education.percentage,
+    education.specialization,
+  ].every((value) => !String(value || "").trim());
+ 
+const mapEducationFromApi = (education) => {
+  const degree = String(education.degree || "").trim();
+  const isListedDegree = degreeOptions.includes(degree) && degree !== "Other";
+ 
+  return {
+    Graduation: isListedDegree ? degree : degree ? "Other" : "",
+    customGraduation: isListedDegree ? "" : degree,
+    university: String(education.universityBoard || ""),
+    year: education.yearOfPassing ? String(education.yearOfPassing) : "",
+    percentage:
+      education.percentageCGPA !== undefined && education.percentageCGPA !== null
+        ? String(education.percentageCGPA)
+        : "",
+    specialization: String(education.specialization || ""),
+  };
+};
+ 
 function Education({ onNext, onBack, employeeId, viewMode, data }) {
-  const currentYear = new Date().getFullYear();
-
-  // ✅ NEW: Degree dropdown options
-  const degreeOptions = [
-    "10th (SSC)",
-    "Intermediate (12th)",
-    "Diploma",
-    "B.Tech / BE",
-    "B.Sc",
-    "BCA",
-    "M.Tech / ME",
-    "M.Sc",
-    "MCA",
-    "PhD",
-    "Other"
-  ];
-
-  const [educations, setEducations] = useState([
-    {
-      Graduation: "",
-      university: "",
-      year: "",
-      percentage: "",
-      specialization: "",
-    },
-  ]);
-
+  const [educations, setEducations] = useState(() =>
+    viewMode ? [] : [createEmptyEducation()]
+  );
   const [errors, setErrors] = useState([]);
-  const [serverErrors, setServerErrors] = useState({});
   const [successMsg, setSuccessMsg] = useState("");
   const [apiError, setApiError] = useState("");
   const [loading, setLoading] = useState(false);
-
+ 
+  const isEditMode = Array.isArray(data) && data.length > 0;
+ 
   useEffect(() => {
-    if (!data || data.length === 0) return;
-
-    const mapped = data.map((edu) => ({
-      Graduation: edu.degree || "",
-      university: edu.universityBoard || "",
-      year: edu.yearOfPassing ? String(edu.yearOfPassing) : "",
-      percentage:
-        edu.percentageCGPA !== undefined && edu.percentageCGPA !== null
-          ? String(edu.percentageCGPA)
-          : "",
-      specialization: edu.specialization || "",
-    }));
-
-    setEducations(mapped);
-  }, [data]);
-
-  const handleChange = (index, field, value) => {
-    const updated = [...educations];
-    updated[index][field] = value;
-    setEducations(updated);
-
-    if (serverErrors[field]) {
-      setServerErrors((prev) => {
-        const next = { ...prev };
-        delete next[field];
-        return next;
-      });
-    }
-  };
-
-  const handleYearChange = (index, value) => {
-    if (!/^\d*$/.test(value)) return;
-    if (value.length > 4) return;
-    handleChange(index, "year", value);
-  };
-
-  const handlePercentageChange = (index, value) => {
-    if (!/^\d*\.?\d*$/.test(value)) return;
-    handleChange(index, "percentage", value);
-  };
-
-  const addEducation = () => {
-    setEducations([
-      ...educations,
-      {
-        Graduation: "",
-        university: "",
-        year: "",
-        percentage: "",
-        specialization: "",
-      },
-    ]);
-  };
-
-  const removeEducation = async (index) => {
-    if (educations.length <= 1) return;
-
-    const updatedList = educations.filter((_, i) => i !== index);
-    setEducations(updatedList);
-    setErrors([]);
-
-    const isEditMode = data && data.length > 0;
-
-    if (isEditMode && employeeId) {
-      try {
-        const payload = updatedList.map((edu) => {
-          const yearNum = edu.year ? parseInt(edu.year, 10) : 0;
-          const pctStr = edu.percentage ? edu.percentage.replace("%", "").trim() : "0";
-
-          return {
-            Employee_Id: String(employeeId),
-            Degree: edu.Graduation?.trim() || "",
-            UniversityBoard: edu.university?.trim() || "",
-            YearOfPassing: isNaN(yearNum) ? 0 : yearNum,
-            PercentageCGPA: pctStr,
-            Specialization: edu.specialization?.trim() || "",
-          };
-        });
-
-        await api.put(
-          API_ENDPOINTS.employeeEducation.byEmployeeId(employeeId),
-          payload,
-          { headers: { "Content-Type": "application/json" } }
-        );
-      } catch (error) {
-        console.error("❌ Remove Error:", error);
-        alert("Failed to delete record from server.");
-      }
-    }
-  };
-
-  const validate = () => {
-    let newErrors = [];
-    let isValid = true;
-
-    educations.forEach((edu, index) => {
-      let error = {};
-
-      if (!edu.Graduation?.trim()) {
-        error.Graduation = "Graduation required";
-        isValid = false;
-      }
-
-      if (!edu.university?.trim()) {
-        error.university = "University required";
-        isValid = false;
-      }
-
-      if (!edu.year || !/^\d{4}$/.test(edu.year)) {
-        error.year = "Valid year required";
-        isValid = false;
-      }
-
-      if (!edu.percentage) {
-        error.percentage = "Percentage required";
-        isValid = false;
-      }
-
-      if (!edu.specialization?.trim()) {
-        error.specialization = "Specialization required";
-        isValid = false;
-      }
-
-      newErrors[index] = error;
-    });
-
-    setErrors(newErrors);
-    return isValid;
-  };
-
-  const handleSaveNext = async () => {
-    setServerErrors({});
-    setSuccessMsg("");
-    setApiError("");
-    if (!validate()) return;
-
-    if (!employeeId) {
-      alert("Employee ID missing");
+    if (!Array.isArray(data) || data.length === 0) {
+      setEducations(viewMode ? [] : [createEmptyEducation()]);
+      setErrors([]);
       return;
     }
-
-    setLoading(true);
-
-    try {
-      const payloadList = educations.map((edu) => ({
+ 
+    setEducations(data.map(mapEducationFromApi));
+    setErrors([]);
+  }, [data, viewMode]);
+ 
+  const clearRowErrors = (index, fields = []) => {
+    setErrors((prev) =>
+      prev.map((error, errorIndex) => {
+        if (errorIndex !== index || !error) {
+          return error;
+        }
+ 
+        const nextError = { ...error };
+        fields.forEach((field) => {
+          delete nextError[field];
+        });
+ 
+        return nextError;
+      })
+    );
+  };
+ 
+  const handleChange = (index, field, value) => {
+    setEducations((prev) =>
+      prev.map((education, educationIndex) =>
+        educationIndex === index
+          ? {
+              ...education,
+              [field]: value,
+            }
+          : education
+      )
+    );
+ 
+    clearRowErrors(index, [field, "duplicate", "row"]);
+    setApiError("");
+    setSuccessMsg("");
+  };
+ 
+  const handleQualificationChange = (index, value) => {
+    setEducations((prev) =>
+      prev.map((education, educationIndex) =>
+        educationIndex === index
+          ? {
+              ...education,
+              Graduation: value,
+              customGraduation: value === "Other" ? education.customGraduation : "",
+            }
+          : education
+      )
+    );
+ 
+    clearRowErrors(index, ["Graduation", "customGraduation", "duplicate", "row"]);
+    setApiError("");
+    setSuccessMsg("");
+  };
+ 
+  const handleYearChange = (index, value) => {
+    if (!/^\d*$/.test(value) || value.length > 4) {
+      return;
+    }
+ 
+    handleChange(index, "year", value);
+  };
+ 
+  const handlePercentageChange = (index, value) => {
+    if (!/^\d*\.?\d*$/.test(value)) {
+      return;
+    }
+ 
+    handleChange(index, "percentage", value);
+  };
+ 
+  const addEducation = () => {
+    setEducations((prev) => [...prev, createEmptyEducation()]);
+    setApiError("");
+    setSuccessMsg("");
+  };
+ 
+  const buildEducationPayload = (list) =>
+    list
+      .filter((education) => !isEducationRowEmpty(education))
+      .map((education) => ({
         Employee_Id: String(employeeId),
-        Degree: edu.Graduation?.trim() || "",
-        UniversityBoard: edu.university?.trim() || "",
-        YearOfPassing: parseInt(edu.year, 10),
-        PercentageCGPA: edu.percentage,
-        Specialization: edu.specialization?.trim() || "",
+        Degree: getEducationDegree(education),
+        UniversityBoard: String(education.university || "").trim(),
+        YearOfPassing: parseInt(education.year, 10),
+        PercentageCGPA: String(education.percentage || "").trim(),
+        Specialization: String(education.specialization || "").trim(),
       }));
-
-      const isEditMode = data && data.length > 0;
-
-      if (isEditMode) {
-        await api.put(
-          API_ENDPOINTS.employeeEducation.byEmployeeId(employeeId),
-          payloadList,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
+ 
+  const syncEducationCollection = async (nextEducations) => {
+    const payloadList = buildEducationPayload(nextEducations);
+ 
+    if (payloadList.length === 0) {
+      await api.delete(API_ENDPOINTS.employeeEducation.byEmployeeId(employeeId));
+      return;
+    }
+ 
+    await api.put(API_ENDPOINTS.employeeEducation.byEmployeeId(employeeId), payloadList, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+  };
+ 
+  const removeEducation = async (index) => {
+    const previousEducations = educations;
+    const updatedEducations = educations.filter((_, educationIndex) => educationIndex !== index);
+ 
+    setEducations(updatedEducations);
+    setErrors([]);
+    setApiError("");
+    setSuccessMsg("");
+ 
+    if (!isEditMode || !employeeId) {
+      return;
+    }
+ 
+    try {
+      setLoading(true);
+      await syncEducationCollection(updatedEducations);
+      setSuccessMsg("Education deleted successfully!");
+    } catch (error) {
+      console.error("Education delete failed:", error);
+      setEducations(previousEducations);
+      setApiError("Failed to delete education details.");
+    } finally {
+      setLoading(false);
+    }
+  };
+ 
+  const validate = () => {
+    if (educations.length === 0) {
+      setErrors([]);
+      return true;
+    }
+ 
+    const nextErrors = educations.map(() => ({}));
+    const seenCombinations = new Map();
+    let isValid = true;
+ 
+    educations.forEach((education, index) => {
+      if (isEducationRowEmpty(education)) {
+        nextErrors[index].row = "Please complete or remove this education entry.";
+        isValid = false;
+        return;
+      }
+ 
+      const qualification = getEducationDegree(education);
+      const institution = String(education.university || "").trim();
+      const year = String(education.year || "").trim();
+ 
+      if (!qualification) {
+        nextErrors[index].Graduation = "Qualification required";
+        isValid = false;
+      }
+ 
+      if (!institution) {
+        nextErrors[index].university = "University required";
+        isValid = false;
+      }
+ 
+      if (!/^\d{4}$/.test(year)) {
+        nextErrors[index].year = "Valid year required";
+        isValid = false;
+      }
+ 
+      if (!String(education.percentage || "").trim()) {
+        nextErrors[index].percentage = "Percentage required";
+        isValid = false;
+      }
+ 
+      if (!String(education.specialization || "").trim()) {
+        nextErrors[index].specialization = "Specialization required";
+        isValid = false;
+      }
+ 
+      if (!qualification || !institution || !year) {
+        return;
+      }
+ 
+      const duplicateKey = [
+        qualification.toLowerCase(),
+        institution.toLowerCase(),
+        year,
+      ].join("::");
+ 
+      if (seenCombinations.has(duplicateKey)) {
+        const firstIndex = seenCombinations.get(duplicateKey);
+ 
+        nextErrors[index].duplicate =
+          "This qualification, institution, and year combination already exists.";
+        nextErrors[firstIndex].duplicate =
+          "This qualification, institution, and year combination already exists.";
+        isValid = false;
+        return;
+      }
+ 
+      seenCombinations.set(duplicateKey, index);
+    });
+ 
+    setErrors(nextErrors);
+    return isValid;
+  };
+ 
+  const handleSaveNext = async () => {
+    setSuccessMsg("");
+    setApiError("");
+ 
+    if (!validate()) {
+      return;
+    }
+ 
+    if (!employeeId) {
+      setApiError("Employee ID missing.");
+      return;
+    }
+ 
+    setLoading(true);
+ 
+    try {
+      const payloadList = buildEducationPayload(educations);
+ 
+      if (payloadList.length === 0) {
+        if (isEditMode) {
+          await api.delete(API_ENDPOINTS.employeeEducation.byEmployeeId(employeeId));
+        }
+ 
+        setSuccessMsg(
+          isEditMode
+            ? "Education cleared successfully!"
+            : "No education details to save."
         );
+ 
+        setTimeout(() => {
+          onNext?.();
+        }, 500);
+ 
+        return;
+      }
+ 
+      if (isEditMode) {
+        await api.put(API_ENDPOINTS.employeeEducation.byEmployeeId(employeeId), payloadList, {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
       } else {
         await Promise.all(
           payloadList.map((payload) =>
@@ -214,166 +336,174 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
           )
         );
       }
-
+ 
       setSuccessMsg(
         isEditMode
           ? "Education updated successfully!"
           : "Education saved successfully!"
       );
-      setTimeout(() => onNext(), 800);
+ 
+      setTimeout(() => {
+        onNext?.();
+      }, 800);
     } catch (error) {
-      console.error("Save failed", error);
+      console.error("Education save failed:", error);
       setApiError("Failed to save education details.");
     } finally {
       setLoading(false);
     }
   };
-
+ 
   return (
     <div className="form-section">
       <h3>Add Educational Qualifications</h3>
-
-      {educations.map((edu, index) => (
-        <div className="form-card" key={index}>
-          <div className="form-grid">
-
-            {/* ✅ UPDATED DEGREE FIELD */}
-            <div className="form-group">
-              <label>Graduation</label>
-
-              <select
-                value={
-                  degreeOptions.includes(edu.Graduation)
-                    ? edu.Graduation
-                    : edu.Graduation
-                      ? "Other"
-                      : ""
-                }
-                onChange={(e) =>
-                  handleChange(index, "Graduation", e.target.value)
-                }
-                disabled={viewMode}
-              >
-                <option value="">Select Degree</option>
-                {degreeOptions.map((deg) => (
-                  <option key={deg} value={deg}>
-                    {deg}
-                  </option>
-                ))}
-              </select>
-
-              {/* ✅ SHOW INPUT IF OTHER */}
-              {edu.Graduation &&
-                !degreeOptions.includes(edu.Graduation) && (
-                  <input
-                    type="text"
-                    placeholder="Enter your degree"
-                    value={edu.Graduation}
-                    onChange={(e) =>
-                      handleChange(index, "Graduation", e.target.value)
-                    }
-                    disabled={viewMode}
-                    style={{ marginTop: "8px" }}
-                  />
+ 
+      {educations.length === 0 ? (
+        <div className="form-card">
+          <p className="review-empty-state">No education details added.</p>
+        </div>
+      ) : (
+        educations.map((education, index) => (
+          <div className="form-card" key={`education-${index}`}>
+            <div className="card-header">
+              <h4>Education {index + 1}</h4>
+ 
+              {!viewMode && (
+                <button
+                  type="button"
+                  className="remove-btn"
+                  onClick={() => removeEducation(index)}
+                  disabled={loading}
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+ 
+            {errors[index]?.row && <p className="education-feedback error">{errors[index].row}</p>}
+            {errors[index]?.duplicate && (
+              <p className="education-feedback error">{errors[index].duplicate}</p>
+            )}
+ 
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Qualification</label>
+                <select
+                  value={education.Graduation}
+                  onChange={(event) => handleQualificationChange(index, event.target.value)}
+                  disabled={viewMode}
+                >
+                  <option value="">Select Qualification</option>
+                  {degreeOptions.map((degree) => (
+                    <option key={degree} value={degree}>
+                      {degree}
+                    </option>
+                  ))}
+                </select>
+                {errors[index]?.Graduation && <span className="error">{errors[index].Graduation}</span>}
+ 
+                {education.Graduation === "Other" && (
+                  <>
+                    <input
+                      type="text"
+                      placeholder="Enter your qualification"
+                      value={education.customGraduation}
+                      onChange={(event) =>
+                        handleChange(index, "customGraduation", event.target.value)
+                      }
+                      disabled={viewMode}
+                      style={{ marginTop: "8px" }}
+                    />
+                    {errors[index]?.customGraduation && (
+                      <span className="error">{errors[index].customGraduation}</span>
+                    )}
+                  </>
                 )}
-            </div>
-
-            {/* KEEP REST SAME */}
-            <div className="form-group">
-              <label>University</label>
-              <input
-                value={edu.university}
-                onChange={(e) =>
-                  handleChange(index, "university", e.target.value)
-                }
-                disabled={viewMode}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Year</label>
-              <input
-                value={edu.year}
-                onChange={(e) => handleYearChange(index, e.target.value)}
-                disabled={viewMode}
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Percentage</label>
-              <input
-                value={edu.percentage}
-                onChange={(e) =>
-                  handlePercentageChange(index, e.target.value)
-                }
-                disabled={viewMode}
-              />
-            </div>
-
-            <div className="form-group full">
-              <label>Specialization</label>
-              <input
-                value={edu.specialization}
-                onChange={(e) =>
-                  handleChange(index, "specialization", e.target.value)
-                }
-                disabled={viewMode}
-              />
+              </div>
+ 
+              <div className="form-group">
+                <label>University</label>
+                <input
+                  value={education.university}
+                  onChange={(event) => handleChange(index, "university", event.target.value)}
+                  disabled={viewMode}
+                />
+                {errors[index]?.university && <span className="error">{errors[index].university}</span>}
+              </div>
+ 
+              <div className="form-group">
+                <label>Year</label>
+                <input
+                  value={education.year}
+                  onChange={(event) => handleYearChange(index, event.target.value)}
+                  disabled={viewMode}
+                />
+                {errors[index]?.year && <span className="error">{errors[index].year}</span>}
+              </div>
+ 
+              <div className="form-group">
+                <label>Percentage</label>
+                <input
+                  value={education.percentage}
+                  onChange={(event) => handlePercentageChange(index, event.target.value)}
+                  disabled={viewMode}
+                />
+                {errors[index]?.percentage && <span className="error">{errors[index].percentage}</span>}
+              </div>
+ 
+              <div className="form-group full">
+                <label>Specialization</label>
+                <input
+                  value={education.specialization}
+                  onChange={(event) => handleChange(index, "specialization", event.target.value)}
+                  disabled={viewMode}
+                />
+                {errors[index]?.specialization && (
+                  <span className="error">{errors[index].specialization}</span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      ))}
-
+        ))
+      )}
+ 
       {!viewMode && (
         <div className="education-add-wrapper">
           <button
             type="button"
             className="add-education-btn"
             onClick={addEducation}
+            disabled={loading}
           >
             + Add Education
           </button>
         </div>
       )}
-
+ 
       <div className="step-actions">
-        <button
-          className="btn secondary"
-          onClick={onBack}
-          disabled={loading}
-        >
+        <button className="btn secondary" onClick={onBack} disabled={loading}>
           Back
         </button>
-
-        {successMsg && (
-          <p className="education-feedback success">{successMsg}</p>
-        )}
-
-        {apiError && (
-          <p className="education-feedback error">{apiError}</p>
-        )}
-
+ 
+        {successMsg && <p className="education-feedback success">{successMsg}</p>}
+        {apiError && <p className="education-feedback error">{apiError}</p>}
+ 
         {!viewMode && (
-          <>
-            <button
-              className="btn primary"
-              onClick={handleSaveNext}
-              disabled={loading}
-            >
-              {loading
-                ? data && data.length > 0
-                  ? "Updating..."
-                  : "Saving..."
-                : data && data.length > 0
-                  ? "Update & Next"
-                  : "Save & Next"}
-            </button>
-          </>
+          <button className="btn primary" onClick={handleSaveNext} disabled={loading}>
+            {loading
+              ? isEditMode
+                ? "Updating..."
+                : "Saving..."
+              : isEditMode
+                ? "Update & Next"
+                : "Save & Next"}
+          </button>
         )}
       </div>
-
     </div>
   );
 }
-
+ 
 export default Education;
+ 
+ 

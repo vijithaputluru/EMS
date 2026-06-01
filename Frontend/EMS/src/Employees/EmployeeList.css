@@ -13,6 +13,25 @@
   flex-wrap: wrap;
 }
 
+.emp-download-btn {
+  background: #dbeafe;
+  color: #2563eb;
+  border: 1px solid #93c5fd;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.emp-download-btn:hover {
+  background: #bfdbfe;
+}
+
+.emp-download-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
 /* =========================
    PAGINATION
 ========================= */

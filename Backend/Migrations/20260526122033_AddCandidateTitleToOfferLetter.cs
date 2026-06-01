@@ -5,23 +5,25 @@
 namespace EmployeeManagementSystem.Migrations
 {
     /// <inheritdoc />
-    public partial class AddDescriptionToAssets : Migration
+    public partial class AddCandidateTitleToOfferLetter : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.AddColumn<string>(
-                name: "Description",
-                table: "assets",
+                name: "Candidate_Title",
+                table: "offerletters",
                 type: "longtext",
-                nullable: true);
+                nullable: false)
+                .Annotation("MySql:CharSet", "utf8mb4");
         }
 
+        /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "Description",
-                table: "assets");
+                name: "Candidate_Title",
+                table: "offerletters");
         }
     }
 }

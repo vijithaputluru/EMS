@@ -214,8 +214,8 @@ function Projects() {
           return "Project Name must be at least 3 characters";
         }
 
-        if (trimmedValue.length > 20) {
-          return "Project Name cannot exceed 20 characters";
+        if (trimmedValue.length > 50) {
+          return "Project Name cannot exceed 50 characters";
         }
 
         if (!/^[A-Za-z\s]+$/.test(trimmedValue)) {

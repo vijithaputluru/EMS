@@ -99,35 +99,11 @@ export default function RegisterLeft() {
       nextValue =
         nextValue.replace(/\s/g, "");
 
-      // allow only letters numbers @ .
+      // allow only letters, numbers, @, ., _, -
       nextValue = nextValue.replace(
-        /[^a-z0-9@.]/g,
+        /[^a-z0-9@._-]/g,
         ""
       );
-
-      // allow only one @
-      const atCount =
-        (nextValue.match(/@/g) || []).length;
-
-      if (atCount > 1) {
-
-        const firstPart =
-          nextValue.substring(
-            0,
-            nextValue.indexOf("@") + 1
-          );
-
-        const secondPart =
-          nextValue
-            .substring(
-              nextValue.indexOf("@") + 1
-            )
-            .replace(/@/g, "");
-
-        nextValue =
-          firstPart + secondPart;
-
-      }
 
       nextValue = nextValue.slice(0, 40);
 
@@ -191,43 +167,70 @@ export default function RegisterLeft() {
 
     const validationErrors = {};
 
-    //----------------------------------------
-    // FULL NAME VALIDATION
-    //----------------------------------------
+//----------------------------------------
 
-    if (!fullName) {
+// FULL NAME VALIDATION
 
-      validationErrors.fullName =
-        "Full Name is required";
+//----------------------------------------
+ 
+if (!fullName) {
+ 
+  validationErrors.fullName =
 
-    }
+    "Full Name is required";
+ 
+}
+ 
+else if (
 
-    else if (
-      !/^[A-Za-z ]+$/.test(fullName)
-    ) {
+  !/^[A-Za-z ]+$/.test(fullName)
 
-      validationErrors.fullName =
-        "Full Name should contain only alphabets";
+) {
+ 
+  validationErrors.fullName =
 
-    }
+    "Full Name should contain only alphabets";
+ 
+}
+ 
+else if (
 
-    else if (
-      fullName.length < 2
-    ) {
+  fullName.length < 2
 
-      validationErrors.fullName =
-        "Full Name must contain minimum 2 characters";
+) {
+ 
+  validationErrors.fullName =
 
-    }
+    "Full Name must contain minimum 2 characters";
+ 
+}
+ 
+else if (
 
-    else if (
-      fullName.length > 50
-    ) {
+  fullName.length > 50
 
-      validationErrors.fullName =
-        "Full Name cannot exceed 50 characters";
+) {
+ 
+  validationErrors.fullName =
 
-    }
+    "Full Name cannot exceed 50 characters";
+ 
+}
+ 
+// NEW VALIDATION
+
+else if (
+
+  fullName.trim().split(/\s+/).length < 2
+
+) {
+ 
+  validationErrors.fullName =
+
+    "Please enter First Name and Last Name";
+ 
+}
+ 
 
     //----------------------------------------
     // EMAIL VALIDATION
@@ -237,42 +240,6 @@ export default function RegisterLeft() {
 
       validationErrors.email =
         "Email Address is required";
-
-    }
-
-    else if (
-      /\s/.test(email)
-    ) {
-
-      validationErrors.email =
-        "Spaces are not allowed in email";
-
-    }
-
-    else if (
-      /^[0-9@]/.test(email)
-    ) {
-
-      validationErrors.email =
-        "Email cannot start with number or @";
-
-    }
-
-    else if (
-      (email.match(/@/g) || []).length !== 1
-    ) {
-
-      validationErrors.email =
-        "Email must contain only one @";
-
-    }
-
-    else if (
-      !/^[a-z][a-z0-9]*@(gmail|pirnav)\.com$/.test(email)
-    ) {
-
-      validationErrors.email =
-        "Email must be example@gmail.com or example@pirnav.com";
 
     }
 
@@ -333,7 +300,7 @@ export default function RegisterLeft() {
     }
 
     else if (
-      !/[!@#$%^&*(),.?":{}|<>]/.test(password)
+      !/[!@#$%^&*(),.?":{}|<>_]/.test(password)
     ) {
 
       validationErrors.password =
@@ -398,7 +365,7 @@ export default function RegisterLeft() {
     }
 
     else if (
-      !/[!@#$%^&*(),.?":{}|<>]/.test(confirmPassword)
+      !/[!@#$%^&*(),.?":{}|<>_]/.test(confirmPassword)
     ) {
 
       validationErrors.confirmPassword =
@@ -443,6 +410,14 @@ export default function RegisterLeft() {
 
     try {
 
+      console.log("Register Data:", {
+        firstName,
+        lastName,
+        email,
+        password,
+        confirmPassword,
+      });
+
       await api.post(
         API_ENDPOINTS.auth.userRegister,
         {
@@ -474,6 +449,13 @@ export default function RegisterLeft() {
     }
 
     catch (requestError) {
+
+      console.log("Register Error:", requestError);
+
+      console.log(
+        "Backend Message:",
+        requestError.response?.data
+      );
 
       setErrors((prev) => ({
         ...prev,
@@ -606,9 +588,9 @@ export default function RegisterLeft() {
                 <span
                   key={index}
                   className={`auth-strength-bar ${index <
-                      passwordStrength.score
-                      ? `auth-strength-bar-${passwordStrength.tone}`
-                      : ""
+                    passwordStrength.score
+                    ? `auth-strength-bar-${passwordStrength.tone}`
+                    : ""
                     }`}
                 />
               )
@@ -622,8 +604,8 @@ export default function RegisterLeft() {
               <span
                 key={rule.id}
                 className={`auth-rule-item ${rule.passed
-                    ? "passed"
-                    : ""
+                  ? "passed"
+                  : ""
                   }`}
               >
                 {rule.label}

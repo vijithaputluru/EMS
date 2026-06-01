@@ -121,19 +121,50 @@ function TaskManagement() {
   }, []);
 
   /* ================= DELETE TASK ================= */
-
   const handleDeleteTask = async (id) => {
+
+    if (!id) {
+      toast.error("Task ID not found");
+      return;
+    }
+
     try {
-      await api.delete(API_ENDPOINTS.tasks.byId(id));
+
+      console.log("Deleting Task ID:", id);
+      console.log(
+        "Delete URL:",
+        API_ENDPOINTS.tasks.byId(id)
+      );
+
+      await api.delete(
+        API_ENDPOINTS.tasks.byId(id),
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token") ||
+              sessionStorage.getItem("token")
+              }`,
+          },
+        }
+      );
 
       setEmsTaskSelected(null);
       setDeleteTaskId(null);
+
       toast.success("Task deleted successfully");
+
       fetchTasks();
 
     } catch (error) {
-      console.error("Delete failed:", error);
-      toast.error("Something went wrong while deleting task");
+
+      console.error(
+        "Delete failed:",
+        error.response?.data || error.message
+      );
+
+      toast.error(
+        error.response?.data?.message ||
+        "Something went wrong while deleting task"
+      );
     }
   };
 
@@ -794,6 +825,97 @@ function TaskManagement() {
 
       )}
 
+      {/* DELETE CONFIRM POPUP */}
+
+      {deleteTaskId && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(15,23,42,0.35)",
+            backdropFilter: "blur(3px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999
+          }}
+        >
+          <div
+            style={{
+              width: "520px",
+              background: "#ffffff",
+              borderRadius: "22px",
+              padding: "34px",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.15)"
+            }}
+          >
+            <h2
+              style={{
+                fontSize: "22px",
+                fontWeight: "800",
+                color: "#0f172a",
+                marginBottom: "26px"
+              }}
+            >
+              Confirm Delete
+            </h2>
+
+            <p
+              style={{
+                fontSize: "17px",
+                color: "#475569",
+                marginBottom: "38px",
+                lineHeight: "1.5"
+              }}
+            >
+              Are you sure you want to delete this task?
+            </p>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "14px"
+              }}
+            >
+              <button
+                onClick={() => setDeleteTaskId(null)}
+                style={{
+                  border: "1px solid #dbe2ea",
+                  background: "#f8fafc",
+                  color: "#334155",
+                  minWidth: "105px",
+                  height: "52px",
+                  borderRadius: "14px",
+                  fontSize: "16px",
+                  fontWeight: "700",
+                  cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={() => handleDeleteTask(deleteTaskId)}
+                style={{
+                  border: "none",
+                  background: "#ef4444",
+                  color: "#ffffff",
+                  minWidth: "138px",
+                  height: "52px",
+                  borderRadius: "14px",
+                  fontSize: "16px",
+                  fontWeight: "800",
+                  cursor: "pointer"
+                }}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODAL */}
 
       {emsTaskShowPopup && (
@@ -803,6 +925,7 @@ function TaskManagement() {
           refreshTasks={fetchTasks}
         />
       )}
+
     </div>
   );
 }

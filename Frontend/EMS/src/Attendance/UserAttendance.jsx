@@ -29,6 +29,7 @@ function UserAttendance() {
   const [checkedOut, setCheckedOut] = useState(false);
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [viewType, setViewType] = useState("week");
   const [attendanceData, setAttendanceData] = useState([]);
   const [stats, setStats] = useState({
@@ -266,6 +267,7 @@ function UserAttendance() {
       setAttendanceData([]);
     } finally {
       setHistoryLoading(false);
+      setInitialLoading(false);
     }
   };
  
@@ -467,223 +469,236 @@ function UserAttendance() {
   };
  
   return (
-    <div
-      className="attendance-page"
-      style={{
-        width: "100%",
-        minHeight: "100vh",
-        padding: "20px",
-        boxSizing: "border-box",
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "flex-start",
-        background: "#f1f5f9",
-        overflowX: "hidden"
-      }}
-    >
-      <ToastContainer position="top-right" autoClose={3000} />
- 
+    <>
       <div
+        className="attendance-page"
         style={{
           width: "100%",
-          maxWidth: "1200px",
-          marginBottom: "18px"
+          minHeight: "100vh",
+          padding: "20px",
+          boxSizing: "border-box",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          background: "#f1f5f9",
+          overflowX: "hidden"
         }}
       >
-        <h1
+        <ToastContainer position="top-right" autoClose={3000} />
+ 
+        <div
           style={{
-            fontSize: "24px",
-            fontWeight: "700",
-            color: "#0f172a",
-            margin: "-20px -5px -10px -30px",
-            textAlign: "left",
-            transform: "translateX(0px)"
+            width: "100%",
+            maxWidth: "1200px",
+            marginBottom: "18px"
           }}
         >
-          My Attendance
-        </h1>
-      </div>
- 
-      <div
-        className="attendance-card"
-        style={{
-          width: "100%",
-          maxWidth: "1200px",
-          background: "#ffffff",
-          borderRadius: "24px",
-          padding: "40px",
-          boxSizing: "border-box",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-          marginBottom: "30px"
-        }}
-      >
-        <h3>Mark Attendance</h3>
-        <h1>{formattedDate}</h1>
- 
-        <div className="attendance-buttons">
-          <button
-            className="checkin-btn"
-            onClick={handleCheckIn}
-            disabled={checkedIn || loading}
+          <h1
+            style={{
+              fontSize: "24px",
+              fontWeight: "700",
+              color: "#0f172a",
+              margin: "-20px 0 0 0",
+              textAlign: "left",
+              transform: "translateX(0px)"
+            }}
           >
-            <FaSignInAlt />
-            {loading ? "Processing..." : "Check In"}
-          </button>
- 
-          <button
-            className="checkout-btn"
-            onClick={handleCheckOut}
-            disabled={!checkedIn || checkedOut || loading}
-          >
-            <FaSignOutAlt />
-            {loading ? "Processing..." : "Check Out"}
-          </button>
+            My Attendance
+          </h1>
         </div>
  
         <div
-          className="attendance-stats-row"
+          className="attendance-card"
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "20px",
             width: "100%",
-            marginTop: "35px"
+            maxWidth: "1200px",
+            background: "#ffffff",
+            borderRadius: "24px",
+            padding: "40px",
+            boxSizing: "border-box",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+            marginBottom: "30px",
+            position: "relative"
           }}
         >
-          <div className="attendance-stat-box">
-            <div className="stat-icon checkin-icon">
-              <FaArrowRight />
+          {(initialLoading || historyLoading) && (
+            <div className="card-loader">
+              <div className="loader-spinner"></div>
             </div>
-            <div className="stat-label">Check In</div>
-            <div className="stat-value">{stats.checkIn}</div>
-          </div>
+          )}
+          <h3>Mark Attendance</h3>
+          <h1>{formattedDate}</h1>
  
-          <div className="attendance-stat-box">
-            <div className="stat-icon checkout-icon">
-              <FaArrowLeft />
-            </div>
-            <div className="stat-label">Check Out</div>
-            <div className="stat-value">{stats.checkOut}</div>
-          </div>
- 
-          <div className="attendance-stat-box">
-            <div className="stat-icon hours-icon">
-              <FaClock />
-            </div>
-            <div className="stat-label">Hours</div>
-            <div className="stat-value">{stats.workedHours}</div>
-          </div>
-        </div>
-      </div>
- 
-      <div
-        className="week-card"
-        style={{
-          width: "100%",
-          maxWidth: "1200px",
-          background: "#ffffff",
-          borderRadius: "24px",
-          padding: "30px",
-          boxSizing: "border-box",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.08)"
-        }}
-      >
-        <div className="week-header">
-          <h3>
-            <FaRegCalendarAlt className="week-title-icon" />
-            {viewType === "week"
-              ? "This Week"
-              : viewType === "lastWeek"
-                ? "Last Week"
-                : "This Month"}
-          </h3>
- 
-          <div className="week-toggle">
+          <div className="attendance-buttons">
             <button
-              className={viewType === "week" ? "active" : ""}
-              onClick={() => setViewType("week")}
+              className="checkin-btn"
+              onClick={handleCheckIn}
+              disabled={checkedIn || loading}
             >
-              Week
+              <FaSignInAlt />
+              {loading ? "Processing..." : "Check In"}
             </button>
  
             <button
-              className={viewType === "lastWeek" ? "active" : ""}
-              onClick={() => setViewType("lastWeek")}
+              className="checkout-btn"
+              onClick={handleCheckOut}
+              disabled={!checkedIn || checkedOut || loading}
             >
-              Last Week
-            </button>
- 
-            <button
-              className={viewType === "month" ? "active" : ""}
-              onClick={() => setViewType("month")}
-            >
-              Month
+              <FaSignOutAlt />
+              {loading ? "Processing..." : "Check Out"}
             </button>
           </div>
-        </div>
  
-        <div
-          className="week-table-header"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1.3fr 1fr 1fr 1fr 1fr",
-            gap: "10px",
-            width: "100%",
-            padding: "18px 20px",
-            background: "#f8fafc",
-            borderRadius: "14px",
-            marginTop: "25px"
-          }}
-        >
-          <span>DAY</span>
-          <span>CHECK IN</span>
-          <span>CHECK OUT</span>
-          <span>HOURS</span>
-          <span>STATUS</span>
-        </div>
- 
-        {historyLoading ? (
-          <div className="attendance-empty">Loading attendance...</div>
-        ) : attendanceData.length === 0 ? (
-          <div className="attendance-empty">No attendance data found</div>
-        ) : (
-          attendanceData.map((item) => (
-            <div
-              key={item.id}
-              className="week-row"
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1.3fr 1fr 1fr 1fr 1fr",
-                gap: "10px",
-                alignItems: "center",
-                padding: "18px 20px",
-                borderBottom: "1px solid #e2e8f0",
-                width: "100%",
-                background: "#fff"
-              }}
-            >
-              <div className="week-day-cell">
-                <div>{item.day}</div>
-                <small>{item.dateLabel}</small>
+          <div
+            className="attendance-stats-row"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "20px",
+              width: "100%",
+              marginTop: "35px"
+            }}
+          >
+            <div className="attendance-stat-box">
+              <div className="stat-icon checkin-icon">
+                <FaArrowRight />
               </div>
- 
-              <span>{item.checkIn}</span>
-              <span>{item.checkOut}</span>
-              <span>{item.hours}</span>
- 
-              <span className={`status ${getStatusClass(item.status)}`}>
-                {item.status}
-              </span>
+              <div className="stat-label">Check In</div>
+              <div className="stat-value">{stats.checkIn}</div>
             </div>
-          ))
-        )}
+ 
+            <div className="attendance-stat-box">
+              <div className="stat-icon checkout-icon">
+                <FaArrowLeft />
+              </div>
+              <div className="stat-label">Check Out</div>
+              <div className="stat-value">{stats.checkOut}</div>
+            </div>
+ 
+            <div className="attendance-stat-box">
+              <div className="stat-icon hours-icon">
+                <FaClock />
+              </div>
+              <div className="stat-label">Hours</div>
+              <div className="stat-value">{stats.workedHours}</div>
+            </div>
+          </div>
+        </div>
+ 
+        <div
+          className="week-card"
+          style={{
+            width: "100%",
+            maxWidth: "1200px",
+            background: "#ffffff",
+            borderRadius: "24px",
+            padding: "30px",
+            boxSizing: "border-box",
+            boxShadow: "0 10px 30px rgba(0,0,0,0.08)"
+          }}
+        >
+          <div className="week-header">
+            <h3>
+              <FaRegCalendarAlt className="week-title-icon" />
+              {viewType === "week"
+                ? "This Week"
+                : viewType === "lastWeek"
+                  ? "Last Week"
+                  : "This Month"}
+            </h3>
+ 
+            <div className="week-toggle">
+              <button
+                className={viewType === "week" ? "active" : ""}
+                onClick={() => setViewType("week")}
+              >
+                Week
+              </button>
+ 
+              <button
+                className={viewType === "lastWeek" ? "active" : ""}
+                onClick={() => setViewType("lastWeek")}
+              >
+                Last Week
+              </button>
+ 
+              <button
+                className={viewType === "month" ? "active" : ""}
+                onClick={() => setViewType("month")}
+              >
+                Month
+              </button>
+            </div>
+          </div>
+ 
+          <div
+            className="week-table-header"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1.3fr 1fr 1fr 1fr 1fr",
+              gap: "10px",
+              width: "100%",
+              padding: "18px 20px",
+              background: "#f8fafc",
+              borderRadius: "14px",
+              marginTop: "25px"
+            }}
+          >
+            <span>DAY</span>
+            <span>CHECK IN</span>
+            <span>CHECK OUT</span>
+            <span>HOURS</span>
+            <span>STATUS</span>
+          </div>
+ 
+          {historyLoading || loading ? (
+            <div className="attendance-empty">
+              Loading attendance...
+            </div>
+          ) : !attendanceData || attendanceData.length === 0 ? (
+            <div className="attendance-empty">
+              Loading attendance...
+            </div>
+          ) : (
+            attendanceData.map((item) => (
+              <div
+                key={item.id}
+                className="week-row"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1.3fr 1fr 1fr 1fr 1fr",
+                  gap: "10px",
+                  alignItems: "center",
+                  padding: "18px 20px",
+                  borderBottom: "1px solid #e2e8f0",
+                  width: "100%",
+                  background: "#fff"
+                }}
+              >
+                <div className="week-day-cell">
+                  <div>{item.day}</div>
+                  <small>{item.dateLabel}</small>
+                </div>
+ 
+                <span>{item.checkIn}</span>
+                <span>{item.checkOut}</span>
+                <span>{item.hours}</span>
+ 
+                <span className={`status ${getStatusClass(item.status)}`}>
+                  {item.status}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
  
 export default UserAttendance;
+ 
  
  
  

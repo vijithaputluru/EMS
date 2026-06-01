@@ -14,6 +14,7 @@ namespace EmployeeManagementSystem.Models
         public DateTime Joining_Date { get; set; }
         public decimal CTC_Annual { get; set; }
         public DateTime Generated_On { get; set; }
+        public string Candidate_Title { get; set; }
         public string? File_Path { get; set; }
     }
 }

@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using ClosedXML.Excel;
+using System.IO;
 
 namespace EmployeeManagementSystem.Services
 {
@@ -408,7 +410,7 @@ namespace EmployeeManagementSystem.Services
 
             if (File.Exists(outputPath))
                 File.Delete(outputPath);
-            
+
             //--------------------------------
             // SAVE DB
             //--------------------------------
@@ -417,7 +419,7 @@ namespace EmployeeManagementSystem.Services
                 EmployeeId = employee.Employee_Id,
                 Month = month,
                 Year = year,
-                CTC=employee.CTC,
+                CTC = employee.CTC,
                 GrossSalary = gross,
                 NetSalary = netSalary,
                 TotalDeductions = totalDeductions,
@@ -482,7 +484,9 @@ namespace EmployeeManagementSystem.Services
         public async Task<List<PaySlip>>
             GetRecentPayslips()
         {
+            // Optimization: recent payslip lists are read-only, so skip EF tracking.
             return await _context.PaySlips
+                .AsNoTracking()
                 .OrderByDescending(x => x.Id)
                 .ToListAsync();
         }
@@ -606,5 +610,237 @@ namespace EmployeeManagementSystem.Services
 
             return words;
         }
+        public async Task<byte[]> DownloadSalaryRegister(
+    string month,
+    int year)
+        {
+            var payslips = await _context.PaySlips
+                .AsNoTracking()
+                .Where(x => x.Month == month &&
+                            x.Year == year)
+                .ToListAsync();
+
+            var employeeIds = payslips
+                .Select(x => x.EmployeeId)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToList();
+
+            // Optimization: load employees once for both salary and PF sheets instead of querying per row.
+            var employeesById = await _context.Employees
+                .AsNoTracking()
+                .Where(e => employeeIds.Contains(e.Employee_Id))
+                .Select(e => new
+                {
+                    e.Employee_Id,
+                    e.Name,
+                    e.Department
+                })
+                .ToDictionaryAsync(e => e.Employee_Id);
+
+            using var workbook = new XLWorkbook();
+
+            var sheet = workbook.Worksheets
+                .Add("Salary Register");
+
+            sheet.Cell(1, 1).Value =
+                $"Salary Register - {month} {year}";
+            sheet.Cell(1, 1).Style.Font.Bold = true;
+            sheet.Cell(1, 1).Style.Font.FontSize = 16;
+            sheet.Cell(2, 1).Value =
+    $"Total Employees : {payslips.Count}";
+            sheet.Cell(2, 3).Value =
+    $"Total Gross Salary : {payslips.Sum(x => x.GrossSalary ?? 0):N2}";
+            sheet.Cell(2, 6).Value =
+    $"Total Deductions : {payslips.Sum(x => x.TotalDeductions ?? 0):N2}";
+            sheet.Cell(2, 8).Value =
+    $"Total Net Salary : {payslips.Sum(x => x.NetSalary ?? 0):N2}";
+            var totalGross =
+    payslips.Sum(x => x.GrossSalary ?? 0);
+
+            var totalDeductions =
+                payslips.Sum(x => x.TotalDeductions ?? 0);
+
+            var totalNet =
+                payslips.Sum(x => x.NetSalary ?? 0);
+
+            var grandTotal =
+                totalGross + totalDeductions + totalNet;
+
+            sheet.Cell(2, 10).Value =
+                $"Grand Total : {grandTotal:N2}";
+
+            sheet.Range(1, 1, 1, 9)
+                .Merge();
+
+            sheet.Cell(3, 1).Value =
+                "Employee ID";
+
+            sheet.Cell(3, 2).Value =
+                "Employee Name";
+
+            sheet.Cell(3, 3).Value =
+                "Department";
+
+            sheet.Cell(3, 4).Value =
+                "Month";
+
+            sheet.Cell(3, 5).Value =
+                "Year";
+
+            sheet.Cell(3, 6).Value =
+                "Gross Salary";
+
+            sheet.Cell(3, 7).Value =
+                "Total Deductions";
+
+            sheet.Cell(3, 8).Value =
+                "Other Deductions";
+
+            sheet.Cell(3, 9).Value =
+                "Net Salary";
+
+            var header =
+                sheet.Range(3, 1, 3, 9);
+            sheet.RangeUsed().SetAutoFilter();
+            sheet.SheetView.FreezeRows(3);
+
+            header.Style.Font.Bold = true;
+            header.Style.Fill.BackgroundColor =
+                XLColor.DarkBlue;
+
+            header.Style.Font.FontColor =
+                XLColor.White;
+
+            int row = 4;
+
+            foreach (var pay in payslips)
+            {
+                employeesById.TryGetValue(pay.EmployeeId, out var employee);
+
+                sheet.Cell(row, 1).Value =
+                    pay.EmployeeId;
+
+                sheet.Cell(row, 2).Value =
+                    employee?.Name ?? "";
+
+                sheet.Cell(row, 3).Value =
+                    employee?.Department ?? "";
+
+                sheet.Cell(row, 4).Value =
+                    pay.Month;
+
+                sheet.Cell(row, 5).Value =
+                    pay.Year;
+
+                sheet.Cell(row, 6).Value =
+                    pay.GrossSalary ?? 0;
+
+                sheet.Cell(row, 7).Value =
+                    pay.TotalDeductions ?? 0;
+
+                sheet.Cell(row, 8).Value =
+                    pay.OtherDeductions ?? 0;
+
+                sheet.Cell(row, 9).Value =
+                    pay.NetSalary ?? 0;
+
+                row++;
+            }
+
+            sheet.Columns()
+                .AdjustToContents();
+            var pfSheet = workbook.Worksheets
+    .Add("PF Report");
+            pfSheet.Cell(1, 1).Value =
+    $"PF Report - {month} {year}";
+
+            pfSheet.Cell(1, 1).Style.Font.Bold = true;
+            pfSheet.Cell(1, 1).Style.Font.FontSize = 16;
+
+            decimal totalPf = 0;
+
+            foreach (var pay in payslips)
+            {
+                decimal monthlyCTC =
+                    (pay.CTC ?? 0) / 12;
+
+                decimal basic =
+                    Math.Round(monthlyCTC * 0.3817m);
+
+                decimal pf =
+                    Math.Round(basic * 0.12m);
+
+                totalPf += pf;
+            }
+
+            pfSheet.Cell(2, 1).Value =
+                $"Total Employees : {payslips.Count}";
+
+            pfSheet.Cell(2, 4).Value =
+                $"Total PF Amount : {totalPf:N0}";
+            pfSheet.Cell(4, 1).Value = "Employee ID";
+            pfSheet.Cell(4, 2).Value = "Employee Name";
+            pfSheet.Cell(4, 3).Value = "Department";
+            pfSheet.Cell(4, 4).Value = "CTC";
+            pfSheet.Cell(4, 5).Value = "Basic Salary";
+            pfSheet.Cell(4, 6).Value = "PF Amount";
+
+            var pfHeader = pfSheet.Range(4, 1, 4, 6);
+
+            pfHeader.Style.Font.Bold = true;
+            pfHeader.Style.Fill.BackgroundColor =
+                XLColor.DarkBlue;
+
+            pfHeader.Style.Font.FontColor =
+                XLColor.White;
+
+            int pfRow = 5;
+
+            foreach (var pay in payslips)
+            {
+                employeesById.TryGetValue(pay.EmployeeId, out var employee);
+
+                decimal monthlyCTC =
+                    (pay.CTC ?? 0) / 12;
+
+                decimal basic =
+                    Math.Round(monthlyCTC * 0.3817m);
+
+                decimal pf =
+                    Math.Round(basic * 0.12m);
+
+                pfSheet.Cell(pfRow, 1).Value =
+                    pay.EmployeeId;
+
+                pfSheet.Cell(pfRow, 2).Value =
+                    employee?.Name ?? "";
+
+                pfSheet.Cell(pfRow, 3).Value =
+                    employee?.Department ?? "";
+
+                pfSheet.Cell(pfRow, 4).Value =
+                    pay.CTC ?? 0;
+
+                pfSheet.Cell(pfRow, 5).Value =
+                    basic;
+
+                pfSheet.Cell(pfRow, 6).Value =
+                    pf;
+
+                pfRow++;
+            }
+
+            pfSheet.Columns()
+                .AdjustToContents();
+
+            using var stream =
+                new MemoryStream();
+
+            workbook.SaveAs(stream);
+
+            return stream.ToArray();
+        }
+
     }
 }

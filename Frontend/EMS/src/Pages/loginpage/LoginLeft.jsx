@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/axiosInstance";
 import { API_ENDPOINTS } from "../../api/endpoints";
 import { clearAuthData, getAuthStorage } from "../../utils/authStorage";
+import { startSessionTimer } from "../../utils/sessionManager";
 import AuthField from "./AuthField";
 import { isValidEmail } from "./authUtils";
 
@@ -153,6 +154,7 @@ export default function LoginLeft() {
       clearAuthData();
 
       storage.setItem("token", token);
+      localStorage.setItem("loginTime", Date.now());
       storage.setItem("role", role);
       storage.setItem("roleName", roleName || "");
       storage.setItem("roleId", roleId || "");
@@ -199,6 +201,8 @@ export default function LoginLeft() {
         localStorage.setItem("rememberEmail", form.email);
         localStorage.setItem("rememberPassword", form.password);
       }
+
+      startSessionTimer();
 
       navigate(role === "admin" ? "/dashboard" : "/user-dashboard", {
         replace: true,

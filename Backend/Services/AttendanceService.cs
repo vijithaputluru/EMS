@@ -12,6 +12,8 @@ using Microsoft.EntityFrameworkCore;
 
 using System.Security.Claims;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using ClosedXML.Excel;
+using System.IO;
 
 namespace EmployeeManagementSystem.Services
 
@@ -102,69 +104,78 @@ namespace EmployeeManagementSystem.Services
         // CHECK IN (FIXED ONLY HERE)
 
         //---------------------------------------
-
         public async Task<IActionResult> CheckIn(ClaimsPrincipal user)
-
         {
-
             var emp = await GetEmployee(user);
 
             if (emp == null)
-
                 return new UnauthorizedObjectResult("Invalid user");
 
             var today = DateTime.UtcNow.Date;
 
             var existing = await _context.Attendance
-
-                .FirstOrDefaultAsync(x => x.Employee_Id == emp.Employee_Id && x.Attendance_Date.Date == today);
+                .FirstOrDefaultAsync(x =>
+                    x.Employee_Id == emp.Employee_Id &&
+                    x.Attendance_Date.Date == today);
 
             var now = DateTime.UtcNow;
-
             var ist = ConvertToIST(now);
+            var checkInStartTime = new TimeSpan(8, 55, 0);
 
-            string status = ist.TimeOfDay > new TimeSpan(9, 30, 0) ? "Late" : "Present";
+            if (ist.TimeOfDay < checkInStartTime)
+            {
+                return new BadRequestObjectResult(
+                    "Check-in is allowed only after 08:55 AM");
+            }
+
+            string status = ist.TimeOfDay > new TimeSpan(9, 15, 0)
+                ? "Late"
+                : "Present";
+
+            var employeeName = emp.Name;
+
+            if (string.IsNullOrWhiteSpace(employeeName))
+            {
+                employeeName = emp.Email ?? "Employee";
+            }
 
             if (existing != null)
-
             {
-
-                // 🔥 FIX: update instead of blocking
-
                 if (existing.Check_In != null)
-
                     return new BadRequestObjectResult("Already checked in");
 
                 existing.Check_In = now;
-
                 existing.Status = status;
+
+                _context.ActivityLogs.Add(new ActivityLog
+                {
+                    Activity = $"{employeeName} checked in",
+                    CreatedAt = DateTime.UtcNow
+                });
 
                 await _context.SaveChangesAsync();
 
                 return new OkObjectResult("Check-in updated successfully");
-
             }
 
             _context.Attendance.Add(new Attendance
-
             {
-
                 Employee_Id = emp.Employee_Id,
-
                 Attendance_Date = today,
-
                 Check_In = now,
-
                 Status = status,
-
                 WorkingMinutes = 0
+            });
 
+            _context.ActivityLogs.Add(new ActivityLog
+            {
+                Activity = $"{employeeName} checked in",
+                CreatedAt = DateTime.UtcNow
             });
 
             await _context.SaveChangesAsync();
 
             return new OkObjectResult("Check-in successful");
-
         }
 
         //---------------------------------------
@@ -205,10 +216,12 @@ namespace EmployeeManagementSystem.Services
 
             var hours = minutes / 60.0;
 
-            if (hours < 4)
+            if (hours >= 3 && hours < 4)
                 att.Status = "Half Day";
-            else
+            else if (hours >= 4)
                 att.Status = "Present";
+            else
+                att.Status = "Absent";
 
             await _context.SaveChangesAsync();
 
@@ -877,9 +890,8 @@ namespace EmployeeManagementSystem.Services
 
             var istNow = ConvertToIST(nowUtc);
 
-            var officeEndTime = new TimeSpan(18, 0, 0); // 6 PM
-            var autoCheckoutTime = officeEndTime.Add(TimeSpan.FromMinutes(30)); // 6:30 PM
-
+            var officeEndTime = new TimeSpan(18, 15, 0); // 6:15 PM
+            var autoCheckoutTime = officeEndTime;
             if (istNow.TimeOfDay < autoCheckoutTime)
                 return;
 
@@ -888,18 +900,19 @@ namespace EmployeeManagementSystem.Services
                     a.Attendance_Date.Date == today &&
                     a.Check_In != null &&
                     a.Check_Out == null)
-                .AsNoTracking().ToListAsync();
+                .ToListAsync();
 
             var istZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
 
             foreach (var att in records)
             {
+                // save checkout as 6:00 PM
                 var autoCheckoutIst = new DateTime(
                     istNow.Year,
                     istNow.Month,
                     istNow.Day,
-                    autoCheckoutTime.Hours,
-                    autoCheckoutTime.Minutes,
+                    officeEndTime.Hours,
+                    officeEndTime.Minutes,
                     0,
                     DateTimeKind.Unspecified
                 );
@@ -913,10 +926,12 @@ namespace EmployeeManagementSystem.Services
 
                 var hours = minutes / 60.0;
 
-                if (hours < 4)
+                if (hours >= 3 && hours < 4)
                     att.Status = "Half Day";
-                else
+                else if (hours >= 4)
                     att.Status = "Present";
+                else
+                    att.Status = "Absent";
             }
 
             await _context.SaveChangesAsync();
@@ -1191,7 +1206,12 @@ namespace EmployeeManagementSystem.Services
 
                 var hours = minutes / 60.0;
 
-                attendance.Status = hours < 4 ? "Half Day" : "Present";
+                if (hours >= 3 && hours < 4)
+                    attendance.Status = "Half Day";
+                else if (hours >= 4)
+                    attendance.Status = "Present";
+                else
+                    attendance.Status = "Absent";
             }
             else if (attendance.Check_In != null &&
                      attendance.Check_Out == null)
@@ -1476,9 +1496,424 @@ namespace EmployeeManagementSystem.Services
                 CompleteMonthWorkingHours = Math.Round(monthlyMinutes / 60.0, 2)
             });
         }
+
+        public async Task<byte[]> ExportMonthlyAttendance(int month, int year)
+        {
+            var attendance = await GetAllEmployeeAttendance(month, year);
+            var monthName = new DateTime(year, month, 1).ToString("MMMM");
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add($"{monthName} Attendance");
+
+            worksheet.Cell(1, 1).Value = "Employee Id";
+            worksheet.Cell(1, 2).Value = "Employee Name";
+
+
+            int totalDays = DateTime.DaysInMonth(year, month);
+
+            for (int day = 1; day <= totalDays; day++)
+            {
+                worksheet.Cell(1, day + 2).Value = day;
+            }
+            worksheet.Cell(1, totalDays + 3).Value = "P";
+            worksheet.Cell(1, totalDays + 4).Value = "A";
+            worksheet.Cell(1, totalDays + 5).Value = "OL";
+            worksheet.Cell(1, totalDays + 6).Value = "LT";
+            worksheet.Cell(1, totalDays + 7).Value = "W";
+            worksheet.Cell(1, totalDays + 8).Value = "HD";
+            worksheet.Cell(1, totalDays + 9).Value = "H";
+            var header = worksheet.Range(1, 1, 1, totalDays + 2);
+
+            header.Style.Font.Bold = true;
+            header.Style.Fill.BackgroundColor = XLColor.FromHtml("#1F2937");
+            header.Style.Font.FontColor = XLColor.White;
+            header.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            header.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            int row = 2;
+
+            foreach (var emp in attendance)
+            {
+                int presentCount = 0;
+                int absentCount = 0;
+                int leaveCount = 0;
+                int lateCount = 0;
+                int weekendCount = 0;
+                int halfDayCount = 0;
+                int holidayCount = 0;
+                worksheet.Cell(row, 1).Value = emp.EmployeeId;
+                worksheet.Cell(row, 2).Value = emp.EmployeeName;
+
+                for (int i = 0; i < emp.Days.Count; i++)
+                {
+                    var status = emp.Days[i].Status;
+                    switch (status)
+                    {
+                        case "Present":
+                        case "P":
+                            presentCount++;
+                            break;
+
+                        case "Absent":
+                        case "A":
+                            absentCount++;
+                            break;
+
+                        case "L":
+                        case "On Leave":
+                            leaveCount++;
+                            break;
+
+                        case "Late":
+                        case "LT":
+                            lateCount++;
+                            break;
+
+                        case "W":
+                            weekendCount++;
+                            break;
+
+                        case "HD":
+                        case "Half Day":
+                            halfDayCount++;
+                            break;
+
+                        case "H":
+                            holidayCount++;
+                            break;
+                    }
+
+
+                    var cell = worksheet.Cell(row, i + 3);
+                    cell.Value = status;
+
+                    ApplyStatusColor(cell, status);
+                }
+                worksheet.Cell(row, totalDays + 3).Value = presentCount;
+                worksheet.Cell(row, totalDays + 4).Value = absentCount;
+                worksheet.Cell(row, totalDays + 5).Value = leaveCount;
+                worksheet.Cell(row, totalDays + 6).Value = lateCount;
+                worksheet.Cell(row, totalDays + 7).Value = weekendCount;
+                worksheet.Cell(row, totalDays + 8).Value = halfDayCount;
+                worksheet.Cell(row, totalDays + 9).Value = holidayCount;
+
+                row++;
+            }
+            
+            worksheet.Rows().Height = 24;
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            return stream.ToArray();
+        }
+
+
+
+        public async Task<byte[]> ExportWeeklyAttendance(DateTime weekStartDate)
+        {
+            var monday = DateTime.SpecifyKind(weekStartDate.Date, DateTimeKind.Utc);
+            var weekEnd = monday.AddDays(7);
+
+            var employees = await _context.Employees
+                .AsNoTracking()
+                .ToListAsync();
+
+            var attendanceData = await _context.Attendance
+                .AsNoTracking()
+                .Where(a => a.Attendance_Date >= monday && a.Attendance_Date < weekEnd)
+                .ToListAsync();
+
+            var holidays = await _context.Holidays
+                .AsNoTracking()
+                .Where(h => h.Holiday_Date >= monday && h.Holiday_Date < weekEnd)
+                .ToListAsync();
+
+            var leaves = await _context.EmployeeLeaves
+                .AsNoTracking()
+                .Where(l => l.Status == "Approved")
+                .ToListAsync();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Weekly Attendance");
+
+            worksheet.Cell(1, 1).Value = "Employee Id";
+            worksheet.Cell(1, 2).Value = "Employee Name";
+
+            for (int i = 0; i < 7; i++)
+            {
+                worksheet.Cell(1, i + 3).Value = monday.AddDays(i).ToString("dddd dd MMM");
+            }
+            worksheet.Cell(1, 10).Value = "P";
+            worksheet.Cell(1, 11).Value = "A";
+            worksheet.Cell(1, 12).Value = "OL";
+            worksheet.Cell(1, 13).Value = "LT";
+            worksheet.Cell(1, 14).Value = "W";
+            worksheet.Cell(1, 15).Value = "HD";
+            worksheet.Cell(1, 16).Value = "H";
+
+            var header = worksheet.Range(1, 1, 1, 9);
+
+            header.Style.Font.Bold = true;
+            header.Style.Fill.BackgroundColor = XLColor.FromHtml("#1F2937");
+            header.Style.Font.FontColor = XLColor.White;
+            header.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            header.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            int row = 2;
+
+            foreach (var emp in employees)
+            {
+                int presentCount = 0;
+                int absentCount = 0;
+                int leaveCount = 0;
+                int lateCount = 0;
+                int weekendCount = 0;
+                int halfDayCount = 0;
+                int holidayCount = 0;
+                worksheet.Cell(row, 1).Value = emp.Employee_Id;
+                worksheet.Cell(row, 2).Value = emp.Name;
+
+                for (int i = 0; i < 7; i++)
+                {
+                    var date = monday.AddDays(i);
+
+                    string status;
+
+                    if (date.DayOfWeek == DayOfWeek.Saturday ||
+                        date.DayOfWeek == DayOfWeek.Sunday)
+                    {
+                        status = "W";
+                    }
+                    else if (holidays.Any(h => h.Holiday_Date.Date == date.Date))
+                    {
+                        status = "H";
+                    }
+                    else if (leaves.Any(l =>
+                        l.EmployeeId == emp.Employee_Id &&
+                        date >= l.FromDate.Date &&
+                        date <= l.ToDate.Date))
+                    {
+                        status = "L";
+                    }
+                    else
+                    {
+                        var att = attendanceData.FirstOrDefault(a =>
+                            a.Employee_Id == emp.Employee_Id &&
+                            a.Attendance_Date.Date == date.Date);
+
+                        status = att != null ? MapStatus(att.Status) : "Absent";
+                    }
+
+                    var cell = worksheet.Cell(row, i + 3);
+                    cell.Value = status;
+                    switch (status)
+                    {
+                        case "P":
+                        case "Present":
+                            presentCount++;
+                            break;
+
+                        case "A":
+                        case "Absent":
+                            absentCount++;
+                            break;
+
+                        case "L":
+                        case "On Leave":
+                            leaveCount++;
+                            break;
+
+                        case "LT":
+                        case "Late":
+                            lateCount++;
+                            break;
+
+                        case "W":
+                            weekendCount++;
+                            break;
+
+                        case "HD":
+                        case "Half Day":
+                            halfDayCount++;
+                            break;
+
+                        case "H":
+                            holidayCount++;
+                            break;
+                    }
+
+                    ApplyStatusColor(cell, status);
+                }
+                worksheet.Cell(row, 10).Value = presentCount;
+                worksheet.Cell(row, 11).Value = absentCount;
+                worksheet.Cell(row, 12).Value = leaveCount;
+                worksheet.Cell(row, 13).Value = lateCount;
+                worksheet.Cell(row, 14).Value = weekendCount;
+                worksheet.Cell(row, 15).Value = halfDayCount;
+                worksheet.Cell(row, 16).Value = holidayCount;
+
+                row++;
+            }
+
+            worksheet.Rows().Height = 24;
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            return stream.ToArray();
+        }
+        public async Task<byte[]> ExportDailyAttendance(DateTime date)
+        {
+            date = date.Date;
+
+            var employees = await _context.Employees
+                .AsNoTracking()
+                .ToListAsync();
+
+            var attendanceData = await _context.Attendance
+                .AsNoTracking()
+                .Where(a => a.Attendance_Date.Date == date)
+                .ToListAsync();
+            var reportData = employees
+    .Select(emp =>
+    {
+        var att = attendanceData
+            .FirstOrDefault(a => a.Employee_Id == emp.Employee_Id);
+
+        var status = att != null
+            ? MapStatus(att.Status)
+            : "Absent";
+
+        return new
+        {
+            Employee = emp,
+            Attendance = att,
+            Status = status
+        };
+    })
+    .OrderBy(x =>
+        x.Status == "Present" ? 1 :
+        x.Status == "Late" ? 2 :
+        x.Status == "Half Day" ? 3 :
+        x.Status == "On Leave" ? 4 :
+        5)
+    .ThenBy(x => x.Attendance?.Check_In);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Daily Attendance");
+
+            worksheet.Cell(1, 1).Value = "Employee ID";
+            worksheet.Cell(1, 2).Value = "Employee Name";
+            worksheet.Cell(1, 3).Value = "Department";
+            worksheet.Cell(1, 4).Value = "Date";
+            worksheet.Cell(1, 5).Value = "Check In";
+            worksheet.Cell(1, 6).Value = "Check Out";
+            worksheet.Cell(1, 7).Value = "Status";
+            worksheet.Cell(1, 8).Value = "Working Hours";
+
+            int row = 2;
+
+            foreach (var item in reportData)
+            {
+                var emp = item.Employee;
+                var att = item.Attendance;
+
+                worksheet.Cell(row, 1).Value = emp.Employee_Id;
+                worksheet.Cell(row, 2).Value = emp.Name;
+                worksheet.Cell(row, 3).Value = emp.Department;
+                worksheet.Cell(row, 4).Value = date.ToString("dd-MMM-yyyy");
+
+                worksheet.Cell(row, 5).Value =
+                    att?.Check_In != null
+                    ? ConvertToIST(att.Check_In.Value).ToString("hh:mm tt")
+                    : "-";
+
+                worksheet.Cell(row, 6).Value =
+                    att?.Check_Out != null
+                    ? ConvertToIST(att.Check_Out.Value).ToString("hh:mm tt")
+                    : "-";
+
+                worksheet.Cell(row, 7).Value =
+                    att != null ? MapStatus(att.Status) : "Absent";
+
+                worksheet.Cell(row, 8).Value =
+                    att != null ? FormatHours(att.WorkingMinutes) : "0h 0m";
+
+                row++;
+            }
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+
+            workbook.SaveAs(stream);
+
+            return stream.ToArray();
+        }
+        private void ApplyStatusColor(IXLCell cell, string status)
+        {
+            status = status?.Trim();
+
+            cell.Style.Font.Bold = true;
+            cell.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            cell.Style.Alignment.Vertical = XLAlignmentVerticalValues.Center;
+
+            cell.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+            cell.Style.Border.OutsideBorderColor = XLColor.LightGray;
+
+            cell.Style.Font.FontColor = XLColor.Black;
+
+            switch (status)
+            {
+                case "Present":
+                case "P":
+                case "Late":
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#DFF6DD");
+                    cell.Value = "P";
+                    break;
+
+                case "Absent":
+                case "A":
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#FDE2E1");
+                    cell.Value = "A";
+                    break;
+
+                case "Half Day":
+                case "HD":
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#FFF4CC");
+                    cell.Value = "HD";
+                    break;
+
+                case "W":
+                case "Weekend":
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E5E7EB");
+                    cell.Value = "W";
+                    break;
+
+                case "H":
+                case "Holiday":
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#DCEBFF");
+                    cell.Value = "H";
+                    break;
+
+                case "L":
+                case "On Leave":
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E9D5FF");
+                    cell.Value = "L";
+                    break;
+
+                default:
+                    cell.Style.Fill.BackgroundColor = XLColor.White;
+                    break;
+            }
+        }
     }
 }
 
 
-    
+
 

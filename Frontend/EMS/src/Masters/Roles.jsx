@@ -25,6 +25,8 @@ function Roles() {
  
   const [isEdit, setIsEdit] = useState(false);
   const [selectedRoleId, setSelectedRoleId] = useState(null);
+  const [showDeletePopup, setShowDeletePopup] = useState(false);
+  const [deleteRoleId, setDeleteRoleId] = useState(null);
  
   const [rolesForm, setRolesForm] = useState({
     roleName: "",
@@ -430,7 +432,8 @@ function Roles() {
                           return;
                         }
  
-                        handleDelete(r.roleId);
+                        setDeleteRoleId(r.roleId);
+                        setShowDeletePopup(true);
                       }}
                       disabled={r.users > 0}
                       style={{
@@ -503,10 +506,92 @@ function Roles() {
           </div>
         </div>
       )}
+      {showDeletePopup && (
+        <div className="roles-modal-overlay">
+          <div
+            style={{
+              width: "400px",
+              background: "#fff",
+              borderRadius: "20px",
+              padding: "30px",
+              boxShadow: "0 20px 50px rgba(0,0,0,0.15)",
+            }}
+          >
+            <h2
+              style={{
+                marginBottom: "15px",
+                color: "#041c32",
+                fontSize: "18px",
+                fontWeight: "700",
+              }}
+            >
+              Confirm Delete
+            </h2>
+ 
+            <p
+              style={{
+                color: "#475467",
+                fontSize: "16px",
+                marginBottom: "20px",
+                fontWeight: "500",
+              }}
+            >
+              Are you sure you want to delete this role?
+            </p>
+ 
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "14px",
+              }}
+            >
+              <button
+                onClick={() => {
+                  setShowDeletePopup(false);
+                  setDeleteRoleId(null);
+                }}
+                style={{
+                  padding: "12px 22px",
+                  borderRadius: "14px",
+                  border: "1px solid #d0d5dd",
+                  background: "#f9fafb",
+                  cursor: "pointer",
+                  fontWeight: "600",
+                  fontSize: "14px",
+                }}
+              >
+                Cancel
+              </button>
+ 
+              <button
+                onClick={() => {
+                  handleDelete(deleteRoleId);
+                  setShowDeletePopup(false);
+                  setDeleteRoleId(null);
+                }}
+                style={{
+                  padding: "12px 22px",
+                  borderRadius: "14px",
+                  border: "none",
+                  background: "#ef4444",
+                  color: "#fff",
+                  cursor: "pointer",
+                  fontWeight: "700",
+                  fontSize: "14px",
+                }}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
  
 export default Roles;
+ 
  
  

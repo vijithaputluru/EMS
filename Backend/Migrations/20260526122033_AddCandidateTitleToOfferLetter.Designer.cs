@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace EmployeeManagementSystem.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260525055909_AddDescriptionToAssets")]
-    partial class AddDescriptionToAssets
+    [Migration("20260526122033_AddCandidateTitleToOfferLetter")]
+    partial class AddCandidateTitleToOfferLetter
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -853,6 +853,10 @@ namespace EmployeeManagementSystem.Migrations
                         .HasColumnType("decimal(65,30)");
 
                     b.Property<string>("Candidate_Name")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Candidate_Title")
                         .IsRequired()
                         .HasColumnType("longtext");
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import "./AddEmployee.css";
 import api from "../../api/axiosInstance";
 import { API_ENDPOINTS } from "../../api/endpoints";
@@ -18,46 +18,50 @@ import {
   validatePhoneNumber,
 } from "../../utils/validation";
 
-function PersonalInfo({ onNext, viewMode, data }) {
-  const initialFormData = {
-    employeeId: "",
-    firstName: "",
-    middleName: "",
-    lastName: "",
-    dob: "",
-    gender: "",
-    maritalStatus: "",
-    phone: "",
-    email: "",
-    aadhaar: "",
-    pan: "",
-    department: "",
-    designation: "",
-    joiningDate: "",
-    workExperience: "",
-    bloodGroup: "",
-    houseNo: "",
-    street: "",
-    city: "",
-    district: "",
-    state: "",
-    country: "",
-    pincode: "",
-  };
+const INITIAL_FORM_DATA = {
+  employeeId: "",
+  firstName: "",
+  middleName: "",
+  lastName: "",
+  dob: "",
+  gender: "",
+  maritalStatus: "",
+  phone: "",
+  email: "",
+  aadhaar: "",
+  pan: "",
+  department: "",
+  designation: "",
+  joiningDate: "",
+  workExperience: "",
+  bloodGroup: "",
+  houseNo: "",
+  street: "",
+  city: "",
+  district: "",
+  state: "",
+  country: "",
+  pincode: "",
+};
 
-  const [formData, setFormData] = useState(initialFormData);
+function PersonalInfo({ onNext, viewMode, data }) {
+  // Temporarily hidden until finalized
+  const isWorkExperienceFieldHidden = true;
+
+  const [formData, setFormData] = useState(INITIAL_FORM_DATA);
   const [errors, setErrors] = useState({});
   const [successMsg, setSuccessMsg] = useState("");
   const [apiError, setApiError] = useState("");
   const [saving, setSaving] = useState(false);
   const [departments, setDepartments] = useState([]);
 
-  // ✅ Load employee data safely
   useEffect(() => {
-    if (!data) return;
+    if (!data) {
+      return;
+    }
 
     setFormData({
-      ...initialFormData, // ✅ ensures no field becomes undefined
+      ...INITIAL_FORM_DATA,
       employeeId: String(data.employee_Id ?? ""),
       firstName: String(data.firstName ?? ""),
       middleName: String(data.middleName ?? ""),
@@ -87,12 +91,10 @@ function PersonalInfo({ onNext, viewMode, data }) {
     });
   }, [data]);
 
-  // ✅ Fetch departments
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
         const response = await api.get(API_ENDPOINTS.departments.list);
-
         setDepartments(extractCollection(response.data));
       } catch (error) {
         console.error("Department fetch error:", error);
@@ -102,56 +104,71 @@ function PersonalInfo({ onNext, viewMode, data }) {
     fetchDepartments();
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    let newValue = value;
+  const handleChange = (event) => {
+    const { name, value } = event.target;
+    let nextValue = value;
 
     if (["firstName", "middleName", "lastName"].includes(name)) {
-      newValue = sanitizeLettersAndSpaces(value, 30);
+      nextValue = sanitizeLettersAndSpaces(value, 30);
     }
 
     if (name === "phone") {
-      newValue = sanitizePhoneInput(value, 10);
+      nextValue = sanitizePhoneInput(value, 10);
     }
 
     if (name === "email") {
-      newValue = sanitizeEmailInput(value, 60);
+      nextValue = sanitizeEmailInput(value, 60);
     }
 
     if (name === "aadhaar") {
-      newValue = value.replace(/\D/g, "").slice(0, 12);
+      nextValue = value.replace(/\D/g, "").slice(0, 12);
     }
 
     if (name === "pan") {
-      newValue = value.toUpperCase();
+      nextValue = value.toUpperCase();
     }
 
     if (name === "employeeId") {
-      newValue = sanitizeAlphaNumericInput(formatEmployeeCode(value), 10);
+      nextValue = sanitizeAlphaNumericInput(formatEmployeeCode(value), 10);
     }
 
     if (name === "houseNo") {
-      newValue = value.replace(/[^a-zA-Z0-9\-\/]/g, "").slice(0, 15);
+      nextValue = value.replace(/[^a-zA-Z0-9/-]/g, "").slice(0, 15);
     }
 
     if (name === "street") {
-      newValue = value.replace(/[^a-zA-Z0-9\s]/g, "").slice(0, 30);
+      nextValue = value
+        .replace(/[^a-zA-Z0-9,\s]/g, "")
+        .replace(/\s+/g, " ")
+        .replace(/^\s+/g, "")
+        .slice(0, 50);
     }
 
-    if (["city", "district", "state", "country"].includes(name)) {
-      newValue = value.replace(/[^a-zA-Z\s]/g, "").slice(0, 30);
+    if (name === "city") {
+      nextValue = value
+        .replace(/[^a-zA-Z,\s]/g, "")
+        .replace(/\s+/g, " ")
+        .replace(/^\s+/g, "")
+        .slice(0, 50);
+    }
+
+    if (["district", "state", "country"].includes(name)) {
+      nextValue = value
+        .replace(/[^a-zA-Z\s]/g, "")
+        .replace(/\s+/g, " ")
+        .replace(/^\s+/g, "")
+        .slice(0, 30);
     }
 
     if (name === "pincode") {
-      newValue = value.replace(/\D/g, "").slice(0, 6);
+      nextValue = value.replace(/\D/g, "").slice(0, 6);
     }
 
     setFormData((prev) => ({
       ...prev,
-      [name]: newValue,
+      [name]: nextValue,
     }));
 
-    // ✅ clear error instantly while typing
     setErrors((prev) => ({
       ...prev,
       [name]: "",
@@ -159,21 +176,25 @@ function PersonalInfo({ onNext, viewMode, data }) {
   };
 
   const validate = () => {
-    let newErrors = {};
+    const nextErrors = {};
 
     const employeeIdError = validateEmployeeId(formData.employeeId, {
       label: "Employee ID",
       min: 3,
       max: 10,
     });
-    if (employeeIdError) newErrors.employeeId = employeeIdError;
+    if (employeeIdError) {
+      nextErrors.employeeId = employeeIdError;
+    }
 
     const firstNameError = validateEmployeeName(formData.firstName, {
       label: "First Name",
       min: 2,
       max: 30,
     });
-    if (firstNameError) newErrors.firstName = firstNameError;
+    if (firstNameError) {
+      nextErrors.firstName = firstNameError;
+    }
 
     if (normalizeWhitespace(formData.middleName)) {
       const middleNameError = validateEmployeeName(formData.middleName, {
@@ -181,7 +202,10 @@ function PersonalInfo({ onNext, viewMode, data }) {
         min: 1,
         max: 30,
       });
-      if (middleNameError) newErrors.middleName = middleNameError;
+
+      if (middleNameError) {
+        nextErrors.middleName = middleNameError;
+      }
     }
 
     const lastNameError = validateEmployeeName(formData.lastName, {
@@ -189,90 +213,141 @@ function PersonalInfo({ onNext, viewMode, data }) {
       min: 2,
       max: 30,
     });
-    if (lastNameError) newErrors.lastName = lastNameError;
+    if (lastNameError) {
+      nextErrors.lastName = lastNameError;
+    }
 
-    if (!formData.gender) newErrors.gender = "Gender is required";
+    if (!formData.gender) {
+      nextErrors.gender = "Gender is required";
+    }
 
-    if (!formData.maritalStatus)
-      newErrors.maritalStatus = "Marital status is required";
+    if (!formData.maritalStatus) {
+      nextErrors.maritalStatus = "Marital status is required";
+    }
 
-    if (!formData.dob) newErrors.dob = "Date of birth is required";
+    if (!formData.dob) {
+      nextErrors.dob = "Date of birth is required";
+    }
 
     const phoneError = validatePhoneNumber(formData.phone);
-    if (phoneError) newErrors.phone = phoneError;
+    if (phoneError) {
+      nextErrors.phone = phoneError;
+    }
 
     const emailError = validateEmailAddress(formData.email, {
       label: "Email",
       max: 60,
     });
-    if (emailError) newErrors.email = emailError;
+    if (emailError) {
+      nextErrors.email = emailError;
+    }
 
-    if (!/^[0-9]{12}$/.test(formData.aadhaar))
-      newErrors.aadhaar = "Aadhaar must be 12 digits";
+    if (!/^[0-9]{12}$/.test(formData.aadhaar)) {
+      nextErrors.aadhaar = "Aadhaar must be 12 digits";
+    }
 
-    if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.pan))
-      newErrors.pan = "Enter valid PAN (e.g., ABCDE1234F)";
+    if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(formData.pan)) {
+      nextErrors.pan = "Enter valid PAN (e.g., ABCDE1234F)";
+    }
 
-    if (!formData.department.trim())
-      newErrors.department = "Department is required";
+    if (!formData.department.trim()) {
+      nextErrors.department = "Department is required";
+    }
 
-    if (formData.workExperience === "")
-      newErrors.workExperience = "Experience is required";
+    if (!isWorkExperienceFieldHidden && formData.workExperience === "") {
+      nextErrors.workExperience = "Experience is required";
+    }
 
-    if (!formData.designation.trim())
-      newErrors.designation = "Designation is required";
+    if (!formData.designation.trim()) {
+      nextErrors.designation = "Designation is required";
+    }
 
-    if (!formData.joiningDate)
-      newErrors.joiningDate = "Joining date is required";
+    if (!formData.joiningDate) {
+      nextErrors.joiningDate = "Joining date is required";
+    }
 
-    if (!formData.bloodGroup)
-      newErrors.bloodGroup = "Blood group is required";
+    if (!formData.bloodGroup) {
+      nextErrors.bloodGroup = "Blood group is required";
+    }
 
-    if (!formData.houseNo.trim())
-      newErrors.houseNo = "House No is required";
-    else if (!/^[a-zA-Z0-9\-\/]{1,15}$/.test(formData.houseNo))
-      newErrors.houseNo =
+    if (!formData.houseNo.trim()) {
+      nextErrors.houseNo = "House Number is required";
+    } else if (!/^[a-zA-Z0-9/-]{1,15}$/.test(formData.houseNo)) {
+      nextErrors.houseNo =
         "Max 15 characters. Only letters, numbers, - or / allowed";
+    }
 
-    if (!formData.street.trim())
-      newErrors.street = "Street is required";
-    else if (formData.street.length > 30)
-      newErrors.street = "Street cannot exceed 30 characters";
+    if (!formData.street.trim()) {
+      nextErrors.street = "Street is required";
+    } else if (formData.street.length > 50) {
+      nextErrors.street = "Street cannot exceed 50 characters";
+    } else if (!/^[A-Za-z0-9,\s]+$/.test(formData.street)) {
+      nextErrors.street =
+        "Only letters, numbers, spaces and comma are allowed";
+    } else {
+      const streetWords = formData.street.trim().split(/\s+/);
 
-    if (!formData.city.trim())
-      newErrors.city = "City is required";
-    else if (!/^[A-Za-z\s]{1,30}$/.test(formData.city))
-      newErrors.city = "Only alphabets allowed (max 30 characters)";
+      if (streetWords.length < 2) {
+        nextErrors.street = "Street must contain at least 2 words";
+      }
+    }
 
-    if (!formData.district.trim())
-      newErrors.district = "District is required";
-    else if (!/^[A-Za-z\s]{1,30}$/.test(formData.district))
-      newErrors.district = "Only alphabets allowed (max 30 characters)";
+    if (!formData.city.trim()) {
+      nextErrors.city = "City is required";
+    } else if (formData.city.length > 50) {
+      nextErrors.city = "City cannot exceed 50 characters";
+    } else if (!/^[A-Za-z,\s]+$/.test(formData.city)) {
+      nextErrors.city =
+        "Only alphabets, spaces and comma are allowed";
+    } else {
+      const cityWords = formData.city.trim().split(/\s+/);
 
-    if (!formData.state.trim())
-      newErrors.state = "State is required";
-    else if (!/^[A-Za-z\s]{1,30}$/.test(formData.state))
-      newErrors.state = "Only alphabets allowed (max 30 characters)";
+      if (cityWords.length <= 1) {
+        nextErrors.city = "City must contain at least 1 words";
+      }
+    }
 
-    if (!formData.country.trim())
-      newErrors.country = "Country is required";
-    else if (!/^[A-Za-z\s]{1,30}$/.test(formData.country))
-      newErrors.country = "Only alphabets allowed (max 30 characters)";
+    if (!formData.district.trim()) {
+      nextErrors.district = "District is required";
+    } else if (!/^[A-Za-z\s]{1,30}$/.test(formData.district)) {
+      nextErrors.district = "Only alphabets allowed (max 30 characters)";
+    }
 
-    if (!/^[0-9]{6}$/.test(formData.pincode))
-      newErrors.pincode = "Enter valid 6-digit pincode";
+    if (!formData.state.trim()) {
+      nextErrors.state = "State is required";
+    } else if (!/^[A-Za-z\s]{1,30}$/.test(formData.state)) {
+      nextErrors.state = "Only alphabets allowed (max 30 characters)";
+    }
 
-    return newErrors;
+    if (!formData.country.trim()) {
+      nextErrors.country = "Country is required";
+    } else if (!/^[A-Za-z\s]{1,30}$/.test(formData.country)) {
+      nextErrors.country = "Only alphabets allowed (max 30 characters)";
+    }
+
+    if (!/^[0-9]{6}$/.test(formData.pincode)) {
+      nextErrors.pincode = "Enter valid 6-digit pincode";
+    }
+
+    return nextErrors;
   };
+
   const handleSave = async () => {
     const validationErrors = validate();
     setErrors(validationErrors);
 
-    if (Object.keys(validationErrors).length > 0) return;
+    if (Object.keys(validationErrors).length > 0) {
+      return;
+    }
 
     setApiError("");
     setSuccessMsg("");
     setSaving(true);
+
+    const resolvedWorkExperience =
+      formData.workExperience === ""
+        ? data?.workExperience ?? 0
+        : formData.workExperience;
 
     const payload = {
       employee_Id: formData.employeeId.trim().toUpperCase(),
@@ -297,16 +372,13 @@ function PersonalInfo({ onNext, viewMode, data }) {
       state: formData.state,
       country: formData.country,
       pincode: formData.pincode,
-      workExperience: formData.workExperience,
+      workExperience: String(resolvedWorkExperience ?? "0"),
       joiningDate: toIsoDateString(formData.joiningDate),
     };
 
     try {
-      let response;
-
-      if (data) {
-        // ✅ EDIT MODE (existing employee)
-        response = await api.put(
+      const response = data
+        ? await api.put(
           API_ENDPOINTS.employeePersonalInfo.byEmployeeId(formData.employeeId),
           payload,
           {
@@ -314,10 +386,8 @@ function PersonalInfo({ onNext, viewMode, data }) {
               "Content-Type": "application/json",
             },
           }
-        );
-      } else {
-        // ✅ CREATE MODE (new employee)
-        response = await api.post(
+        )
+        : await api.post(
           API_ENDPOINTS.employeePersonalInfo.list,
           payload,
           {
@@ -326,26 +396,26 @@ function PersonalInfo({ onNext, viewMode, data }) {
             },
           }
         );
-      }
 
       console.log("Saved:", response.data);
       setSuccessMsg(data ? "Updated successfully!" : "Saved successfully!");
 
       setTimeout(() => {
-        if (onNext) {
-          onNext(formData.employeeId);
-        }
+        onNext?.(formData.employeeId);
       }, 800);
-
     } catch (error) {
-      console.error("API Error:", error.response?.data || error.message);
-      const backendMessage = error.response?.data?.message || error.message;
+      console.log("Backend Validation Errors:");
 
-      if (String(backendMessage).includes("already exists")) {
-        setApiError("Employee already exists. Please edit instead.");
-      } else {
-        setApiError("Failed to save personal information.");
+      if (error.response?.data?.errors) {
+        Object.entries(error.response.data.errors).forEach(([field, messages]) => {
+          console.log(field, messages);
+        });
       }
+
+      console.log(error.response?.data);
+      setApiError(
+        error.response?.data?.message || "Failed to save personal information."
+      );
     } finally {
       setSaving(false);
     }
@@ -454,9 +524,9 @@ function PersonalInfo({ onNext, viewMode, data }) {
             <label>Department<span className="required">*</span></label>
             <select name="department" value={formData.department} onChange={handleChange} disabled={viewMode}>
               <option value="">Select</option>
-              {departments.map((dept) => (
-                <option key={dept.id} value={dept.departmentName}>
-                  {dept.departmentName}
+              {departments.map((department) => (
+                <option key={department.id} value={department.departmentName}>
+                  {department.departmentName}
                 </option>
               ))}
             </select>
@@ -467,10 +537,13 @@ function PersonalInfo({ onNext, viewMode, data }) {
             <label>Designation<span className="required">*</span></label>
             <select name="designation" value={formData.designation} onChange={handleChange} disabled={viewMode}>
               <option value="">Select</option>
-              <option value="Junior Developer">Junior Developer</option>
-              <option value="Senior Developer">Senior Developer</option>
+              <option value="Associate Software Developer">Associate Software Developer</option>
+              <option value="Senior Software Developer">Senior Software Developer</option>
               <option value="Team Lead">Team Lead</option>
               <option value="Manager">Manager</option>
+              <option value="HR">HR</option>
+              <option value="HR Manager">HR Manager</option>
+              <option value="HR Intern">HR Intern</option>
               <option value="HR Executive">HR Executive</option>
             </select>
             {renderError("designation")}
@@ -487,18 +560,20 @@ function PersonalInfo({ onNext, viewMode, data }) {
             {renderError("joiningDate")}
           </div>
 
-          <div className="form-group">
-            <label>Experience (Years)<span className="required">*</span></label>
-            <select name="workExperience" value={formData.workExperience} onChange={handleChange} disabled={viewMode}>
-              <option value="">Select</option>
-              {[...Array(21).keys()].map((year) => (
-                <option key={year} value={String(year)}>
-                  {year}
-                </option>
-              ))}
-            </select>
-            {renderError("workExperience")}
-          </div>
+          {!isWorkExperienceFieldHidden && (
+            <div className="form-group">
+              <label>Experience (Years)<span className="required">*</span></label>
+              <select name="workExperience" value={formData.workExperience} onChange={handleChange} disabled={viewMode}>
+                <option value="">Select</option>
+                {[...Array(21).keys()].map((year) => (
+                  <option key={year} value={String(year)}>
+                    {year}
+                  </option>
+                ))}
+              </select>
+              {renderError("workExperience")}
+            </div>
+          )}
 
           <div className="form-group">
             <label>Blood Group<span className="required">*</span></label>
@@ -523,8 +598,8 @@ function PersonalInfo({ onNext, viewMode, data }) {
 
         <div className="form-grid">
           <div className="form-group">
-            <label>Flat / House No <span className="required">*</span></label>
-            <input type="text" name="houseNo" value={formData.houseNo} onChange={handleChange} disabled={viewMode} />
+            <label>House Number <span className="required">*</span></label>
+            <input type="text" name="houseNo" value={formData.houseNo} onChange={handleChange} placeholder="House Number" disabled={viewMode} />
             {renderError("houseNo")}
           </div>
 

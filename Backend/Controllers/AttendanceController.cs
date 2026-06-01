@@ -152,7 +152,7 @@ namespace EmployeeManagementSystem.Controllers
 
         // ✅ Daily Attendance (MAIN UI)
 
-       
+
 
         [HttpGet("today")]
 
@@ -163,7 +163,6 @@ namespace EmployeeManagementSystem.Controllers
             [FromQuery] string search = "")
 
         {
-
 
 
             var result = await _attendanceService.GetTodayAttendance(status, search);
@@ -184,7 +183,7 @@ namespace EmployeeManagementSystem.Controllers
 
         {
 
-            
+
 
             var result = await _attendanceService.GetAllEmployeeAttendance(month, year);
 
@@ -212,22 +211,37 @@ namespace EmployeeManagementSystem.Controllers
         // ✅ Today Stats
 
         // ✅ Today
+
         [Authorize(Roles = "Admin")]
+
         [HttpGet("stats/today")]
+
         public async Task<IActionResult> GetTodayStats()
+
         {
+
             var result = await _attendanceService.GetTodayStats();
+
             return Ok(result);
+
         }
 
         // ✅ Yearly Summary
+
         [Authorize(Roles = "Admin")]
+
         [HttpGet("stats/year")]
+
         public async Task<IActionResult> GetYearlySummary([FromQuery] int year)
+
         {
+
             var result = await _attendanceService.GetYearlySummary(year);
+
             return Ok(result);
+
         }
+
         //---------------------------------------
 
         // 🔔 NOTIFICATION / JOB TRIGGERS
@@ -242,7 +256,7 @@ namespace EmployeeManagementSystem.Controllers
 
         {
 
-            
+
 
             return Ok("Absent check executed");
 
@@ -256,26 +270,100 @@ namespace EmployeeManagementSystem.Controllers
 
         {
 
-           
+
 
             return Ok("Missing checkout check executed");
 
         }
 
         [HttpGet("working-hours/{employeeId}")]
+
         public async Task<IActionResult> GetEmployeeWorkingHours(
+
      string employeeId,
+
      [FromQuery] DateOnly fromDate,
+
      [FromQuery] DateOnly toDate)
+
         {
+
             return await _attendanceService.GetEmployeeWorkingHours(
+
                 employeeId,
+
                 fromDate,
+
                 toDate
+
             );
+
         }
-    }
+
+        [HttpGet("admin/download-monthly")]
+
+        public async Task<IActionResult> DownloadMonthlyAttendance(int month, int year)
+
+        {
+
+            var fileBytes = await _attendanceService.ExportMonthlyAttendance(month, year);
+
+            return File(
+
+                fileBytes,
+
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+                $"Monthly_Attendance_{new DateTime(year, month, 1):MMMM}_{year}.xlsx"
+
+            );
+
+        }
+
+        [HttpGet("admin/download-weekly")]
+
+        public async Task<IActionResult> DownloadWeeklyAttendance(DateTime weekStartDate)
+
+        {
+
+            var fileBytes = await _attendanceService.ExportWeeklyAttendance(weekStartDate);
+
+            return File(
+
+                fileBytes,
+
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+                $"Weekly_Attendance_{weekStartDate:dd_MMM_yyyy}.xlsx"
+
+            );
+
+        }
+
+        [HttpGet("admin/download-daily")]
+
+        public async Task<IActionResult> DownloadDailyAttendance(
+
+    DateTime date)
+
+        {
+
+            var fileBytes =
+
+                await _attendanceService.ExportDailyAttendance(date);
+
+            return File(
+
+                fileBytes,
+
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+                $"Daily_Attendance_{date:dd_MMM_yyyy}.xlsx");
+
+        }
 
     }
+
+}
 
 

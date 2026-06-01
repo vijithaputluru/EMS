@@ -212,6 +212,28 @@ namespace EmployeeManagementSystem.Data
 
                 .HasForeignKey(rp => rp.ModuleId);
 
+            // Optimization: safe read-path indexes for dashboard, attendance, payroll, and report filters.
+            modelBuilder.Entity<Attendance>()
+                .HasIndex(a => new { a.Employee_Id, a.Attendance_Date });
+
+            modelBuilder.Entity<Attendance>()
+                .HasIndex(a => a.Attendance_Date);
+
+            modelBuilder.Entity<EmployeeLeave>()
+                .HasIndex(l => new { l.EmployeeId, l.Status, l.FromDate, l.ToDate });
+
+            modelBuilder.Entity<Holiday>()
+                .HasIndex(h => h.Holiday_Date);
+
+            modelBuilder.Entity<PaySlip>()
+                .HasIndex(p => new { p.Month, p.Year });
+
+            modelBuilder.Entity<PaySlip>()
+                .HasIndex(p => p.EmployeeId);
+
+            modelBuilder.Entity<ActivityLog>()
+                .HasIndex(a => a.CreatedAt);
+
 
             // Make Employee.EmployeeId UNIQUE
 

@@ -26,7 +26,9 @@ namespace EmployeeManagementSystem.Services
             //--------------------------------
             // FETCH EMPLOYEE
             //--------------------------------
+            // Optimization: employee details are read-only during manual payslip generation.
             var employee = await _context.Employees
+                .AsNoTracking()
                 .Include(e => e.BankDetails)
                 .FirstOrDefaultAsync(e => e.Employee_Id == dto.EmployeeId);
 
@@ -34,6 +36,7 @@ namespace EmployeeManagementSystem.Services
                 throw new Exception("Employee not found");
 
             var personalInfo = await _context.EmployeePersonalInfos
+                .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.Employee_Id == dto.EmployeeId);
 
 
@@ -130,7 +133,7 @@ namespace EmployeeManagementSystem.Services
             {
                 ReplaceBookmark(wordDoc, "CandidateName", employee.Name);
                 ReplaceBookmark(wordDoc, "EmployeeID", employee.Employee_Id);
-                ReplaceBookmark(wordDoc, "Position", employee.RoleName);
+                
                 ReplaceBookmark(wordDoc, "Department", employee.Department);
                 ReplaceBookmark(wordDoc, "Month", $"{dto.Month.ToUpper()} {dto.Year}");
 
@@ -172,6 +175,22 @@ namespace EmployeeManagementSystem.Services
                 ReplaceBookmark(wordDoc, "ConveyanceAllowance", conveyance.ToString("N2"));
                 ReplaceBookmark(wordDoc, "Medical", medical.ToString("N2"));
                 ReplaceBookmark(wordDoc, "Special", specialAllowance.ToString("N2"));
+
+                ReplaceBookmark(
+                   wordDoc,
+                   "Gender",
+                   string.IsNullOrWhiteSpace(
+                       personalInfo?.Gender)
+                   ? "-"
+                   : personalInfo.Gender);
+
+                ReplaceBookmark(
+                 wordDoc,
+                 "Position",
+                 string.IsNullOrWhiteSpace(
+                     personalInfo?.Designation)
+                 ? "-"
+                 : personalInfo.Designation);
 
                 //--------------------------------
                 // TOTALS

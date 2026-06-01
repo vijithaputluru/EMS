@@ -853,6 +853,10 @@ namespace EmployeeManagementSystem.Migrations
                         .IsRequired()
                         .HasColumnType("longtext");
 
+                    b.Property<string>("Candidate_Title")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
                     b.Property<string>("Department")
                         .HasColumnType("longtext");
 

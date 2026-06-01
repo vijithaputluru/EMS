@@ -8,6 +8,11 @@ import {
   formatDate,
   timeAgo
 } from "../utils/date";
+import {
+  endPerformanceTimer,
+  logPerformanceError,
+  startPerformanceTimer,
+} from "../utils/performance";
 
 import {
   FaTasks,
@@ -36,25 +41,32 @@ function UserDashboard() {
     sessionStorage.getItem("token");
 
   useEffect(() => {
-    fetchDashboard();
+    const controller = new AbortController();
+
+    fetchDashboard(controller.signal);
+
+    return () => controller.abort();
   }, []);
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = async (signal) => {
+    const timerLabel = "user-dashboard:initial-data";
 
     try {
 
       const token = getToken();
 
+      // Optimization: time the user dashboard request and cancel it if the page unmounts.
+      startPerformanceTimer(timerLabel);
+
       const res = await api.get(
         API_ENDPOINTS.userDashboard,
         {
+          signal,
           headers: {
             Authorization: `Bearer ${token}`,
           }
         }
       );
-
-      console.log("User Dashboard:", res.data);
 
       const apiData = res.data || {};
 
@@ -71,10 +83,18 @@ function UserDashboard() {
 
     } catch (error) {
 
-      console.error(
+      if (error?.code === "ERR_CANCELED") {
+        return;
+      }
+
+      logPerformanceError(
         "User dashboard error:",
         error.response?.data || error.message
       );
+
+    } finally {
+
+      endPerformanceTimer(timerLabel);
 
     }
   };
@@ -252,10 +272,12 @@ function UserDashboard() {
                   </span>
 
                   <span className="udb-activity-time">
-                    {rawTime
-                      ? timeAgo(rawTime)
-                      : ""}
-                  </span>
+  {rawTime
+    ? rawTime.toLowerCase?.().includes("ago")
+      ? rawTime
+      : timeAgo(rawTime)
+    : ""}
+</span>
 
                 </div>
 

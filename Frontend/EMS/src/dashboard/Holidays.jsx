@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { memo, useEffect, useMemo, useState } from "react";
 import "./Dashboard.css";
 import api from "../api/axiosInstance";
 import { API_ENDPOINTS } from "../api/endpoints";
@@ -9,6 +9,7 @@ import {
   formatDate,
   getTodayInputValue,
 } from "../utils/date";
+import { logPerformanceError } from "../utils/performance";
 
 const sortHolidays = (items) => {
   const today = getTodayInputValue();
@@ -26,42 +27,78 @@ const sortHolidays = (items) => {
   });
 };
 
-function Holidays() {
+const normalizeHoliday = (holiday) => {
+  const rawDate =
+    holiday.date ||
+    holiday.holiday_Date ||
+    holiday.Holiday_Date ||
+    holiday.Date ||
+    "";
+
+  return {
+    ...holiday,
+    holiday_Name: holiday.holiday_Name || holiday.holidayName || holiday.HolidayName || "",
+    date: String(rawDate).split("T")[0],
+  };
+};
+
+function Holidays({ holidays: dashboardHolidays }) {
   const [holidays, setHolidays] = useState([]);
 
-  useEffect(() => {
-    fetchHolidays();
-  }, []);
-
-  const fetchHolidays = async () => {
-    try {
-      const res = await api.get(API_ENDPOINTS.company.holidays.list);
-
-      console.log("Holiday API:", res.data);
-
-      const data = extractCollection(res.data);
-
-      const upcomingHolidays = sortHolidays(
-        data
-          .filter(
-            (holiday) =>
-              holiday.holiday_Name &&
-              holiday.holiday_Date !== "0001-01-01T00:00:00"
-          )
-          .map((holiday) => ({
-            ...holiday,
-            date: holiday.holiday_Date ? holiday.holiday_Date.split("T")[0] : "",
-          }))
-      )
-        .filter((holiday) => holiday.date >= getTodayInputValue())
-        .slice(0, 3);
-
-      setHolidays(upcomingHolidays);
-    } catch (error) {
-      console.error("Holiday fetch error:", error);
-      setHolidays([]);
+  const normalizedDashboardHolidays = useMemo(() => {
+    if (!Array.isArray(dashboardHolidays)) {
+      return [];
     }
-  };
+
+    // Optimization: reuse dashboard response holidays instead of making a second dashboard-side API call.
+    return sortHolidays(dashboardHolidays.map(normalizeHoliday))
+      .filter((holiday) => holiday.date >= getTodayInputValue())
+      .slice(0, 3);
+  }, [dashboardHolidays]);
+
+  useEffect(() => {
+    if (dashboardHolidays !== undefined) {
+      setHolidays(normalizedDashboardHolidays);
+      return undefined;
+    }
+
+    const controller = new AbortController();
+
+    const fetchHolidays = async () => {
+      try {
+        const res = await api.get(API_ENDPOINTS.company.holidays.list, {
+          signal: controller.signal,
+        });
+
+        const data = extractCollection(res.data);
+
+        const upcomingHolidays = sortHolidays(
+          data
+            .filter(
+              (holiday) =>
+                holiday.holiday_Name &&
+                holiday.holiday_Date !== "0001-01-01T00:00:00"
+            )
+            .map(normalizeHoliday)
+        )
+          .filter((holiday) => holiday.date >= getTodayInputValue())
+          .slice(0, 3);
+
+        setHolidays(upcomingHolidays);
+      } catch (error) {
+        if (error?.code === "ERR_CANCELED") {
+          return;
+        }
+
+        logPerformanceError("Holiday fetch error:", error);
+        setHolidays([]);
+      }
+    };
+
+    fetchHolidays();
+
+    return () => controller.abort();
+  }, [dashboardHolidays, normalizedDashboardHolidays]);
 
   return (
     <div className="holidays">
@@ -88,4 +125,4 @@ function Holidays() {
   );
 }
 
-export default Holidays;
+export default memo(Holidays);

@@ -1,8 +1,18 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import AppMonthPicker from "../components/AppMonthPicker";
 import AttendanceTable from "./AttendanceTable";
+import useDebouncedValue from "../hooks/useDebouncedValue";
 import "./AttendanceTable.css";
+
+const ATTENDANCE_TABS = [
+  "All",
+  "Present",
+  "Late",
+  "Absent",
+  "Half Day",
+  "On Leave"
+];
 
 const getInitialAttendanceState = (searchString) => {
   const params = new URLSearchParams(searchString);
@@ -37,24 +47,22 @@ function Attendance() {
 
   const location = useLocation();
 
-  const initialState =
-    getInitialAttendanceState(
-      location.search
-    );
-
   const [viewMode, setViewMode] = useState(
-    String(initialState.viewMode)
-      .trim()
-      .toLowerCase()
+    () =>
+      String(getInitialAttendanceState(location.search).viewMode)
+        .trim()
+        .toLowerCase()
   );
 
   const [filter, setFilter] = useState(
-    initialState.filter
+    () => getInitialAttendanceState(location.search).filter
   );
 
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 250);
 
-  const today = new Date();
+  // Optimization: keep date boundaries stable instead of recreating them on every keystroke render.
+  const today = useMemo(() => new Date(), []);
 
   const [month, setMonth] = useState(
     today.getMonth() + 1
@@ -63,15 +71,6 @@ function Attendance() {
   const [year, setYear] = useState(
     today.getFullYear()
   );
-
-  const tabs = [
-    "All",
-    "Present",
-    "Late",
-    "Absent",
-    "Half Day",
-    "On Leave"
-  ];
 
   // ================= URL FILTER HANDLING =================
 
@@ -86,21 +85,21 @@ function Attendance() {
         location.search
       );
 
-    setViewMode(
+    const nextViewMode =
       String(nextState.viewMode)
         .trim()
-        .toLowerCase()
+        .toLowerCase();
+
+    // Optimization: avoid no-op state updates that would rerender the full attendance table.
+    setViewMode((currentViewMode) =>
+      currentViewMode === nextViewMode ? currentViewMode : nextViewMode
     );
 
-    setFilter(nextState.filter);
+    setFilter((currentFilter) =>
+      currentFilter === nextState.filter ? currentFilter : nextState.filter
+    );
 
   }, [location.search]);
-
-  // ================= DEBUG =================
-
-  console.log("VIEW MODE:", viewMode);
-  console.log("MONTH:", month);
-  console.log("YEAR:", year);
 
   return (
 
@@ -188,7 +187,7 @@ function Attendance() {
 
         <div className="attendance-filters">
 
-          {tabs.map((tab) => (
+          {ATTENDANCE_TABS.map((tab) => (
 
             <button
               key={tab}
@@ -217,7 +216,7 @@ function Attendance() {
           .trim()
           .toLowerCase()}
         filter={filter}
-        search={search}
+        search={debouncedSearch}
         month={month}
         year={year}
       />
@@ -226,4 +225,5 @@ function Attendance() {
   );
 }
 
-export default Attendance;
+// Optimization: memoize the page wrapper so parent route renders do not redraw the table unnecessarily.
+export default React.memo(Attendance);

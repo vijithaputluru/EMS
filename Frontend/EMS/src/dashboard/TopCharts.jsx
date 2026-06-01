@@ -1,70 +1,12 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { memo } from "react";
 import {
   FaUsers,
   FaBuilding,
   FaProjectDiagram,
   FaCalendarCheck,
 } from "react-icons/fa";
-import api from "../api/axiosInstance";
-import { API_ENDPOINTS } from "../api/endpoints";
 
-function TopCharts() {
-
-  const [data, setData] = useState({});
-  const fetched = useRef(false);
-
-  const getToken = () => {
-    const token =
-      localStorage.getItem("token") ||
-      sessionStorage.getItem("token");
-
-    console.log("🔑 Token:", token); // ✅ Added
-    return token;
-  };
-
-  useEffect(() => {
-
-    if (fetched.current) {
-      console.log("⚠️ Already fetched, skipping...");
-      return;
-    }
-
-    fetched.current = true;
-
-    console.log("🚀 Fetching Dashboard Data..."); // ✅ Added
-
-    fetchDashboard();
-
-  }, []);
-
-  const fetchDashboard = async () => {
-    try {
-
-      const token = getToken();
-
-      console.log("📡 API URL:", API_ENDPOINTS.dashboard); // ✅ Added
-
-      const res = await api.get(API_ENDPOINTS.dashboard, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      console.log("✅ Full API Response:", res); // ✅ Added
-      console.log("📊 Dashboard Data:", res.data); // ✅ Existing improved
-
-      setData(res.data || {});
-
-    } catch (error) {
-
-      console.error("❌ Dashboard API error:");
-      console.error("Status:", error.response?.status);
-      console.error("Data:", error.response?.data);
-      console.error("Message:", error.message);
-
-    }
-  };
-
+function TopCharts({ data = {} }) {
   return (
     <div className="cards">
 
@@ -136,4 +78,5 @@ function TopCharts() {
   );
 }
 
-export default TopCharts;
+// Optimization: memoized dashboard cards rerender only when shared dashboard data changes.
+export default memo(TopCharts);

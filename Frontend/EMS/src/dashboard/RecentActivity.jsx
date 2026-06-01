@@ -1,53 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { memo } from "react";
 import { FaUserPlus, FaCheckCircle, FaTasks, FaClock } from "react-icons/fa";
-import api from "../api/axiosInstance";
-import { API_ENDPOINTS } from "../api/endpoints";
 import { timeAgo } from "../utils/date";
-import { sortByRecency } from "../utils/collections";
 
-function RecentActivity() {
-
-  const [activities, setActivities] = useState([]);
-
-  const getToken = () =>
-    localStorage.getItem("token") || sessionStorage.getItem("token");
-
-  useEffect(() => {
-    getActivities();
-  }, []);
-
-  const getActivities = async () => {
-    try {
-
-      const token = getToken();
-
-      const res = await api.get(API_ENDPOINTS.dashboard, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      console.log("Dashboard Response:", res.data);
-
-      const activityData =
-        res.data?.recentActivities ||
-        res.data?.activities ||
-        res.data?.data?.recentActivities ||
-        [];
-
-      setActivities(sortByRecency(Array.isArray(activityData) ? activityData : []).slice(0, 6));
-
-    } catch (error) {
-
-      console.error(
-        "Error fetching activities:",
-        error.response?.data || error.message
-      );
-
-      setActivities([]);
-
-    }
-  };
+function RecentActivity({ activities = [] }) {
 
   const getIcon = (type) => {
     switch (type) {
@@ -124,4 +79,5 @@ function RecentActivity() {
   );
 }
 
-export default RecentActivity;
+// Optimization: memoized recent activity avoids duplicate fetches and rerenders from sibling widgets.
+export default memo(RecentActivity);

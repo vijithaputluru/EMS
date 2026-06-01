@@ -2,12 +2,18 @@ const AUTH_KEYS = [
   "token",
   "authToken",
   "jwtToken",
+  "refreshToken",
+  "loginTime",
   "role",
   "roleName",
   "roleId",
   "email",
   "modules",
   "permissions",
+  "userData",
+  "user",
+  "userInfo",
+  "authUser",
 ];
 
 export const getAuthStorage = (rememberMe) =>

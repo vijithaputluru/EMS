@@ -21,6 +21,102 @@ const normalizeDepartmentName = (value) =>
     .trim()
     .toLowerCase();
 
+const getDepartmentRecordId = (department) => {
+  const value =
+    department?.id ??
+    department?.departmentId ??
+    department?.department_Id ??
+    department?.departmentID ??
+    department?.Department_Id ??
+    null;
+
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  if (
+    typeof value === "string" &&
+    !value.trim()
+  ) {
+    return null;
+  }
+
+  return value;
+};
+
+const hasDepartmentIdentifier = (value) => {
+  if (value === null || value === undefined) {
+    return false;
+  }
+
+  if (
+    typeof value === "string" &&
+    !value.trim()
+  ) {
+    return false;
+  }
+
+  return true;
+};
+
+const buildDepartmentIdentifierFields = (
+  value
+) => {
+  if (!hasDepartmentIdentifier(value)) {
+    return {};
+  }
+
+  return {
+    id: value,
+    department_Id: value,
+    departmentId: value,
+  };
+};
+
+const createDepartmentIdentifier = () => {
+  if (
+    globalThis?.crypto &&
+    typeof globalThis.crypto.randomUUID === "function"
+  ) {
+    return globalThis.crypto.randomUUID();
+  }
+
+  const bytes = new Uint8Array(16);
+
+  if (
+    globalThis?.crypto &&
+    typeof globalThis.crypto.getRandomValues === "function"
+  ) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index += 1) {
+      bytes[index] =
+        Math.floor(Math.random() * 256);
+    }
+  }
+
+  bytes[6] =
+    (bytes[6] & 0x0f) | 0x40;
+  bytes[8] =
+    (bytes[8] & 0x3f) | 0x80;
+
+  const hex = Array.from(
+    bytes,
+    (byte) =>
+      byte
+        .toString(16)
+        .padStart(2, "0")
+  ).join("");
+
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20),
+  ].join("-");
+};
+
 function Departments() {
 
   const [departments, setDepartments] =
@@ -74,7 +170,23 @@ function Departments() {
       const cleaned = extractCollection(
         res.data
       ).map((dept) => ({
+        ...buildDepartmentIdentifierFields(
+          getDepartmentRecordId(dept)
+        ),
         ...dept,
+        id:
+          getDepartmentRecordId(dept) ??
+          dept?.id ??
+          null,
+        department_Id:
+          dept?.department_Id ??
+          getDepartmentRecordId(dept) ??
+          null,
+        departmentId:
+          dept?.departmentId ??
+          dept?.department_Id ??
+          getDepartmentRecordId(dept) ??
+          null,
         membersCount: Math.max(
           0,
           Number(dept.membersCount || 0)
@@ -149,9 +261,15 @@ function Departments() {
   useEffect(() => {
 
     const closeMenu = (event) => {
+      const target =
+        event?.target;
 
       if (
-        !event.target.closest(
+        !(
+          target &&
+          typeof target.closest === "function"
+        ) ||
+        !target.closest(
           ".dept-menu-wrapper"
         )
       ) {
@@ -189,9 +307,8 @@ function Departments() {
 
         label:
           emp.name ||
-          `${emp.firstName || ""} ${
-            emp.lastName || ""
-          }`.trim() ||
+          `${emp.firstName || ""} ${emp.lastName || ""
+            }`.trim() ||
           "Employee",
 
         department:
@@ -297,9 +414,7 @@ function Departments() {
 
     if (name === "head") {
 
-      return value
-        ? ""
-        : "Department Head is required";
+      return "";
 
     }
 
@@ -371,10 +486,7 @@ function Departments() {
         draft
       ),
 
-      head: validateField(
-        "head",
-        draft
-      ),
+      head: "",
 
       building: validateField(
         "building",
@@ -419,7 +531,7 @@ function Departments() {
 
       [name]:
         name === "name" ||
-        name === "building"
+          name === "building"
           ? value.replace(/^\s+/g, "")
           : value,
 
@@ -532,24 +644,15 @@ function Departments() {
 
     const payload = {
 
-      departmentName:
-        trimmed.name,
+      departmentName: trimmed.name,
 
-      departmentHead:
-        trimmed.head,
+      departmentHead: trimmed.head,
 
-      membersCount:
-        trimmedDepartmentMembers.length,
+      membersCount: trimmedDepartmentMembers.length,
 
-      building:
-        trimmed.building,
+      building: trimmed.building,
 
-      status:
-        trimmed.status,
-
-      department_Id: editId
-        ? undefined
-        : crypto.randomUUID(),
+      status: trimmed.status,
 
     };
 
@@ -560,12 +663,19 @@ function Departments() {
       if (editId) {
 
         await api.put(
-          API_ENDPOINTS.departments.byId(
-            editId
-          ),
+          API_ENDPOINTS.departments.byId(editId),
           {
-            ...payload,
+            departmentName: trimmed.name,
+            departmentHead: trimmed.head,
+            membersCount: trimmedDepartmentMembers.length,
+            building: trimmed.building,
+            status: trimmed.status,
             id: editId,
+          },
+          {
+            headers: {
+              "Content-Type": "application/json",
+            },
           }
         );
 
@@ -608,7 +718,7 @@ function Departments() {
       toast.error(
         error.response?.data
           ?.message ||
-          "Unable to save department."
+        "Unable to save department."
       );
 
     }
@@ -627,7 +737,18 @@ function Departments() {
 
   const handleEdit = (dept) => {
 
-    setEditId(dept.id);
+    const resolvedDepartmentId =
+      getDepartmentRecordId(dept);
+
+    if (!resolvedDepartmentId) {
+      toast.error(
+        "Unable to edit department."
+      );
+      setActiveMenu(null);
+      return;
+    }
+
+    setEditId(resolvedDepartmentId);
 
     setErrors({});
 
@@ -665,6 +786,17 @@ function Departments() {
     dept
   ) => {
 
+    const resolvedDepartmentId =
+      getDepartmentRecordId(dept);
+
+    if (!resolvedDepartmentId) {
+      toast.error(
+        "Unable to delete department."
+      );
+      setActiveMenu(null);
+      return;
+    }
+
     setDeptToDelete(dept);
 
     setShowDeleteModal(true);
@@ -677,12 +809,40 @@ function Departments() {
 
     if (!deptToDelete) return;
 
+    const resolvedDepartmentId =
+      getDepartmentRecordId(
+        deptToDelete
+      );
+
+    if (!resolvedDepartmentId) {
+      toast.error(
+        "Unable to delete department."
+      );
+      setShowDeleteModal(false);
+      setDeptToDelete(null);
+      return;
+    }
+
     try {
 
       await api.delete(
         API_ENDPOINTS.departments.byId(
-          deptToDelete.id
-        )
+          resolvedDepartmentId
+        ),
+        {
+          params:
+            buildDepartmentIdentifierFields(
+              resolvedDepartmentId
+            ),
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          data:
+            buildDepartmentIdentifierFields(
+              resolvedDepartmentId
+            ),
+        }
       );
 
       toast.success(
@@ -705,6 +865,8 @@ function Departments() {
       );
 
       toast.error(
+        error?.response?.data
+          ?.message ||
         "Unable to delete department."
       );
 
@@ -754,7 +916,13 @@ function Departments() {
 
       <div className="dept-grid">
 
-        {departments.map((dept) => {
+        {departments.map((dept, index) => {
+
+          const departmentCardId =
+            getDepartmentRecordId(
+              dept
+            ) ||
+            `${dept.departmentName || "department"}-${index}`;
 
           const deptEmployees =
             normalizedEmployees.filter(
@@ -771,7 +939,7 @@ function Departments() {
 
             <div
               className="dept-card"
-              key={dept.id}
+              key={departmentCardId}
               onClick={() =>
                 setSelectedDept(dept)
               }
@@ -786,9 +954,10 @@ function Departments() {
                     event.stopPropagation();
 
                     setActiveMenu(
-                      activeMenu === dept.id
+                      activeMenu ===
+                        departmentCardId
                         ? null
-                        : dept.id
+                        : departmentCardId
                     );
 
                   }}
@@ -796,37 +965,38 @@ function Departments() {
                   ⋮
                 </button>
 
-                {activeMenu === dept.id && (
+                {activeMenu ===
+                  departmentCardId && (
 
-                  <div
-                    className="dept-popup-menu"
-                    onClick={(event) =>
-                      event.stopPropagation()
-                    }
-                  >
-
-                    <button
-                      onClick={() =>
-                        handleEdit(dept)
+                    <div
+                      className="dept-popup-menu"
+                      onClick={(event) =>
+                        event.stopPropagation()
                       }
                     >
-                      Edit
-                    </button>
 
-                    <button
-                      className="delete"
-                      onClick={() =>
-                        handleDeleteClick(
-                          dept
-                        )
-                      }
-                    >
-                      Delete
-                    </button>
+                      <button
+                        onClick={() =>
+                          handleEdit(dept)
+                        }
+                      >
+                        Edit
+                      </button>
 
-                  </div>
+                      <button
+                        className="delete"
+                        onClick={() =>
+                          handleDeleteClick(
+                            dept
+                          )
+                        }
+                      >
+                        Delete
+                      </button>
 
-                )}
+                    </div>
+
+                  )}
 
               </div>
 
@@ -839,7 +1009,7 @@ function Departments() {
                 <span
                   className={
                     dept.status ===
-                    "Active"
+                      "Active"
                       ? "dept-status active"
                       : "dept-status inactive"
                   }
@@ -913,11 +1083,22 @@ function Departments() {
             }
           >
 
-            <h3>
-              {editId
-                ? "Edit Department"
-                : "Add Department"}
-            </h3>
+            <div className="dept-modal-header">
+              <h3>
+                {editId
+                  ? "Edit Department"
+                  : "Add Department"}
+              </h3>
+
+              <button
+                type="button"
+                className="dept-modal-close"
+                onClick={closeModal}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
 
             {/* NAME */}
 
@@ -1001,11 +1182,10 @@ function Departments() {
               )}
 
               <div
-                className={`dept-head-dropdown ${
-                  errors.head
-                    ? "field-error"
-                    : ""
-                }`}
+                className={`dept-head-dropdown ${errors.head
+                  ? "field-error"
+                  : ""
+                  }`}
               >
 
                 {employeeOptions
@@ -1379,7 +1559,7 @@ function Departments() {
             <div className="dept-members-list">
 
               {selectedDepartmentMembers.length >
-              0 ? (
+                0 ? (
 
                 selectedDepartmentMembers.map(
                   (member) => (

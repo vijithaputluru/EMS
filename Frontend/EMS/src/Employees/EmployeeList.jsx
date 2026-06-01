@@ -88,6 +88,7 @@ function EmployeeList() {
   const [departmentFilter, setDepartmentFilter] = useState("All");
   const [statusFilter, setStatusFilter] = useState("All");
   const [sortBy, setSortBy] = useState("latest-desc");
+  const [joiningDateFilter, setJoiningDateFilter] = useState("");
 
   const [empShowModal, setEmpShowModal] = useState(false);
   const [showDeptModal, setShowDeptModal] = useState(false);
@@ -95,6 +96,7 @@ function EmployeeList() {
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [employeeToDelete, setEmployeeToDelete] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
@@ -160,7 +162,13 @@ function EmployeeList() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [empSearch, departmentFilter, statusFilter, sortBy]);
+  }, [
+    empSearch,
+    departmentFilter,
+    statusFilter,
+    joiningDateFilter,
+    sortBy,
+  ]);
 
   useEffect(() => {
     if (!isEmployeeSalaryValid && !errors.ctc) {
@@ -503,13 +511,13 @@ function EmployeeList() {
     return [...new Set(values)];
   }, [departments]);
 
-  const statusOptions = useMemo(() => {
-    const values = empList
-      .map((emp) => emp.status)
-      .filter((status) => status && status !== "-");
-
-    return [...new Set(values)];
-  }, [empList]);
+  const statusOptions = [
+    "Active",
+    "Inactive",
+    "Probation",
+    "Ready to Accept Offer",
+    "Rejected Offer",
+  ];
 
   const filteredEmployees = useMemo(() => {
     const searchText = empSearch.trim().toLowerCase();
@@ -522,12 +530,36 @@ function EmployeeList() {
         );
       const matchesDepartment =
         departmentFilter === "All" || emp.dept === departmentFilter;
-      const matchesStatus = statusFilter === "All" || emp.status === statusFilter;
+      const matchesStatus =
+        statusFilter === "All" || emp.status === statusFilter;
 
-      return matchesSearch && matchesDepartment && matchesStatus;
+      const matchesJoiningDate =
+        !joiningDateFilter ||
+        emp.joinedValue === joiningDateFilter;
+
+      return (
+        matchesSearch &&
+        matchesDepartment &&
+        matchesStatus &&
+        matchesJoiningDate
+      );
     });
 
     return [...results].sort((first, second) => {
+      if (sortBy === "latest-desc") {
+        return (
+          new Date(second.joinedValue) -
+          new Date(first.joinedValue)
+        );
+      }
+
+      if (sortBy === "oldest-asc") {
+        return (
+          new Date(first.joinedValue) -
+          new Date(second.joinedValue)
+        );
+      }
+
       if (sortBy === "name-asc") {
         return first.name.localeCompare(second.name);
       }
@@ -590,6 +622,51 @@ function EmployeeList() {
         </div>
 
         <div className="emp-header-actions">
+          <button
+            className="emp-download-btn"
+            disabled={isDownloading}
+            onClick={async () => {
+              try {
+                setIsDownloading(true);
+
+                const response = await api.get(
+                  API_ENDPOINTS.employees.downloadFullMaster,
+                  {
+                    responseType: "blob",
+                  }
+                );
+
+                const blob = new Blob([response.data], {
+                  type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                });
+
+                const downloadUrl = window.URL.createObjectURL(blob);
+
+                const link = document.createElement("a");
+                link.href = downloadUrl;
+                link.download = "employee-full-master.xlsx";
+
+                document.body.appendChild(link);
+                link.click();
+
+                document.body.removeChild(link);
+                window.URL.revokeObjectURL(downloadUrl);
+
+                setMessage("Download completed successfully.");
+                setMessageType("success");
+              } catch (error) {
+                console.error("Download error:", error);
+
+                setMessage("Failed to download Employee Excel.");
+                setMessageType("error");
+              } finally {
+                setIsDownloading(false);
+              }
+            }}
+          >
+            {isDownloading ? "Downloading..." : "Download Excel"}
+          </button>
+
           <button className="emp-add-btn" onClick={openAddEmployeeModal}>
             + Add Employee
           </button>
@@ -624,6 +701,14 @@ function EmployeeList() {
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
           >
+            <input
+              type="date"
+              className="emp-filter-select"
+              value={joiningDateFilter}
+              onChange={(event) =>
+                setJoiningDateFilter(event.target.value)
+              }
+            />
             <option value="All">All Statuses</option>
             {statusOptions.map((status) => (
               <option key={status} value={status}>
@@ -637,9 +722,21 @@ function EmployeeList() {
             value={sortBy}
             onChange={(event) => setSortBy(event.target.value)}
           >
-            <option value="latest-desc">Sort: Latest First</option>
-            <option value="ctc-desc">Sort: Highest CTC</option>
-            <option value="name-asc">Sort: Name</option>
+            <option value="latest-desc">
+              Sort: New Joining Date
+            </option>
+
+            <option value="oldest-asc">
+              Sort: Old Joining Date
+            </option>
+
+            <option value="ctc-desc">
+              Sort: Highest CTC
+            </option>
+
+            <option value="name-asc">
+              Sort: Name
+            </option>
           </select>
         </div>
       </div>

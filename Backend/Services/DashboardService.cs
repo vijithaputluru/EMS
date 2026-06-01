@@ -21,14 +21,17 @@ namespace EmployeeManagementSystem.Services
             var utcNow = DateTime.UtcNow;
             var today = utcNow.Date;
 
-            var totalEmployees = await _context.Employees.CountAsync();
-            var totalDepartments = await _context.Departments.CountAsync();
+            // Optimization: dashboard cards are read-only, so skip EF change tracking.
+            var totalEmployees = await _context.Employees.AsNoTracking().CountAsync();
+            var totalDepartments = await _context.Departments.AsNoTracking().CountAsync();
 
             var activeProjects = await _context.Projects
+                .AsNoTracking()
                 .Where(p => p.Status == "Active")
                 .CountAsync();
 
             var totalAttendance = await _context.Attendance
+                .AsNoTracking()
                 .Where(a => a.Attendance_Date == today)
                 .CountAsync();
 
@@ -39,6 +42,7 @@ namespace EmployeeManagementSystem.Services
             var activityExpiry = utcNow.AddHours(-2);
 
             var activityLogs = await _context.ActivityLogs
+                .AsNoTracking()
                 .Where(a => a.CreatedAt >= activityExpiry)
                 .OrderByDescending(a => a.CreatedAt)
                 .Take(5)
@@ -58,6 +62,7 @@ namespace EmployeeManagementSystem.Services
                 .ToList();
 
             var upcomingHolidays = await _context.Holidays
+                .AsNoTracking()
                 .Where(h => h.Holiday_Date >= today)
                 .OrderBy(h => h.Holiday_Date)
                 .Take(3)

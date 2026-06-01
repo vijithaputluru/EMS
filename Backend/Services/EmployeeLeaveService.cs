@@ -33,21 +33,25 @@ public class EmployeeLeaveService : IEmployeeLeaveService
     }
 
     public async Task<IActionResult> ApplyLeave(EmployeeLeaveDto dto, ClaimsPrincipal user)
-
     {
-
         var email = user.FindFirst(ClaimTypes.Email)?.Value?.Trim().ToLower();
 
         var employee = await _context.Employees
-
-        .FirstOrDefaultAsync(e => e.Email.ToLower() == email);
+            .FirstOrDefaultAsync(e => e.Email.ToLower() == email);
 
         if (employee == null)
-
-            return new BadRequestObjectResult("Employee not found");
+            return new BadRequestObjectResult(new { message = "Employee not found" });
 
         var fromDate = dto.FromDate.Date;
         var toDate = dto.ToDate.Date;
+
+        if (fromDate > toDate)
+        {
+            return new BadRequestObjectResult(new
+            {
+                message = "From date cannot be greater than To date"
+            });
+        }
 
         var alreadyApplied = await _context.EmployeeLeaves
             .AsNoTracking()
@@ -65,58 +69,47 @@ public class EmployeeLeaveService : IEmployeeLeaveService
                 message = "You already applied leave for this date"
             });
 
-        var leave = new EmployeeLeave
+        int workingDays = await CalculateWorkingDays(fromDate, toDate);
 
+        if (workingDays == 0)
         {
+            return new BadRequestObjectResult(new
+            {
+                message = "Leave cannot be applied for weekends or holidays"
+            });
+        }
 
+        var leave = new EmployeeLeave
+        {
             EmployeeId = employee.Employee_Id,
-
             EmployeeName = employee.Name,
-
             LeaveType = dto.LeaveType,
-
-            FromDate = dto.FromDate,
-
-            ToDate = dto.ToDate,
-
+            FromDate = fromDate,
+            ToDate = toDate,
             Reason = dto.Reason,
-
             Status = "Pending",
-
             CreatedAt = DateTime.UtcNow
-
         };
 
-
         await _context.EmployeeLeaves.AddAsync(leave);
-
         await _context.SaveChangesAsync();
 
-
-        // 🔔 ADMIN NOTIFICATION
-
         _context.AdminNotifications.Add(new AdminNotification
-
         {
-
             Title = "Leave Request",
-
             Message = $"{employee.Name} applied for leave",
-
             UserRole = "Admin",
-
             IsRead = false,
-
             CreatedAt = DateTime.UtcNow
-
         });
 
         await _context.SaveChangesAsync();
 
-        return new OkObjectResult("Leave applied successfully");
-
+        return new OkObjectResult(new
+        {
+            message = "Leave applied successfully"
+        });
     }
-
     public async Task<IActionResult> UpdateStatus(int id, string status)
 
     {
@@ -521,38 +514,25 @@ public class EmployeeLeaveService : IEmployeeLeaveService
     }
 
     private async Task<int> CalculateWorkingDays(DateTime fromDate, DateTime toDate)
-
     {
-
         int days = 0;
 
         for (var date = fromDate.Date; date <= toDate.Date; date = date.AddDays(1))
-
         {
-
-            // Skip weekends
-
-            if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
-
+            if (date.DayOfWeek == DayOfWeek.Saturday ||
+                date.DayOfWeek == DayOfWeek.Sunday)
                 continue;
 
-            // Skip holidays
-
             var isHoliday = await _context.Holidays
-
-                .AnyAsync(h => h.Holiday_Date.Date == date);
+                .AnyAsync(h => h.Holiday_Date.Date == date.Date);
 
             if (isHoliday)
-
                 continue;
 
             days++;
-
         }
 
         return days;
-
     }
-
 }
 

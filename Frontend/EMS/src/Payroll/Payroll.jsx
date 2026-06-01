@@ -5,6 +5,12 @@ import { API_ENDPOINTS, buildApiUrl } from "../api/endpoints";
 import { formatDate } from "../utils/date";
 import { formatCurrency as formatAppCurrency } from "../utils/formatters";
 import { getStoredToken } from "../utils/authStorage";
+import useDebouncedValue from "../hooks/useDebouncedValue";
+import {
+  endPerformanceTimer,
+  logPerformanceError,
+  startPerformanceTimer,
+} from "../utils/performance";
 import {
   FaDownload,
   FaAngleLeft,
@@ -12,6 +18,19 @@ import {
   FaAnglesLeft,
   FaAnglesRight
 } from "react-icons/fa6";
+
+const PAYROLL_MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+const PAYROLL_YEARS = Array.from({ length: 10 }, (_, i) => 2022 + i);
+const STANDARD_PERIODS = [1, 3, 6, 12];
+const MANUAL_FIELDS = [
+  ["totalWorkingDays", "Total Working Days"],
+  ["lopDays", "LOP Days"],
+  ["otherDeductions", "Other Deductions"]
+];
 
 function Payroll() {
   const currentDate = new Date();
@@ -24,6 +43,7 @@ function Payroll() {
   const [allPayslips, setAllPayslips] = useState([]);
 
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 250);
   const [successMsg, setSuccessMsg] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -43,15 +63,11 @@ function Payroll() {
   const [recentPage, setRecentPage] = useState(1);
   const [recentRowsPerPage, setRecentRowsPerPage] = useState(10);
   const [recentLoading, setRecentLoading] = useState(false);
+  const [isSalaryDownloading, setIsSalaryDownloading] = useState(false);
 
   const token = getStoredToken();
-
-  const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December"
-  ];
-
-  const years = Array.from({ length: 10 }, (_, i) => 2022 + i);
+  const months = PAYROLL_MONTHS;
+  const years = PAYROLL_YEARS;
 
   const [manualForm, setManualForm] = useState({
     totalWorkingDays: "",
@@ -60,8 +76,12 @@ function Payroll() {
   });
 
   useEffect(() => {
-    fetchEmployees();
-    fetchRecentPayslips();
+    const controller = new AbortController();
+
+    fetchEmployees(controller.signal);
+    fetchRecentPayslips(controller.signal);
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -103,24 +123,42 @@ function Payroll() {
     return !isNaN(fallback.getTime()) ? fallback : null;
   };
 
-  const fetchEmployees = async () => {
+  const fetchEmployees = async (signal) => {
+    const timerLabel = "payroll:employees-fetch";
+
     try {
+      // Optimization: time initial payroll employee loading and cancel stale route requests.
+      startPerformanceTimer(timerLabel);
+
       const res = await api.get(API_ENDPOINTS.payroll.employees, {
+        signal,
         headers: { Authorization: `Bearer ${token}` }
       });
       const empData = Array.isArray(res.data) ? res.data : res.data?.data || [];
       setEmployees(empData);
       if (empData.length > 0) setSelectedEmp(empData[0]);
     } catch (err) {
-      console.error("❌ Employees fetch error:", err.response?.data || err.message);
+      if (err?.code === "ERR_CANCELED") {
+        return;
+      }
+
+      logPerformanceError("Employees fetch error:", err.response?.data || err.message);
       setErrorMsg("Failed to fetch employees");
+    } finally {
+      endPerformanceTimer(timerLabel);
     }
   };
 
-  const fetchRecentPayslips = useCallback(async () => {
+  const fetchRecentPayslips = useCallback(async (signal) => {
+    let canceled = false;
+    const timerLabel = "payroll:recent-payslips-fetch";
+
     try {
       setRecentLoading(true);
+      startPerformanceTimer(timerLabel);
+
       const res = await api.get(API_ENDPOINTS.payroll.recent, {
+        signal,
         headers: { Authorization: `Bearer ${token}` }
       });
 
@@ -166,11 +204,21 @@ function Payroll() {
 
       setAllPayslips(normalized);
     } catch (err) {
-      console.error("❌ Recent payslips fetch error:", err.response?.data || err.message);
+      canceled = err?.code === "ERR_CANCELED";
+
+      if (canceled) {
+        return;
+      }
+
+      logPerformanceError("Recent payslips fetch error:", err.response?.data || err.message);
       setErrorMsg("Failed to fetch recent payslips");
       setAllPayslips([]);
     } finally {
-      setRecentLoading(false);
+      endPerformanceTimer(timerLabel);
+
+      if (!canceled) {
+        setRecentLoading(false);
+      }
     }
   }, [token]);
 
@@ -191,18 +239,32 @@ function Payroll() {
   };
 
   const filteredEmployees = useMemo(() => {
+    const keyword = debouncedSearch.toLowerCase();
+
+    // Optimization: debounce payroll employee filtering for large employee lists.
     return employees.filter((emp) => {
-      const keyword = search.toLowerCase();
       return (
         (emp.name || "").toLowerCase().includes(keyword) ||
         (emp.employee_Id || "").toLowerCase().includes(keyword)
       );
     });
-  }, [employees, search]);
+  }, [employees, debouncedSearch]);
+
+  const employeesById = useMemo(() => {
+    // Optimization: avoid repeated employees.find calls while rendering payslip rows.
+    return new Map(employees.map((emp) => [emp.employee_Id, emp]));
+  }, [employees]);
+
+  const selectedEmployeeSet = useMemo(
+    () => new Set(selectedEmployees),
+    [selectedEmployees]
+  );
 
   const selectedEmployeeObjects = useMemo(() => {
-    return employees.filter((emp) => selectedEmployees.includes(emp.employee_Id));
-  }, [employees, selectedEmployees]);
+    return selectedEmployees
+      .map((employeeId) => employeesById.get(employeeId))
+      .filter(Boolean);
+  }, [employeesById, selectedEmployees]);
 
   const filteredPayslips = useMemo(() => {
     return allPayslips.filter((p) => {
@@ -244,7 +306,7 @@ function Payroll() {
         : [...prev, employeeId];
 
       if (updated.length === 1) {
-        const onlyEmp = employees.find((e) => e.employee_Id === updated[0]);
+        const onlyEmp = employeesById.get(updated[0]);
         setSelectedEmp(onlyEmp || null);
       } else {
         setSelectedEmp(null);
@@ -256,16 +318,17 @@ function Payroll() {
   const handleSelectAll = () => {
     if (generating) return;
     const visibleIds = filteredEmployees.map((emp) => emp.employee_Id);
+    const visibleIdSet = new Set(visibleIds);
     const allVisibleSelected =
-      visibleIds.length > 0 && visibleIds.every((id) => selectedEmployees.includes(id));
+      visibleIds.length > 0 && visibleIds.every((id) => selectedEmployeeSet.has(id));
 
     const updated = allVisibleSelected
-      ? selectedEmployees.filter((id) => !visibleIds.includes(id))
+      ? selectedEmployees.filter((id) => !visibleIdSet.has(id))
       : [...new Set([...selectedEmployees, ...visibleIds])];
 
     setSelectedEmployees(updated);
     if (updated.length === 1) {
-      const onlyEmp = employees.find((e) => e.employee_Id === updated[0]);
+      const onlyEmp = employeesById.get(updated[0]);
       setSelectedEmp(onlyEmp || null);
     } else {
       setSelectedEmp(null);
@@ -274,7 +337,7 @@ function Payroll() {
 
   const allFilteredSelected =
     filteredEmployees.length > 0 &&
-    filteredEmployees.every((emp) => selectedEmployees.includes(emp.employee_Id));
+    filteredEmployees.every((emp) => selectedEmployeeSet.has(emp.employee_Id));
 
   const handleCardClick = (emp) => {
     if (generating) return;
@@ -342,7 +405,7 @@ function Payroll() {
       setRecentPage(1);
       await fetchRecentPayslips();
     } catch (err) {
-      console.error("❌ Generate Error:", err.response?.data || err.message);
+      logPerformanceError("Generate Error:", err.response?.data || err.message);
       setErrorMsg(err.response?.data?.message || "Failed to generate payslip(s)");
     } finally {
       setGenerating(false);
@@ -357,10 +420,15 @@ function Payroll() {
 
   const handleDownloadPayslip = async (id) => {
     try {
-      const response = await api.get(buildApiUrl(API_ENDPOINTS.payroll.download(id)), {
-        responseType: "blob",
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(
+        buildApiUrl(API_ENDPOINTS.payroll.download(id)),
+        {
+          responseType: "blob",
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
 
       const blob = new Blob([response.data], { type: "application/pdf" });
       const url = window.URL.createObjectURL(blob);
@@ -372,7 +440,100 @@ function Payroll() {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Download failed:", error);
+      logPerformanceError("Download failed:", error);
+    }
+  };
+
+  const handleDownloadSalaryRegister = async () => {
+    try {
+      setIsSalaryDownloading(true);
+
+      const registerMonth =
+        recentFilterMonth === "All" ? month : recentFilterMonth;
+      const registerYear =
+        recentFilterYear === "All" ? year : Number(recentFilterYear);
+
+      const response = await api.get(
+        buildApiUrl(API_ENDPOINTS.payroll.salaryRegister),
+        {
+          params: {
+            month: registerMonth,
+            year: Number(registerYear)
+          },
+          responseType: "blob",
+          timeout: 120000,
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept:
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          }
+        }
+      );
+
+      const blob = new Blob(
+        [response.data],
+        {
+          type:
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }
+      );
+
+      const file =
+        new File(
+          [blob],
+          `salary-register-${new Date()
+            .toISOString()
+            .split("T")[0]}.xlsx`,
+          {
+            type:
+              "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          }
+        );
+
+      const downloadUrl =
+        window.URL.createObjectURL(file);
+
+      const link =
+        document.createElement("a");
+
+      link.href = downloadUrl;
+
+      link.setAttribute(
+        "download",
+        file.name
+      );
+
+      document.body.appendChild(link);
+
+      link.click();
+
+      setTimeout(() => {
+
+        document.body.removeChild(link);
+
+        window.URL.revokeObjectURL(downloadUrl);
+
+      }, 1000);
+
+      setSuccessMsg(
+        "Salary register downloaded successfully."
+      );
+
+    } catch (error) {
+
+      logPerformanceError(
+        "Salary register download error:",
+        error
+      );
+
+      setErrorMsg(
+        "Failed to download salary register."
+      );
+
+    } finally {
+
+      setIsSalaryDownloading(false);
+
     }
   };
 
@@ -492,7 +653,7 @@ function Payroll() {
 
         <div className="employee-list">
           {filteredEmployees.map((emp) => {
-            const isChecked = selectedEmployees.includes(emp.employee_Id);
+            const isChecked = selectedEmployeeSet.has(emp.employee_Id);
             const isActive =
               selectedEmp?.employee_Id === emp.employee_Id ||
               (selectedEmployees.length === 1 && isChecked);
@@ -669,7 +830,7 @@ function Payroll() {
                   <div className="standard-periods">
                     <label>STANDARD PERIODS</label>
                     <div className="period-buttons">
-                      {[1, 3, 6, 12].map((period) => (
+                      {STANDARD_PERIODS.map((period) => (
                         <button
                           key={period}
                           type="button"
@@ -776,11 +937,7 @@ function Payroll() {
               </div>
 
               <div className="manual-fields-grid">
-                {[
-                  ["totalWorkingDays", "Total Working Days"],
-                  ["lopDays", "LOP Days"],
-                  ["otherDeductions", "Other Deductions"]
-                ].map(([name, label]) => (
+                {MANUAL_FIELDS.map(([name, label]) => (
                   <div key={name} className="manual-field">
                     <label>{label}</label>
                     <input
@@ -814,7 +971,37 @@ function Payroll() {
           {/* RECENT PAYSLIPS TABLE */}
           <div className="recent-table">
             <div className="recent-table-header">
-              <h4>Recently Generated</h4>
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px"
+                }}
+              >
+                <h4>Recently Generated</h4>
+
+                <button
+                  disabled={isSalaryDownloading}
+                  onClick={handleDownloadSalaryRegister}
+                  style={{
+                    border: "1px solid #93c5fd",
+                    background: "#dbeafe",
+                    color: "#2563eb",
+                    padding: "10px 16px",
+                    borderRadius: "10px",
+                    fontSize: "14px",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    transition: "0.2s ease",
+                    opacity: isSalaryDownloading ? 0.7 : 1
+                  }}
+                >
+                  {isSalaryDownloading
+                    ? "Downloading..."
+                    : "Download Monthly Report"}
+                </button>
+              </div>
 
               <div className="recent-filters">
                 <select
@@ -974,9 +1161,7 @@ function Payroll() {
                     </tr>
                   ) : (
                     paginatedRecentPayslips.map((p, index) => {
-                      const emp = employees.find(
-                        (e) => e.employee_Id === p.employeeId
-                      );
+                      const emp = employeesById.get(p.employeeId);
 
                       const ctcValue = getCtcValue(p, emp);
 

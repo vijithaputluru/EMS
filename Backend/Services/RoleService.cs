@@ -43,7 +43,8 @@
                     Id = r.RoleId,
                     Name = r.Name,
                     IsActive = r.IsActive,
-                    UsersCount = _context.Users.Count(u => u.RoleId == r.RoleId)
+
+                    UsersCount = _context.Employees.Count(e => e.RoleId == r.RoleId)
                 })
                 .ToListAsync();
         }
