@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 using System.Security.Claims;
+using ClosedXML.Excel;
 
 public class EmployeeLeaveService : IEmployeeLeaveService
 
@@ -406,6 +407,51 @@ public class EmployeeLeaveService : IEmployeeLeaveService
 
         });
 
+    }
+    public async Task<byte[]> ExportLeavesExcel()
+    {
+        var leaves = await _context.EmployeeLeaves
+            .AsNoTracking()
+            .ToListAsync();
+
+        using var workbook = new XLWorkbook();
+        var worksheet = workbook.Worksheets.Add("Employee Leaves");
+
+        // Headers
+        worksheet.Cell(1, 1).Value = "Employee ID";
+        worksheet.Cell(1, 2).Value = "Employee Name";
+        worksheet.Cell(1, 3).Value = "Leave Type";
+        worksheet.Cell(1, 4).Value = "From Date";
+        worksheet.Cell(1, 5).Value = "To Date";
+        worksheet.Cell(1, 6).Value = "Reason";
+        worksheet.Cell(1, 7).Value = "Status";
+        worksheet.Cell(1, 8).Value = "Applied On";
+
+        var headerRange = worksheet.Range(1, 1, 1, 8);
+        headerRange.Style.Font.Bold = true;
+
+        int row = 2;
+
+        foreach (var leave in leaves)
+        {
+            worksheet.Cell(row, 1).Value = leave.EmployeeId;
+            worksheet.Cell(row, 2).Value = leave.EmployeeName;
+            worksheet.Cell(row, 3).Value = leave.LeaveType;
+            worksheet.Cell(row, 4).Value = leave.FromDate;
+            worksheet.Cell(row, 5).Value = leave.ToDate;
+            worksheet.Cell(row, 6).Value = leave.Reason;
+            worksheet.Cell(row, 7).Value = leave.Status;
+            worksheet.Cell(row, 8).Value = leave.CreatedAt;
+
+            row++;
+        }
+
+        worksheet.Columns().AdjustToContents();
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+
+        return stream.ToArray();
     }
 
 

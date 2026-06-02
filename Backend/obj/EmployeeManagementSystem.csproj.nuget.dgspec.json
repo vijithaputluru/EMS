@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\EMS New\\Backend\\EmployeeManagementSystem.csproj": {}
+    "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS Pirnav\\Backend\\EmployeeManagementSystem.csproj": {}
   },
   "projects": {
-    "C:\\EMS New\\Backend\\EmployeeManagementSystem.csproj": {
+    "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS Pirnav\\Backend\\EmployeeManagementSystem.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\EMS New\\Backend\\EmployeeManagementSystem.csproj",
+        "projectUniqueName": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS Pirnav\\Backend\\EmployeeManagementSystem.csproj",
         "projectName": "EmployeeManagementSystem",
-        "projectPath": "C:\\EMS New\\Backend\\EmployeeManagementSystem.csproj",
+        "projectPath": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS Pirnav\\Backend\\EmployeeManagementSystem.csproj",
         "packagesPath": "C:\\Users\\ADMIN\\.nuget\\packages\\",
-        "outputPath": "C:\\EMS New\\Backend\\obj\\",
+        "outputPath": "C:\\Users\\ADMIN\\OneDrive\\Desktop\\EMS Pirnav\\Backend\\obj\\",
         "projectStyle": "PackageReference",
         "fallbackFolders": [
           "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

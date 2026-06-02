@@ -219,7 +219,10 @@ namespace EmployeeManagementSystem.Services
             if (hours >= 3 && hours < 4)
                 att.Status = "Half Day";
             else if (hours >= 4)
-                att.Status = "Present";
+            {
+                if (att.Status != "Late")
+                    att.Status = "Present";
+            }
             else
                 att.Status = "Absent";
 
@@ -927,11 +930,18 @@ namespace EmployeeManagementSystem.Services
                 var hours = minutes / 60.0;
 
                 if (hours >= 3 && hours < 4)
+                {
                     att.Status = "Half Day";
+                }
                 else if (hours >= 4)
-                    att.Status = "Present";
+                {
+                    if (att.Status != "Late")
+                        att.Status = "Present";
+                }
                 else
+                {
                     att.Status = "Absent";
+                }
             }
 
             await _context.SaveChangesAsync();
@@ -1207,11 +1217,18 @@ namespace EmployeeManagementSystem.Services
                 var hours = minutes / 60.0;
 
                 if (hours >= 3 && hours < 4)
+                {
                     attendance.Status = "Half Day";
+                }
                 else if (hours >= 4)
-                    attendance.Status = "Present";
+                {
+                    if (attendance.Status != "Late")
+                        attendance.Status = "Present";
+                }
                 else
+                {
                     attendance.Status = "Absent";
+                }
             }
             else if (attendance.Check_In != null &&
                      attendance.Check_Out == null)
@@ -1599,8 +1616,111 @@ namespace EmployeeManagementSystem.Services
 
                 row++;
             }
-            
+
             worksheet.Rows().Height = 24;
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            return stream.ToArray();
+        }
+
+        public async Task<byte[]> ExportAbsentEmployees(DateTime date)
+        {
+            date = date.Date;
+
+            var employees = await _context.Employees
+                .AsNoTracking()
+                .ToListAsync();
+
+            var attendance = await _context.Attendance
+                .AsNoTracking()
+                .Where(a => a.Attendance_Date.Date == date)
+                .ToListAsync();
+
+            var absentEmployees = employees
+                .Where(emp => !attendance.Any(a => a.Employee_Id == emp.Employee_Id))
+                .ToList();
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Absent Employees");
+
+            worksheet.Cell(1, 1).Value = "Employee ID";
+            worksheet.Cell(1, 2).Value = "Employee Name";
+            worksheet.Cell(1, 3).Value = "Department";
+            worksheet.Cell(1, 4).Value = "Date";
+            worksheet.Cell(1, 5).Value = "Status";
+
+            int row = 2;
+
+            foreach (var emp in absentEmployees)
+            {
+                worksheet.Cell(row, 1).Value = emp.Employee_Id;
+                worksheet.Cell(row, 2).Value = emp.Name;
+                worksheet.Cell(row, 3).Value = emp.Department;
+                worksheet.Cell(row, 4).Value = date.ToString("dd-MMM-yyyy");
+                worksheet.Cell(row, 5).Value = "Absent";
+                row++;
+            }
+
+            worksheet.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+
+            return stream.ToArray();
+        }
+
+        public async Task<byte[]> ExportPresentAndLateEmployees(DateTime date)
+        {
+            date = date.Date;
+
+            var attendance = await _context.Attendance
+                .AsNoTracking()
+                .Where(a =>
+                    a.Attendance_Date.Date == date &&
+                    (a.Status == "Present" || a.Status == "Late"))
+                .ToListAsync();
+
+            var employees = await _context.Employees
+                .AsNoTracking()
+                .ToDictionaryAsync(e => e.Employee_Id);
+
+            using var workbook = new XLWorkbook();
+            var worksheet = workbook.Worksheets.Add("Present & Late");
+
+            worksheet.Cell(1, 1).Value = "Employee ID";
+            worksheet.Cell(1, 2).Value = "Employee Name";
+            worksheet.Cell(1, 3).Value = "Department";
+            worksheet.Cell(1, 4).Value = "Check In";
+            worksheet.Cell(1, 5).Value = "Check Out";
+            worksheet.Cell(1, 6).Value = "Status";
+
+            int row = 2;
+
+            foreach (var att in attendance)
+            {
+                if (!employees.TryGetValue(att.Employee_Id, out var emp))
+                    continue;
+
+                worksheet.Cell(row, 1).Value = emp.Employee_Id;
+                worksheet.Cell(row, 2).Value = emp.Name;
+                worksheet.Cell(row, 3).Value = emp.Department;
+                worksheet.Cell(row, 4).Value =
+    att.Check_In != null
+        ? ConvertToIST(att.Check_In.Value).ToString("dd-MM-yyyy hh:mm tt")
+        : "-";
+
+                worksheet.Cell(row, 5).Value =
+                    att.Check_Out != null
+                        ? ConvertToIST(att.Check_Out.Value).ToString("dd-MM-yyyy hh:mm tt")
+                        : "-";
+                worksheet.Cell(row, 6).Value = att.Status;
+
+                row++;
+            }
 
             worksheet.Columns().AdjustToContents();
 
@@ -1803,50 +1923,234 @@ namespace EmployeeManagementSystem.Services
         5)
     .ThenBy(x => x.Attendance?.Check_In);
 
+            var presentEmployees = reportData
+    .Where(x => x.Attendance != null)
+    .ToList();
+
+            var absentEmployees = reportData
+                .Where(x => x.Attendance == null)
+                .ToList();
+
+            var lateEmployees = reportData
+                .Where(x =>
+                    x.Attendance?.Check_In != null &&
+                    ConvertToIST(x.Attendance.Check_In.Value)
+                        .TimeOfDay > new TimeSpan(9, 15, 0))
+                .ToList();
+
             using var workbook = new XLWorkbook();
-            var worksheet = workbook.Worksheets.Add("Daily Attendance");
 
-            worksheet.Cell(1, 1).Value = "Employee ID";
-            worksheet.Cell(1, 2).Value = "Employee Name";
-            worksheet.Cell(1, 3).Value = "Department";
-            worksheet.Cell(1, 4).Value = "Date";
-            worksheet.Cell(1, 5).Value = "Check In";
-            worksheet.Cell(1, 6).Value = "Check Out";
-            worksheet.Cell(1, 7).Value = "Status";
-            worksheet.Cell(1, 8).Value = "Working Hours";
+            var presentSheet =
+                workbook.Worksheets.Add("Present Employees");
 
-            int row = 2;
+            var absentSheet =
+                workbook.Worksheets.Add("Absent Employees");
 
-            foreach (var item in reportData)
+            var lateSheet =
+                workbook.Worksheets.Add("Late Employees");
+
+            //=====================================
+            // PRESENT EMPLOYEES SHEET
+            //=====================================
+
+            presentSheet.Cell(1, 1).Value =
+      "Present Employees Report";
+
+            presentSheet.Cell(2, 1).Value =
+                $"Report Date : {date:dd-MMM-yyyy}";
+
+            presentSheet.Cell(3, 1).Value =
+                $"Total Employees : {employees.Count}";
+
+            presentSheet.Cell(3, 4).Value =
+                $"Total Present : {presentEmployees.Count}";
+
+            presentSheet.Cell(5, 1).Value = "Employee ID";
+            presentSheet.Cell(5, 2).Value = "Employee Name";
+            presentSheet.Cell(5, 3).Value = "Department";
+            presentSheet.Cell(5, 4).Value = "Date";
+            presentSheet.Cell(5, 5).Value = "Check In";
+            presentSheet.Cell(5, 6).Value = "Check Out";
+            presentSheet.Cell(5, 7).Value = "Working Hours";
+
+            var presentHeader =
+     presentSheet.Range(5, 1, 5, 7);
+
+            presentHeader.Style.Font.Bold = true;
+            presentHeader.Style.Fill.BackgroundColor =
+                XLColor.DarkBlue;
+
+            presentHeader.Style.Font.FontColor =
+                XLColor.White;
+
+            int presentRow = 6;
+
+            foreach (var item in presentEmployees)
             {
                 var emp = item.Employee;
                 var att = item.Attendance;
 
-                worksheet.Cell(row, 1).Value = emp.Employee_Id;
-                worksheet.Cell(row, 2).Value = emp.Name;
-                worksheet.Cell(row, 3).Value = emp.Department;
-                worksheet.Cell(row, 4).Value = date.ToString("dd-MMM-yyyy");
+                presentSheet.Cell(presentRow, 1).Value =
+                    emp.Employee_Id;
 
-                worksheet.Cell(row, 5).Value =
+                presentSheet.Cell(presentRow, 2).Value =
+                    emp.Name;
+
+                presentSheet.Cell(presentRow, 3).Value =
+                    emp.Department;
+
+                presentSheet.Cell(presentRow, 4).Value =
+                    date.ToString("dd-MMM-yyyy");
+
+                presentSheet.Cell(presentRow, 5).Value =
                     att?.Check_In != null
-                    ? ConvertToIST(att.Check_In.Value).ToString("hh:mm tt")
+                    ? ConvertToIST(att.Check_In.Value)
+                        .ToString("hh:mm tt")
                     : "-";
 
-                worksheet.Cell(row, 6).Value =
+                presentSheet.Cell(presentRow, 6).Value =
                     att?.Check_Out != null
-                    ? ConvertToIST(att.Check_Out.Value).ToString("hh:mm tt")
+                    ? ConvertToIST(att.Check_Out.Value)
+                        .ToString("hh:mm tt")
                     : "-";
 
-                worksheet.Cell(row, 7).Value =
-                    att != null ? MapStatus(att.Status) : "Absent";
+                presentSheet.Cell(presentRow, 7).Value =
+                    att != null
+                    ? FormatHours(att.WorkingMinutes)
+                    : "0h 0m";
 
-                worksheet.Cell(row, 8).Value =
-                    att != null ? FormatHours(att.WorkingMinutes) : "0h 0m";
-
-                row++;
+                presentRow++;
             }
 
-            worksheet.Columns().AdjustToContents();
+            presentSheet.Columns()
+                .AdjustToContents();
+
+            //=====================================
+            // ABSENT EMPLOYEES SHEET
+            //=====================================
+
+            absentSheet.Cell(1, 1).Value =
+     "Absent Employees Report";
+
+            absentSheet.Cell(2, 1).Value =
+                $"Report Date : {date:dd-MMM-yyyy}";
+
+            absentSheet.Cell(3, 1).Value =
+                $"Total Employees : {employees.Count}";
+
+            absentSheet.Cell(3, 4).Value =
+                $"Total Absent : {absentEmployees.Count}";
+
+            absentSheet.Cell(5, 1).Value = "Employee ID";
+            absentSheet.Cell(5, 2).Value = "Employee Name";
+            absentSheet.Cell(5, 3).Value = "Department";
+            absentSheet.Cell(5, 4).Value = "Date";
+            absentSheet.Cell(5, 5).Value = "Status";
+
+            var absentHeader =
+    absentSheet.Range(5, 1, 5, 5);
+
+            absentHeader.Style.Font.Bold = true;
+            absentHeader.Style.Fill.BackgroundColor =
+                XLColor.DarkRed;
+
+            absentHeader.Style.Font.FontColor =
+                XLColor.White;
+
+            int absentRow = 6;
+
+            foreach (var item in absentEmployees)
+            {
+                absentSheet.Cell(absentRow, 1).Value =
+                    item.Employee.Employee_Id;
+
+                absentSheet.Cell(absentRow, 2).Value =
+                    item.Employee.Name;
+
+                absentSheet.Cell(absentRow, 3).Value =
+                    item.Employee.Department;
+
+                absentSheet.Cell(absentRow, 4).Value =
+                    date.ToString("dd-MMM-yyyy");
+
+                absentSheet.Cell(absentRow, 5).Value =
+                    "Absent";
+
+                absentRow++;
+            }
+
+            absentSheet.Columns()
+                .AdjustToContents();
+
+            //=====================================
+            // LATE EMPLOYEES SHEET
+            //=====================================
+
+            lateSheet.Cell(1, 1).Value =
+     "Late Employees Report";
+
+            lateSheet.Cell(2, 1).Value =
+                $"Report Date : {date:dd-MMM-yyyy}";
+
+            lateSheet.Cell(3, 1).Value =
+                $"Total Employees : {employees.Count}";
+
+            lateSheet.Cell(3, 4).Value =
+                $"Total Late : {lateEmployees.Count}";
+
+            lateSheet.Cell(5, 1).Value = "Employee ID";
+            lateSheet.Cell(5, 2).Value = "Employee Name";
+            lateSheet.Cell(5, 3).Value = "Department";
+            lateSheet.Cell(5, 4).Value = "Date";
+            lateSheet.Cell(5, 5).Value = "Check In";
+            lateSheet.Cell(5, 6).Value = "Late By";
+
+            var lateHeader =
+    lateSheet.Range(5, 1, 5, 6);
+
+            lateHeader.Style.Font.Bold = true;
+            lateHeader.Style.Fill.BackgroundColor =
+                XLColor.DarkOrange;
+
+            lateHeader.Style.Font.FontColor =
+                XLColor.White;
+
+            int lateRow = 6;
+
+            foreach (var item in lateEmployees)
+            {
+                var checkInTime =
+                    ConvertToIST(
+                        item.Attendance.Check_In.Value);
+
+                var lateMinutes =
+                    (int)(checkInTime.TimeOfDay -
+                    new TimeSpan(9, 15, 0))
+                    .TotalMinutes;
+
+                lateSheet.Cell(lateRow, 1).Value =
+                    item.Employee.Employee_Id;
+
+                lateSheet.Cell(lateRow, 2).Value =
+                    item.Employee.Name;
+
+                lateSheet.Cell(lateRow, 3).Value =
+                    item.Employee.Department;
+
+                lateSheet.Cell(lateRow, 4).Value =
+                    date.ToString("dd-MMM-yyyy");
+
+                lateSheet.Cell(lateRow, 5).Value =
+                    checkInTime.ToString("hh:mm tt");
+
+                lateSheet.Cell(lateRow, 6).Value =
+                    $"{lateMinutes} Min";
+
+                lateRow++;
+            }
+
+            lateSheet.Columns()
+                .AdjustToContents();
 
             using var stream = new MemoryStream();
 

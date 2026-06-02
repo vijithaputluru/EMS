@@ -17,5 +17,6 @@ namespace EmployeeManagementSystem.Services
 
         Task<string> DeleteTask(int id);
         Task CheckTaskDeadlines();
+        Task<byte[]> ExportTasksExcel();
     }
 }

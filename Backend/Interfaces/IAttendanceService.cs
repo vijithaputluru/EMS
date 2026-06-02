@@ -83,5 +83,9 @@ namespace EmployeeManagementSystem.Interfaces
         Task<byte[]> ExportWeeklyAttendance(DateTime weekStartDate);
         Task<byte[]> ExportDailyAttendance(DateTime date);
 
+        Task<byte[]> ExportAbsentEmployees(DateTime date);
+
+        Task<byte[]> ExportPresentAndLateEmployees(DateTime date);
+
     }
 }

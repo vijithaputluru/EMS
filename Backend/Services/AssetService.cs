@@ -3,9 +3,7 @@ using EmployeeManagementSystem.DTOs;
 using EmployeeManagementSystem.Interfaces;
 using EmployeeManagementSystem.Models;
 using Microsoft.EntityFrameworkCore;
-using OfficeOpenXml;
-using OfficeOpenXml.Drawing;
-using System.Drawing;
+using ClosedXML.Excel;
 
 namespace EmployeeManagementSystem.Services
 {
@@ -181,73 +179,8 @@ namespace EmployeeManagementSystem.Services
 
             return "Asset deleted successfully";
         }
-
-        public async Task<byte[]> ExportAssetsExcel()
-        {
-            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-
-            var assets = await _context.Assets.ToListAsync();
-
-            using var package = new ExcelPackage();
-            var sheet = package.Workbook.Worksheets.Add("Assets");
-
-            // Headers
-            sheet.Cells[1, 1].Value = "Asset Name";
-            sheet.Cells[1, 2].Value = "Serial No";
-            sheet.Cells[1, 3].Value = "Status";
-            sheet.Cells[1, 4].Value = "Assigned To";
-            sheet.Cells[1, 5].Value = "Description";
-            sheet.Cells[1, 6].Value = "Created Date";
-            sheet.Cells[1, 7].Value = "Images";
-
-            int row = 2;
-
-            foreach (var asset in assets)
-            {
-                sheet.Cells[row, 1].Value = asset.AssetName;
-                sheet.Cells[row, 2].Value = asset.SerialNo;
-                sheet.Cells[row, 3].Value = asset.Status;
-                sheet.Cells[row, 4].Value = asset.AssignedTo;
-                sheet.Cells[row, 5].Value = asset.Description;
-                sheet.Cells[row, 6].Value = asset.CreatedAt.ToString("dd-MM-yyyy");
-
-                sheet.Row(row).Height = 90;
-
-                if (!string.IsNullOrEmpty(asset.ImagePaths))
-                {
-                    var images = asset.ImagePaths
-                        .Split(',', StringSplitOptions.RemoveEmptyEntries);
-
-                    int imageColOffset = 0;
-
-                    foreach (var imagePath in images)
-                    {
-                        var physicalPath = Path.Combine(
-                            Directory.GetCurrentDirectory(),
-                            "wwwroot",
-                            imagePath.TrimStart('/').Replace("/", Path.DirectorySeparatorChar.ToString())
-                        );
-
-                        if (File.Exists(physicalPath))
-                        {
-                            var picture = sheet.Drawings.AddPicture(
-                                Guid.NewGuid().ToString(),
-                                new FileInfo(physicalPath));
-
-                            picture.SetPosition(row - 1, 5, 6 + imageColOffset, 5);
-                            picture.SetSize(80, 80);
-
-                            imageColOffset++;
-                        }
-                    }
-                }
-
-                row++;
-            }
-            sheet.Cells.AutoFitColumns();
-
-            return package.GetAsByteArray();
-        }
+       
 
     }
-    }
+}
+    

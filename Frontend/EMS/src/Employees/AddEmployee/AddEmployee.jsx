@@ -172,6 +172,10 @@ function AddEmployee() {
       setIsEditing(false);
       setMaxStep((prev) => Math.max(prev, 5));
       setReviewSuccess("Profile reviewed and submitted successfully.");
+ setTimeout(() => {
+  setStep(1);
+  setMaxStep(1);
+}, 2000);
     } finally {
       setReviewSubmitting(false);
     }

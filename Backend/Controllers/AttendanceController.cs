@@ -361,6 +361,27 @@ namespace EmployeeManagementSystem.Controllers
                 $"Daily_Attendance_{date:dd_MMM_yyyy}.xlsx");
 
         }
+        [HttpGet("export-absent")]
+        public async Task<IActionResult> ExportAbsent([FromQuery] DateTime date)
+        {
+            var file = await _attendanceService.ExportAbsentEmployees(date);
+
+            return File(
+                file,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"AbsentEmployees_{date:yyyyMMdd}.xlsx");
+        }
+
+        [HttpGet("export-present-late")]
+        public async Task<IActionResult> ExportPresentLate([FromQuery] DateTime date)
+        {
+            var file = await _attendanceService.ExportPresentAndLateEmployees(date);
+
+            return File(
+                file,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                $"PresentLateEmployees_{date:yyyyMMdd}.xlsx");
+        }
 
     }
 

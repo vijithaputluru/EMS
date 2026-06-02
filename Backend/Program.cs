@@ -22,10 +22,8 @@ using System.Security.Claims;
 
 using System.Text;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.ResponseCompression;
 
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
-using System.IO.Compression;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,14 +31,14 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddScoped<JwtHelper>();
 
-// Optimization: pool DbContext instances to reduce per-request allocations without changing query behavior.
-builder.Services.AddDbContextPool<AppDbContext>(options =>
+builder.Services.AddDbContext<AppDbContext>(options =>
 
     options.UseMySql(
 
@@ -51,24 +49,6 @@ builder.Services.AddDbContextPool<AppDbContext>(options =>
     )
 
 );
-
-// Optimization: enable gzip/brotli for JSON APIs and static assets behind IIS/nginx/AWS proxies.
-builder.Services.AddResponseCompression(options =>
-{
-    options.EnableForHttps = true;
-    options.Providers.Add<BrotliCompressionProvider>();
-    options.Providers.Add<GzipCompressionProvider>();
-});
-
-builder.Services.Configure<BrotliCompressionProviderOptions>(options =>
-{
-    options.Level = CompressionLevel.Fastest;
-});
-
-builder.Services.Configure<GzipCompressionProviderOptions>(options =>
-{
-    options.Level = CompressionLevel.Fastest;
-});
 
 builder.Services.AddScoped<IOfferLetterService, OfferLetterService>();
 
@@ -247,27 +227,7 @@ app.UseForwardedHeaders(new ForwardedHeadersOptions
 
 app.UseHttpsRedirection();
 
-app.UseResponseCompression();
-
-// Optimization: cache immutable generated/static assets while keeping generated documents revalidatable.
-app.UseStaticFiles(new StaticFileOptions
-{
-    OnPrepareResponse = context =>
-    {
-        var path = context.File.PhysicalPath ?? string.Empty;
-
-        if (
-            path.Contains("GeneratedPayslips", StringComparison.OrdinalIgnoreCase) ||
-            path.Contains("GeneratedLetters", StringComparison.OrdinalIgnoreCase)
-        )
-        {
-            context.Context.Response.Headers.CacheControl = "no-cache";
-            return;
-        }
-
-        context.Context.Response.Headers.CacheControl = "public,max-age=604800";
-    }
-});
+app.UseStaticFiles();
 
 app.UseRouting();
 

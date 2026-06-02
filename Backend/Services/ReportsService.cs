@@ -15,57 +15,83 @@ namespace EmployeeManagementSystem.Services
 
         public async Task<AllReportsDTO> GetAllReports()
         {
-            // ✅ Basic Counts
-            var totalEmployees = await _context.Employees.CountAsync();
-            var totalDepartments = await _context.Departments.CountAsync();
-
-            // ✅ UTC Date Range (PostgreSQL safe)
             var today = DateTime.UtcNow.Date;
             var tomorrow = today.AddDays(1);
 
-            // ✅ Get today's attendance records once (optimized)
-            var todayAttendance = await _context.Attendance
-                .Where(a => a.Attendance_Date >= today && a.Attendance_Date < tomorrow)
-                .ToListAsync();
+            // Employee & Department Counts
+            var totalEmployees = await _context.Employees
+                .AsNoTracking()
+                .CountAsync();
 
-            // ✅ Normalize status (lowercase safely)
-            var workingStatuses = new[] { "present", "late" };
+            var totalDepartments = await _context.Departments
+                .AsNoTracking()
+                .CountAsync();
 
-            var presentToday = todayAttendance
-                .Count(a => a.Status != null &&
-                            workingStatuses.Contains(a.Status.ToLower()));
+            // Attendance Counts (SQL handles counting)
+            var presentToday = await _context.Attendance
+                .AsNoTracking()
+                .CountAsync(a =>
+                    a.Attendance_Date >= today &&
+                    a.Attendance_Date < tomorrow &&
+                    (
+                        a.Status == "Present" ||
+                        a.Status == "present" ||
+                        a.Status == "Late" ||
+                        a.Status == "late"
+                    ));
 
-            var leaveToday = todayAttendance
-                .Count(a => a.Status != null &&
-                            a.Status.ToLower() == "leave");
+            var leaveToday = await _context.Attendance
+                .AsNoTracking()
+                .CountAsync(a =>
+                    a.Attendance_Date >= today &&
+                    a.Attendance_Date < tomorrow &&
+                    (
+                        a.Status == "Leave" ||
+                        a.Status == "leave"
+                    ));
 
-            // ✅ Final Absent Calculation (CORRECT)
             var absentToday = totalEmployees - (presentToday + leaveToday);
 
-            // Tasks & Projects
-            var totalTasks = await _context.TaskManagement.CountAsync();
-            var totalProjects = await _context.Projects.CountAsync();
+            // Tasks
+            var totalTasks = await _context.TaskManagement
+                .AsNoTracking()
+                .CountAsync();
+
+            // Projects
+            var totalProjects = await _context.Projects
+                .AsNoTracking()
+                .CountAsync();
 
             // Leaves
-            var totalLeaves = await _context.EmployeeLeaves.CountAsync();
+            var totalLeaves = await _context.EmployeeLeaves
+                .AsNoTracking()
+                .CountAsync();
 
-            // ✅ Salary (UTC safe)
+            // Salary
             var now = DateTime.UtcNow;
 
             var startOfMonth = new DateTime(
                 now.Year,
                 now.Month,
                 1,
-                0, 0, 0,
-                DateTimeKind.Utc
-            );
+                0,
+                0,
+                0,
+                DateTimeKind.Utc);
 
             var startOfNextMonth = startOfMonth.AddMonths(1);
 
             var totalSalaryPaid = await _context.PaySlips
-                .Where(p => p.Generated_On >= startOfMonth &&
-                            p.Generated_On < startOfNextMonth)
+                .AsNoTracking()
+                .Where(p =>
+                    p.Generated_On >= startOfMonth &&
+                    p.Generated_On < startOfNextMonth)
                 .SumAsync(p => (decimal?)p.NetSalary) ?? 0;
+
+            // Clients
+            var totalClients = await _context.Clients
+                .AsNoTracking()
+                .CountAsync();
 
             return new AllReportsDTO
             {
@@ -77,7 +103,7 @@ namespace EmployeeManagementSystem.Services
                 TotalProjects = totalProjects,
                 TotalLeaves = totalLeaves,
                 TotalSalaryPaid = totalSalaryPaid,
-                CurrentMonth = now.ToString("MMMM yyyy")
+                TotalClients = totalClients
             };
         }
     }

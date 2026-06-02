@@ -701,21 +701,23 @@ function EmployeeList() {
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value)}
           >
-            <input
-              type="date"
-              className="emp-filter-select"
-              value={joiningDateFilter}
-              onChange={(event) =>
-                setJoiningDateFilter(event.target.value)
-              }
-            />
             <option value="All">All Statuses</option>
+
             {statusOptions.map((status) => (
               <option key={status} value={status}>
                 {status}
               </option>
             ))}
           </select>
+
+          <input
+            type="date"
+            className="emp-filter-select"
+            value={joiningDateFilter}
+            onChange={(event) =>
+              setJoiningDateFilter(event.target.value)
+            }
+          />
 
           <select
             className="emp-filter-select"

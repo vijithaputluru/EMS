@@ -217,16 +217,6 @@
     "ReturnTypes": []
   },
   {
-    "ContainingType": "EmployeeManagementSystem.Controllers.AssetsController",
-    "Method": "ExportAssets",
-    "RelativePath": "api/Assets/export-assets",
-    "HttpMethod": "GET",
-    "IsController": true,
-    "Order": 0,
-    "Parameters": [],
-    "ReturnTypes": []
-  },
-  {
     "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
     "Method": "DownloadDailyAttendance",
     "RelativePath": "api/Attendance/admin/download-daily",
@@ -338,6 +328,38 @@
     "IsController": true,
     "Order": 0,
     "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
+    "Method": "ExportAbsent",
+    "RelativePath": "api/Attendance/export-absent",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "date",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      }
+    ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
+    "Method": "ExportPresentLate",
+    "RelativePath": "api/Attendance/export-present-late",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [
+      {
+        "Name": "date",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      }
+    ],
     "ReturnTypes": []
   },
   {
@@ -664,6 +686,16 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "ClientsController",
+    "Method": "ExportClients",
+    "RelativePath": "api/Clients/export",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "EmployeeManagementSystem.Controllers.CompanyController",
     "Method": "CreateCompany",
     "RelativePath": "api/Company",
@@ -803,6 +835,16 @@
         "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "DepartmentsController",
+    "Method": "ExportDepartments",
+    "RelativePath": "api/Departments/export",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   },
   {
@@ -1145,6 +1187,16 @@
         "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeLeaveController",
+    "Method": "ExportLeaves",
+    "RelativePath": "api/EmployeeLeave/export",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   },
   {
@@ -1871,6 +1923,16 @@
     "ReturnTypes": []
   },
   {
+    "ContainingType": "ProjectsController",
+    "Method": "ExportProjects",
+    "RelativePath": "api/Projects/export",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
     "ContainingType": "EmployeeManagementSystem.Controllers.ReportsController",
     "Method": "GetAllReports",
     "RelativePath": "api/reports/all",
@@ -2199,6 +2261,16 @@
         "IsRequired": true
       }
     ],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "TaskManagementController",
+    "Method": "ExportTasks",
+    "RelativePath": "api/TaskManagement/export",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
     "ReturnTypes": []
   },
   {

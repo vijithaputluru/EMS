@@ -108,16 +108,7 @@ namespace EmployeeManagementSystem.Controllers
 
         }
 
-        [HttpGet("export-assets")]
-        public async Task<IActionResult> ExportAssets()
-        {
-            var fileBytes = await _service.ExportAssetsExcel();
-
-            return File(
-                fileBytes,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                $"Assets_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
-        }
+        
 
     }
 

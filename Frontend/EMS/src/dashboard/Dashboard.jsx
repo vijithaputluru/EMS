@@ -65,7 +65,7 @@ function Dashboard() {
     <div className="dashboard">
       <h2 className="title">Dashboard</h2>
       <p className="subtitle">
-        Welcome back! Hereâ€™s an overview of your organization.
+        Welcome back! Here's an overview of your organization.
       </p>
 
       <TopCharts data={dashboardData} />

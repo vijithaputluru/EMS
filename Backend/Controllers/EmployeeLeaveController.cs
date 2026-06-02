@@ -130,4 +130,16 @@ public class EmployeeLeaveController : ControllerBase
 
     }
 
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportLeaves()
+    {
+        var fileBytes = await _service.ExportLeavesExcel();
+
+        return File(
+            fileBytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"EmployeeLeaves_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
+        );
+    }
+
 }

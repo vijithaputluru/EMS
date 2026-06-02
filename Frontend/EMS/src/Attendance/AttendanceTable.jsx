@@ -2859,7 +2859,12 @@ function AttendanceTable({
                                 {getEmployeeName(emp).charAt(0).toUpperCase()}
                               </div>
                               <div>
-                                <div className="emp-name">{getEmployeeName(emp)}</div>
+                                <div
+                                  className="emp-name"
+                                  title={getEmployeeName(emp)}
+                                >
+                                  {getEmployeeName(emp)}
+                                </div>
                                 <div className="emp-dept">
                                   {getEmployeeId(emp) || getEmployeeDept(emp)}
                                 </div>

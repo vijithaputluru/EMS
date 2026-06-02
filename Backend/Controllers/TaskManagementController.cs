@@ -188,4 +188,15 @@ public class TaskManagementController : ControllerBase
             completedCount
         });
     }
+    [HttpGet("export")]
+    public async Task<IActionResult> ExportTasks()
+    {
+        var fileBytes = await _taskService.ExportTasksExcel();
+
+        return File(
+            fileBytes,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"Tasks_{DateTime.Now:yyyyMMddHHmmss}.xlsx"
+        );
+    }
 }

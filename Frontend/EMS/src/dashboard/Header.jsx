@@ -18,6 +18,7 @@ import {
   getStoredAuthValue,
   getStoredRole,
 } from "../utils/authStorage";
+import { clearSessionTimer } from "../utils/sessionManager";
 import ChangePasswordModal from "./ChangePasswordModal";
 
 const getGreetingMeta = () => {
@@ -144,6 +145,7 @@ function Header({ collapsed = false, isMobileViewport = false, onToggle }) {
     : "var(--layout-sidebar-width)";
 
   const handleLogout = () => {
+    clearSessionTimer();
     clearAuthData();
     navigate("/login");
   };

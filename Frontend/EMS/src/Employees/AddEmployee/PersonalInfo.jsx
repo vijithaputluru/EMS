@@ -302,8 +302,8 @@ function PersonalInfo({ onNext, viewMode, data }) {
     } else {
       const cityWords = formData.city.trim().split(/\s+/);
 
-      if (cityWords.length <= 1) {
-        nextErrors.city = "City must contain at least 1 words";
+       if (!formData.city.trim()) {
+        nextErrors.city = "City is required";
       }
     }
 
@@ -537,9 +537,13 @@ function PersonalInfo({ onNext, viewMode, data }) {
             <label>Designation<span className="required">*</span></label>
             <select name="designation" value={formData.designation} onChange={handleChange} disabled={viewMode}>
               <option value="">Select</option>
-              <option value="Associate Software Developer">Associate Software Developer</option>
-              <option value="Senior Software Developer">Senior Software Developer</option>
-              <option value="Team Lead">Team Lead</option>
+              <option value="Associate Software Engineer">Associate Software Engineer</option>
+              <option value="Senior Software Engineer">Senior Software Engineer</option>
+              <option value="Tech Lead">Tech Lead</option>
+              <option value="QA Analyst">QA Analyst</option>
+              <option value="QA Engineer">QA Engineer</option>
+              <option value="QA Automation Engineer">QA Automation Engineer</option>
+              <option value="QA Lead">QA Lead</option>
               <option value="Manager">Manager</option>
               <option value="HR">HR</option>
               <option value="HR Manager">HR Manager</option>
@@ -548,6 +552,7 @@ function PersonalInfo({ onNext, viewMode, data }) {
             </select>
             {renderError("designation")}
           </div>
+ 
 
           <div className="form-group">
             <label>Date of Joining<span className="required">*</span></label>

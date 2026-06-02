@@ -331,18 +331,6 @@
         }
       }
     },
-    "/api/Assets/export-assets": {
-      "get": {
-        "tags": [
-          "Assets"
-        ],
-        "responses": {
-          "200": {
-            "description": "OK"
-          }
-        }
-      }
-    },
     "/api/Attendance/check-in": {
       "post": {
         "tags": [
@@ -720,6 +708,50 @@
         }
       }
     },
+    "/api/Attendance/export-absent": {
+      "get": {
+        "tags": [
+          "Attendance"
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Attendance/export-present-late": {
+      "get": {
+        "tags": [
+          "Attendance"
+        ],
+        "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Branches": {
       "post": {
         "tags": [
@@ -971,6 +1003,18 @@
         }
       }
     },
+    "/api/Clients/export": {
+      "get": {
+        "tags": [
+          "Clients"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Company/{id}": {
       "get": {
         "tags": [
@@ -1194,6 +1238,18 @@
               "format": "int32"
             }
           }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Departments/export": {
+      "get": {
+        "tags": [
+          "Departments"
         ],
         "responses": {
           "200": {
@@ -1743,6 +1799,18 @@
               "format": "int32"
             }
           }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/EmployeeLeave/export": {
+      "get": {
+        "tags": [
+          "EmployeeLeave"
         ],
         "responses": {
           "200": {
@@ -2855,6 +2923,18 @@
         }
       }
     },
+    "/api/Projects/export": {
+      "get": {
+        "tags": [
+          "Projects"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/reports/all": {
       "get": {
         "tags": [
@@ -3401,6 +3481,18 @@
       }
     },
     "/api/TaskManagement/my-tasks": {
+      "get": {
+        "tags": [
+          "TaskManagement"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/TaskManagement/export": {
       "get": {
         "tags": [
           "TaskManagement"
@@ -4657,7 +4749,28 @@
             "type": "string",
             "nullable": true
           },
+          "projectMembers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ProjectMemberDto"
+            },
+            "nullable": true
+          },
           "status": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false
+      },
+      "ProjectMemberDto": {
+        "type": "object",
+        "properties": {
+          "employee_Id": {
+            "type": "string",
+            "nullable": true
+          },
+          "name": {
             "type": "string",
             "nullable": true
           }

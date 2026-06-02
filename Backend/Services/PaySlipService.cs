@@ -484,9 +484,7 @@ namespace EmployeeManagementSystem.Services
         public async Task<List<PaySlip>>
             GetRecentPayslips()
         {
-            // Optimization: recent payslip lists are read-only, so skip EF tracking.
             return await _context.PaySlips
-                .AsNoTracking()
                 .OrderByDescending(x => x.Id)
                 .ToListAsync();
         }
@@ -615,28 +613,9 @@ namespace EmployeeManagementSystem.Services
     int year)
         {
             var payslips = await _context.PaySlips
-                .AsNoTracking()
                 .Where(x => x.Month == month &&
                             x.Year == year)
                 .ToListAsync();
-
-            var employeeIds = payslips
-                .Select(x => x.EmployeeId)
-                .Where(x => !string.IsNullOrWhiteSpace(x))
-                .Distinct()
-                .ToList();
-
-            // Optimization: load employees once for both salary and PF sheets instead of querying per row.
-            var employeesById = await _context.Employees
-                .AsNoTracking()
-                .Where(e => employeeIds.Contains(e.Employee_Id))
-                .Select(e => new
-                {
-                    e.Employee_Id,
-                    e.Name,
-                    e.Department
-                })
-                .ToDictionaryAsync(e => e.Employee_Id);
 
             using var workbook = new XLWorkbook();
 
@@ -716,7 +695,10 @@ namespace EmployeeManagementSystem.Services
 
             foreach (var pay in payslips)
             {
-                employeesById.TryGetValue(pay.EmployeeId, out var employee);
+                var employee = await _context.Employees
+                    .FirstOrDefaultAsync(e =>
+                        e.Employee_Id ==
+                        pay.EmployeeId);
 
                 sheet.Cell(row, 1).Value =
                     pay.EmployeeId;
@@ -799,7 +781,9 @@ namespace EmployeeManagementSystem.Services
 
             foreach (var pay in payslips)
             {
-                employeesById.TryGetValue(pay.EmployeeId, out var employee);
+                var employee = await _context.Employees
+                    .FirstOrDefaultAsync(e =>
+                        e.Employee_Id == pay.EmployeeId);
 
                 decimal monthlyCTC =
                     (pay.CTC ?? 0) / 12;

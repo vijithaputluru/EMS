@@ -15,6 +15,6 @@
 
         public decimal TotalSalaryPaid { get; set; }
 
-        public string CurrentMonth { get; set; }
+        public int TotalClients { get; set; }
     }
 }

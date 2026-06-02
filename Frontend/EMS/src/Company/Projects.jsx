@@ -27,17 +27,279 @@ const EMPTY_PROJECT_FORM = {
   status: "",
 };
 
-const normalizeProjects = (response) =>
-  extractCollection(response).map((project) => ({
-    name: project.project_Name ?? project.name ?? "",
-    id: project.project_Id ?? project.id ?? "",
-    clientId: project.clientId ?? project.client_Id ?? project.clientID ?? "",
-    client: project.client ?? "",
-    startDate: project.start_Date ? String(project.start_Date).split("T")[0] : "",
-    endDate: project.end_Date ? String(project.end_Date).split("T")[0] : "",
-    team: String(project.team_Members ?? project.team ?? ""),
-    status: project.status ?? "",
-  }));
+const getEmployeeId = (employee) =>
+  String(
+    employee?.employee_Id ??
+    employee?.employee_id ??
+    employee?.employeeId ??
+    employee?.Employee_Id ??
+    employee?.EmployeeID ??
+    employee?.id ??
+    ""
+  ).trim();
+
+const getEmployeeName = (employee) =>
+  String(
+    employee?.employeeName ??
+    employee?.employee_Name ??
+    employee?.name ??
+    employee?.fullName ??
+    employee?.employeeFullName ??
+    `${employee?.firstName ?? ""} ${employee?.lastName ?? ""}`.trim() ??
+    ""
+  ).trim();
+
+const normalizeEmployeeRecord = (employee = {}) => {
+  const employee_Id = getEmployeeId(employee);
+  const employeeName = getEmployeeName(employee);
+  const resolvedName = employeeName || employee_Id || "";
+
+  return {
+    ...employee,
+    employee_Id,
+    employeeName: resolvedName,
+    name: resolvedName,
+    fullName: resolvedName,
+  };
+};
+
+const getEmployeeSelectionKey = (employee = {}) => {
+  const employeeId = getEmployeeId(employee);
+
+  if (employeeId) {
+    return employeeId.trim().toLowerCase();
+  }
+
+  return getEmployeeName(employee).trim().toLowerCase();
+};
+
+const dedupeEmployeesByKey = (employeeList = []) => {
+  const uniqueEmployees = new Map();
+
+  employeeList.forEach((employee, index) => {
+    const normalizedEmployee = normalizeEmployeeRecord(employee);
+    const key = getEmployeeSelectionKey(normalizedEmployee) || `employee-${index}`;
+
+    if (!uniqueEmployees.has(key)) {
+      uniqueEmployees.set(key, normalizedEmployee);
+    }
+  });
+
+  return Array.from(uniqueEmployees.values());
+};
+
+const buildEmployeeLookupMap = (employeeList = []) => {
+  const lookup = new Map();
+
+  employeeList.forEach((employee) => {
+    const normalized = normalizeEmployeeRecord(employee);
+    const keys = [
+      normalized.employee_Id,
+      normalized.employeeName,
+      normalized.name,
+      normalized.fullName,
+    ]
+      .map((value) => String(value || "").trim().toLowerCase())
+      .filter(Boolean);
+
+    keys.forEach((key) => {
+      lookup.set(key, normalized);
+    });
+  });
+
+  return lookup;
+};
+
+const normalizeEmployeeReference = (value, employeeLookup) => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    const rawValue = String(value).trim();
+
+    if (!rawValue) {
+      return null;
+    }
+
+    const lookupKey = rawValue.toLowerCase();
+    const matchedEmployee =
+      employeeLookup.get(lookupKey) ||
+      employeeLookup.get(rawValue) ||
+      null;
+
+    if (matchedEmployee) {
+      return matchedEmployee;
+    }
+
+    return normalizeEmployeeRecord({
+      employee_Id: rawValue,
+      employeeName: rawValue,
+    });
+  }
+
+  const normalized = normalizeEmployeeRecord(value);
+  const lookupKey = normalized.employee_Id.toLowerCase();
+  const matchedEmployee =
+    employeeLookup.get(lookupKey) ||
+    employeeLookup.get(normalized.employeeName.toLowerCase()) ||
+    employeeLookup.get(normalized.name.toLowerCase()) ||
+    null;
+
+  if (!matchedEmployee) {
+    return normalized;
+  }
+
+  return {
+    ...matchedEmployee,
+    ...normalized,
+    employee_Id: normalized.employee_Id || matchedEmployee.employee_Id,
+    employeeName:
+      normalized.employeeName ||
+      matchedEmployee.employeeName ||
+      matchedEmployee.name ||
+      normalized.name,
+    name:
+      normalized.name ||
+      matchedEmployee.name ||
+      matchedEmployee.employeeName,
+    fullName:
+      normalized.fullName ||
+      matchedEmployee.fullName ||
+      matchedEmployee.name ||
+      matchedEmployee.employeeName,
+  };
+};
+
+const collectProjectMemberEntries = (project) => {
+  const memberFields = [
+    "projectMembers",
+    "project_Members",
+    "members",
+    "memberDetails",
+    "projectMemberDetails",
+    "projectMemberIds",
+    "projectMembersIds",
+    "memberIds",
+    "teamMembers",
+    "team_Members",
+  ];
+
+  const entries = [];
+
+  memberFields.forEach((fieldName) => {
+    const value = project?.[fieldName];
+
+    if (value === null || value === undefined || value === "") {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      entries.push(...value);
+      return;
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+
+      if (!trimmed) {
+        return;
+      }
+
+      if (!/[A-Za-z]/.test(trimmed) && !/[;,|]/.test(trimmed)) {
+        return;
+      }
+
+      entries.push(
+        ...trimmed
+          .split(/[,;|]/g)
+          .map((item) => item.trim())
+          .filter(Boolean)
+      );
+      return;
+    }
+
+    if (typeof value === "object") {
+      entries.push(value);
+    }
+  });
+
+  return entries;
+};
+
+const resolveProjectMembers = (project, employeeLookup) =>
+  collectProjectMemberEntries(project)
+    .map((member) => normalizeEmployeeReference(member, employeeLookup))
+    .filter(Boolean);
+
+const getProjectMemberCount = (project, members) => {
+  const resolvedCount = members.length;
+
+  if (resolvedCount > 0) {
+    return resolvedCount;
+  }
+
+  const rawCount = Number(
+    project?.team_Members ??
+    project?.teamMembers ??
+    project?.team ??
+    project?.memberCount ??
+    project?.projectMemberCount ??
+    0
+  );
+
+  return Number.isFinite(rawCount) ? rawCount : 0;
+};
+
+const getProjectTeamLabel = (project, memberCount) => {
+  const candidateValues = [
+    project?.team_Members,
+    project?.teamMembers,
+    project?.team,
+    project?.memberCount,
+    project?.projectMemberCount,
+  ];
+
+  for (const value of candidateValues) {
+    if (value === null || value === undefined || value === "") {
+      continue;
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value);
+    }
+
+    const trimmed = String(value).trim();
+
+    if (/^\d+$/.test(trimmed)) {
+      return trimmed;
+    }
+  }
+
+  return memberCount > 0 ? String(memberCount) : "";
+};
+
+const normalizeProjects = (response, employeeLookup = new Map()) =>
+  extractCollection(response).map((project) => {
+    const members = dedupeEmployeesByKey(
+      resolveProjectMembers(project, employeeLookup)
+    );
+    const memberCount = getProjectMemberCount(project, members);
+
+    return {
+      name: project.project_Name ?? project.name ?? "",
+      id: project.project_Id ?? project.id ?? "",
+      clientId: project.clientId ?? project.client_Id ?? project.clientID ?? "",
+      client: project.client ?? "",
+      startDate: project.start_Date ? String(project.start_Date).split("T")[0] : "",
+      endDate: project.end_Date ? String(project.end_Date).split("T")[0] : "",
+      team: getProjectTeamLabel(project, memberCount),
+      members,
+      memberCount,
+      projectMembers: members,
+      status: project.status ?? "",
+    };
+  });
 
 const normalizeClients = (response) =>
   extractCollection(response).map((client) => ({
@@ -50,7 +312,7 @@ const sanitizeProjectName = (value) =>
     .replace(/[^A-Za-z\s]/g, "")
     .replace(/\s+/g, " ")
     .replace(/^\s+/g, "")
-    .slice(0, 20);
+    .slice(0, 50);
 
 const sanitizeProjectId = (value) =>
   String(value)
@@ -84,6 +346,7 @@ function Projects() {
   const [isClosingDeletePopup, setIsClosingDeletePopup] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState(null);
 
+  const [projectRecords, setProjectRecords] = useState([]);
   const [projectsList, setProjectsList] = useState([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -92,13 +355,24 @@ function Projects() {
   const [formErrors, setFormErrors] = useState({});
   const [apiError, setApiError] = useState("");
 
+  const [employees, setEmployees] = useState([]);
+  const [employeeSearch, setEmployeeSearch] = useState("");
+  const [selectedEmployees, setSelectedEmployees] = useState([]);
+  const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
+  const [showProjectDetails, setShowProjectDetails] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
+
   const projectNameInputRef = useRef(null);
+  const employeeLookup = useMemo(
+    () => buildEmployeeLookupMap(employees),
+    [employees]
+  );
 
   const fetchProjects = async () => {
     try {
       setProjectsLoading(true);
       const response = await api.get(API_ENDPOINTS.company.projects.list);
-      setProjectsList(normalizeProjects(response));
+      setProjectRecords(extractCollection(response));
     } catch (error) {
       console.error("Project fetch error:", error);
       toast.error("Failed to load projects.");
@@ -117,10 +391,65 @@ function Projects() {
     }
   };
 
+  const fetchEmployees = async () => {
+    try {
+      const res = await api.get(API_ENDPOINTS.employees.list);
+
+      const employeeData = extractCollection(res.data);
+
+      setEmployees(dedupeEmployeesByKey(employeeData));
+    } catch (err) {
+      console.error("Employee fetch error:", err);
+    }
+  };
+
   useEffect(() => {
     fetchProjects();
     fetchClients();
+    fetchEmployees();
   }, []);
+
+  useEffect(() => {
+    setProjectsList(normalizeProjects(projectRecords, employeeLookup));
+  }, [projectRecords, employeeLookup]);
+
+  useEffect(() => {
+    if (!showProjectDetails || !selectedProject?.id) {
+      return undefined;
+    }
+
+    const latestProject = projectsList.find(
+      (project) => String(project.id) === String(selectedProject.id)
+    );
+
+    if (latestProject && latestProject !== selectedProject) {
+      setSelectedProject(latestProject);
+    }
+  }, [projectsList, selectedProject?.id, showProjectDetails]);
+
+  useEffect(() => {
+    if (!projectsShowModal || !projectsEditMode || !projectsForm.originalId) {
+      return undefined;
+    }
+
+    const latestProject = projectsList.find(
+      (project) => String(project.id) === String(projectsForm.originalId)
+    );
+
+    if (!latestProject || latestProject.members.length === 0) {
+      return undefined;
+    }
+
+    if (selectedEmployees.length === 0) {
+      setSelectedEmployees(dedupeEmployeesByKey(latestProject.members));
+    }
+  }, [
+    projectsList,
+    projectsShowModal,
+    projectsEditMode,
+    projectsForm.originalId,
+    selectedEmployees.length,
+  ]);
 
   useEffect(() => {
     if (!projectsShowModal && !showDeletePopup) {
@@ -170,10 +499,19 @@ function Projects() {
     setProjectsForm(EMPTY_PROJECT_FORM);
     setFormErrors({});
     setApiError("");
+    setSelectedEmployees([]);
+    setEmployeeSearch("");
+    setShowEmployeeDropdown(false);
   };
 
   const openCreateProjectModal = () => {
     resetForm();
+
+    setProjectsForm({
+      ...EMPTY_PROJECT_FORM,
+      id: generateProjectId(),
+    });
+
     setProjectsEditMode(false);
     setIsClosingModal(false);
     setProjectsShowModal(true);
@@ -200,6 +538,20 @@ function Projects() {
     }, 180);
   };
 
+  const generateProjectId = () => {
+    if (!projectsList.length) return "PRJ001";
+
+    const maxNumber = projectsList.reduce((max, project) => {
+      const match = String(project.id || "").match(/^PRJ(\d+)$/i);
+      if (!match) return max;
+
+      const num = parseInt(match[1], 10);
+      return num > max ? num : max;
+    }, 0);
+
+    return `PRJ${String(maxNumber + 1).padStart(3, "0")}`;
+  };
+
   const validateField = (fieldName, draftForm = projectsForm) => {
     const value = String(draftForm[fieldName] ?? "");
     const trimmedValue = value.trim();
@@ -209,22 +561,21 @@ function Projects() {
         if (!trimmedValue) {
           return "Project Name is required";
         }
-
+ 
         if (trimmedValue.length < 3) {
           return "Project Name must be at least 3 characters";
         }
-
+ 
         if (trimmedValue.length > 50) {
           return "Project Name cannot exceed 50 characters";
         }
-
+ 
         if (!/^[A-Za-z\s]+$/.test(trimmedValue)) {
           return "Only alphabets are allowed";
         }
-
+ 
         return "";
       }
-
       case "id": {
         if (!trimmedValue) {
           return "Project ID is required";
@@ -272,13 +623,8 @@ function Projects() {
         return "";
 
       case "team": {
-        if (!trimmedValue) return "Team Size is required";
-        const teamSize = Number(trimmedValue);
-        if (!Number.isInteger(teamSize) || teamSize < 1) {
-          return "Team Size must be at least 1";
-        }
-        if (teamSize > 9999) {
-          return "Team Size cannot exceed 9999";
+        if (selectedEmployees.length === 0) {
+          return "Please select at least one employee";
         }
         return "";
       }
@@ -361,12 +707,14 @@ function Projects() {
   const handleSaveProject = async (event) => {
     event.preventDefault();
 
+    const uniqueSelectedEmployees = dedupeEmployeesByKey(selectedEmployees);
+
     const trimmedForm = {
       ...projectsForm,
       name: projectsForm.name.trim().replace(/\s+/g, " "),
       id: projectsForm.id.trim().toUpperCase(),
       client: projectsForm.client.trim(),
-      team: projectsForm.team.trim(),
+      team: String(uniqueSelectedEmployees.length),
       status: projectsForm.status.trim(),
     };
 
@@ -387,8 +735,22 @@ function Projects() {
       end_Date: trimmedForm.endDate
         ? toIsoDateString(trimmedForm.endDate)
         : null,
-      team_Members: String(trimmedForm.team),
+      projectMembers: uniqueSelectedEmployees.map((emp) => ({
+        employee_Id: emp.employee_Id,
+        name:
+          emp.employeeName ||
+          emp.name ||
+          emp.fullName,
+      })),
+
+      team_Members: uniqueSelectedEmployees
+        .map((emp) =>
+          String(emp.employee_Id || "").trim()
+        )
+        .filter(Boolean)
+        .join(","),
       status: trimmedForm.status,
+
     };
 
     try {
@@ -448,6 +810,10 @@ function Projects() {
         String(client.name).toLowerCase() === String(project.client).toLowerCase()
     );
 
+    const resolvedMembers = project.members.length
+      ? project.members
+      : resolveProjectMembers(project, employeeLookup);
+
     setProjectsForm({
       name: project.name || "",
       id: project.id || "",
@@ -455,9 +821,20 @@ function Projects() {
       client: matchedClient ? String(matchedClient.id) : "",
       startDate: project.startDate || "",
       endDate: project.endDate || "",
-      team: project.team || "",
+      team: String(project.memberCount ?? resolvedMembers.length ?? project.team ?? ""),
       status: project.status || "",
     });
+    setSelectedEmployees(
+      dedupeEmployeesByKey(
+        (project.projectMembers || resolvedMembers || []).map((member) => ({
+            employee_Id: member.employee_Id,
+            employeeName: member.name || member.employeeName,
+            name: member.name || member.employeeName,
+        }))
+      )
+    );
+    setEmployeeSearch("");
+    setShowEmployeeDropdown(false);
     setFormErrors({});
     setApiError("");
     setProjectsEditMode(true);
@@ -487,6 +864,18 @@ function Projects() {
       })),
     []
   );
+
+  const selectedProjectMembers = useMemo(
+    () =>
+      dedupeEmployeesByKey(
+        selectedProject?.projectMembers ||
+          selectedProject?.members ||
+          []
+      ),
+    [selectedProject]
+  );
+  const selectedProjectMemberCount =
+    selectedProjectMembers.length;
 
   return (
     <div className="projects-page">
@@ -539,13 +928,31 @@ function Projects() {
                   No projects available.
                 </td>
               </tr>
-            ) : (
-              projectsList.map((project) => (
-                <tr key={project.id}>
+              ) : (
+                projectsList.map((project, index) => (
+                <tr
+                  key={`${project.id}-${index}`}
+                  className="project-row-clickable"
+                  onClick={() => {
+                    setSelectedProject(project);
+                    setShowProjectDetails(true);
+                  }}
+                >
                   <td>
-                    <div className="projects-name">
-                      <strong title={project.name}>{project.name || "-"}</strong>
-                      <span title={project.id}>{project.id || "-"}</span>
+                    <div
+                      className="projects-name project-clickable"
+                      onClick={() => {
+                        setSelectedProject(project);
+                        setShowProjectDetails(true);
+                      }}
+                    >
+                      <strong title={project.name}>
+                        {project.name || "-"}
+                      </strong>
+
+                      <span title={project.id}>
+                        {project.id || "-"}
+                      </span>
                     </div>
                   </td>
 
@@ -582,7 +989,10 @@ function Projects() {
                           minWidth: "75px",
                           height: "40px",
                         }}
-                        onClick={() => handleProjectsEdit(project)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleProjectsEdit(project);
+                        }}
                       >
                         Edit
                       </button>
@@ -606,7 +1016,7 @@ function Projects() {
                     </div>
                   </td>
                 </tr>
-              ))
+                ))
             )}
           </tbody>
         </table>
@@ -661,21 +1071,20 @@ function Projects() {
                   <label htmlFor="project-name-input">
                     Project Name <span aria-hidden="true">*</span>
                   </label>
-                  <input
-                    ref={projectNameInputRef}
-                    id="project-name-input"
-                    name="name"
-                    type="text"
-                    value={projectsForm.name}
-                    onChange={handleProjectsChange}
-                    onBlur={handleProjectsBlur}
-                    aria-invalid={Boolean(formErrors.name)}
-                    aria-describedby={formErrors.name ? "project-name-error" : undefined}
-                    className={formErrors.name ? "has-error" : ""}
-                    maxLength={100}
-                    autoComplete="off"
-                  />
-                  {formErrors.name && (
+                 <input
+  ref={projectNameInputRef}
+  id="project-name-input"
+  name="name"
+  type="text"
+  value={projectsForm.name}
+  onChange={handleProjectsChange}
+  onBlur={handleProjectsBlur}
+  aria-invalid={Boolean(formErrors.name)}
+  aria-describedby={formErrors.name ? "project-name-error" : undefined}
+  className={formErrors.name ? "has-error" : ""}
+  maxLength={50}
+  autoComplete="off"
+/> {formErrors.name && (
                     <p id="project-name-error" className="projects-field-error">
                       {formErrors.name}
                     </p>
@@ -691,12 +1100,7 @@ function Projects() {
                     name="id"
                     type="text"
                     value={projectsForm.id}
-                    onChange={handleProjectsChange}
-                    onBlur={handleProjectsBlur}
-                    aria-invalid={Boolean(formErrors.id)}
-                    aria-describedby={formErrors.id ? "project-id-error" : "project-id-helper"}
-                    className={formErrors.id ? "has-error" : ""}
-                    autoComplete="off"
+                    readOnly
                     disabled={isSubmitting || projectsEditMode}
                   />
                   <p id="project-id-helper" className="projects-field-helper">
@@ -739,33 +1143,185 @@ function Projects() {
                 </div>
 
                 <div className="projects-field">
-                  <label htmlFor="project-team-input">
-                    Team Size <span aria-hidden="true">*</span>
+                  <label>
+                    Team Members <span>*</span>
                   </label>
-                  <input
-                    id="project-team-input"
-                    name="team"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={projectsForm.team}
-                    onChange={handleProjectsChange}
-                    onBlur={handleProjectsBlur}
-                    onKeyDown={(event) => {
-                      if (["e", "E", "+", "-", "."].includes(event.key)) {
-                        event.preventDefault();
+
+                  <div className="employee-select-wrapper">
+
+                    <div
+                      className="employee-select-box"
+                      onClick={() =>
+                        setShowEmployeeDropdown(!showEmployeeDropdown)
                       }
-                    }}
-                    aria-invalid={Boolean(formErrors.team)}
-                    aria-describedby={formErrors.team ? "project-team-error" : undefined}
-                    className={formErrors.team ? "has-error" : ""}
-                    disabled={isSubmitting}
-                  />
-                  {formErrors.team && (
-                    <p id="project-team-error" className="projects-field-error">
-                      {formErrors.team}
-                    </p>
-                  )}
+                    >
+                      <span>
+                          {selectedEmployees.length > 0
+                          ? `${selectedEmployees.length} Employees Selected`
+                          : "Select Employees"}
+                      </span>
+
+                      <span className="dropdown-arrow">
+                        ▼
+                      </span>
+                    </div>
+
+                    {showEmployeeDropdown && (
+                      <div className="employee-dropdown-popup">
+
+                        <input
+                          type="text"
+                          placeholder="Search employee..."
+                          value={employeeSearch}
+                          onChange={(e) =>
+                            setEmployeeSearch(e.target.value)
+                          }
+                          className="employee-search-input"
+                        />
+
+                        <div className="employee-dropdown-list">
+
+                          {employees
+                            .filter((emp) => {
+                              const fullName =
+                                emp.employeeName ||
+                                emp.employee_Name ||
+                                emp.name ||
+                                emp.fullName ||
+                                `${emp.firstName || ""} ${emp.lastName || ""}`.trim() ||
+                                emp.employee_Id;
+
+                              return (
+                                fullName
+                                  .toLowerCase()
+                                  .includes(employeeSearch.toLowerCase()) ||
+                                String(emp.employee_Id || "")
+                                  .toLowerCase()
+                                  .includes(employeeSearch.toLowerCase())
+                              );
+                            })
+                            .map((emp, index) => {
+
+                              const fullName =
+                                emp.employeeName ||
+                                emp.employee_Name ||
+                                emp.name ||
+                                emp.fullName ||
+                                `${emp.firstName || ""} ${emp.lastName || ""}`.trim() ||
+                                emp.employee_Id;
+
+                              const selected =
+                                selectedEmployees.some(
+                                  (e) =>
+                                    getEmployeeSelectionKey(e) ===
+                                    getEmployeeSelectionKey(emp)
+                                );
+
+                              return (
+                                <div
+                                  key={`${emp.employee_Id}-${index}`}
+                                  className={`employee-option ${selected ? "selected" : ""
+                                    }`}
+                                  onClick={() => {
+
+                                    if (selected) {
+                                      setSelectedEmployees((prev) =>
+                                        prev.filter(
+                                          (x) =>
+                                            getEmployeeSelectionKey(x) !==
+                                            getEmployeeSelectionKey(emp)
+                                        )
+                                      );
+                                    } else {
+                                      setSelectedEmployees((prev) => {
+                                        const nextEmployee =
+                                          normalizeEmployeeRecord(emp);
+                                        const nextEmployeeKey =
+                                          getEmployeeSelectionKey(nextEmployee);
+
+                                        if (
+                                          prev.some(
+                                            (item) =>
+                                              getEmployeeSelectionKey(item) ===
+                                              nextEmployeeKey
+                                          )
+                                        ) {
+                                          return prev;
+                                        }
+
+                                        return [
+                                          ...prev,
+                                          nextEmployee,
+                                        ];
+                                      });
+                                    }
+
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      fontWeight: 600,
+                                      color: "#0f172a",
+                                    }}
+                                  >
+                                    {fullName}
+                                  </div>
+
+                                  <small
+                                    style={{
+                                      color: "#64748b",
+                                    }}
+                                  >
+                                    Employee ID: {emp.employee_Id}
+                                  </small>
+                                </div>
+                              );
+
+                            })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="selected-count">
+                    Selected Employees: {selectedEmployees.length}
+                  </div>
+
+                  <div className="selected-members-wrapper">
+                    {selectedEmployees.map((emp, index) => (
+                      <div
+                        key={`${emp.employee_Id}-${index}`}
+                        className="selected-member-chip"
+                      >
+                        <span className="employee-id">
+                          {emp.employee_Id}
+                        </span>
+
+                        <span className="employee-name">
+                          {emp.employeeName ||
+                            emp.employee_Name ||
+                            emp.name ||
+                            emp.fullName ||
+                            `${emp.firstName || ""} ${emp.lastName || ""}`.trim()}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedEmployees((prev) =>
+                              prev.filter(
+                                (item) =>
+                                  getEmployeeSelectionKey(item) !==
+                                  getEmployeeSelectionKey(emp)
+                              )
+                            )
+                          }
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="projects-field">
@@ -877,50 +1433,117 @@ function Projects() {
               </div>
             </form>
           </div>
-        </div>
-      )}
+        </div >
+      )
+      }
 
-      {showDeletePopup && (
+      {
+        showDeletePopup && (
+          <div
+            className={`projects-modal-overlay ${isClosingDeletePopup ? "closing" : ""}`}
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                closeDeletePopup();
+              }
+            }}
+          >
+            <div
+              className={`projects-modal projects-modal-small ${isClosingDeletePopup ? "closing" : ""}`}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="project-delete-title"
+            >
+              <div className="projects-delete-content">
+                <h3 id="project-delete-title" className="projects-delete-title">
+                  Confirm Delete
+                </h3>
+
+                <p className="projects-delete-copy">
+                  Are you sure you want to delete this project?
+                </p>
+
+                <div className="projects-delete-actions">
+                  <button className="projects-secondary-btn" onClick={closeDeletePopup}>
+                    Cancel
+                  </button>
+                  <button
+                    className="projects-delete-btn app-action-button app-action-button--delete"
+                    onClick={confirmDeleteProject}
+                  >
+                    Yes, Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )
+      }
+      {showProjectDetails && (
         <div
-          className={`projects-modal-overlay ${isClosingDeletePopup ? "closing" : ""}`}
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              closeDeletePopup();
+          className="projects-modal-overlay"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowProjectDetails(false);
             }
           }}
         >
-          <div
-            className={`projects-modal projects-modal-small ${isClosingDeletePopup ? "closing" : ""}`}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="project-delete-title"
-          >
-            <div className="projects-delete-content">
-              <h3 id="project-delete-title" className="projects-delete-title">
-                Confirm Delete
-              </h3>
+          <div className="project-members-modal">
 
-              <p className="projects-delete-copy">
-                Are you sure you want to delete this project?
-              </p>
+            <div className="project-members-header">
+              <h3>{selectedProject?.name}</h3>
 
-              <div className="projects-delete-actions">
-                <button className="projects-secondary-btn" onClick={closeDeletePopup}>
-                  Cancel
-                </button>
-                <button
-                  className="projects-delete-btn app-action-button app-action-button--delete"
-                  onClick={confirmDeleteProject}
-                >
-                  Yes, Delete
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setShowProjectDetails(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <p>
+              {selectedProjectMemberCount} assigned members
+            </p>
+
+            <div className="project-members-list">
+              {selectedProjectMembers.length > 0 ? (
+                selectedProjectMembers.map((member, index) => (
+                  <div
+                    key={`${member.employee_Id}-${index}`}
+                    className="project-member-card"
+                  >
+                    <div className="member-avatar">
+                      {(
+                        member.name ||
+                        member.employeeName ||
+                        member.fullName ||
+                        member.employee_Id ||
+                        ""
+                      )
+                        .substring(0, 2)
+                        .toUpperCase()}
+                    </div>
+
+                    <div>
+                      <div className="member-name">
+                        {member.name || member.employeeName || member.fullName}
+                      </div>
+
+                      <div className="member-id">
+                        {member.employee_Id}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="project-members-empty-state">
+                  No assigned members found.
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
-    </div>
+    </div >
   );
-}
-
+};
 export default Projects;

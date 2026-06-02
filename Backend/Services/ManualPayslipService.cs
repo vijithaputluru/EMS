@@ -26,9 +26,7 @@ namespace EmployeeManagementSystem.Services
             //--------------------------------
             // FETCH EMPLOYEE
             //--------------------------------
-            // Optimization: employee details are read-only during manual payslip generation.
             var employee = await _context.Employees
-                .AsNoTracking()
                 .Include(e => e.BankDetails)
                 .FirstOrDefaultAsync(e => e.Employee_Id == dto.EmployeeId);
 
@@ -36,7 +34,6 @@ namespace EmployeeManagementSystem.Services
                 throw new Exception("Employee not found");
 
             var personalInfo = await _context.EmployeePersonalInfos
-                .AsNoTracking()
                 .FirstOrDefaultAsync(p => p.Employee_Id == dto.EmployeeId);
 
 

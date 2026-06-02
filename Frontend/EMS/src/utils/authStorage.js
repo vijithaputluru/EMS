@@ -36,6 +36,8 @@ export const clearAuthData = () => {
     localStorage.removeItem(key);
     sessionStorage.removeItem(key);
   });
+
+  sessionStorage.clear();
 };
 
 export const getStoredAuthValue = (key, fallback = "") =>

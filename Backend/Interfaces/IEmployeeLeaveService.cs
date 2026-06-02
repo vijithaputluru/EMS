@@ -19,5 +19,6 @@ public interface IEmployeeLeaveService
     Task<IActionResult> UpdateStatus(int id, string status);
 
     Task<IActionResult> Delete(int id);
+    Task<byte[]> ExportLeavesExcel();
 
 }
