@@ -126,6 +126,8 @@ namespace EmployeeManagementSystem.Data
         public DbSet<EmployeeScreenshot> EmployeeScreenshots { get; set; }
 
         public DbSet<MonitoringLog> MonitoringLogs { get; set; }
+        public DbSet<EmployeeDocument> EmployeeDocuments { get; set; }
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
 
@@ -184,6 +186,8 @@ namespace EmployeeManagementSystem.Data
             modelBuilder.Entity<Company>().ToTable("Company");
 
             modelBuilder.Entity<Module>().ToTable("modules");
+          
+
 
             modelBuilder.Entity<RolePermission>().ToTable("rolepermissions");
             modelBuilder.Entity<Admin>().ToTable("admins");

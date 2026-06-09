@@ -306,32 +306,24 @@ function EmployeeList() {
     // =========================
     // EMAIL VALIDATION
     // =========================
-    const email = empForm.email.trim().toLowerCase();
+   
 
-    if (!email) {
-      nextErrors.email = "Email is required";
-    } else {
-      // only gmail.com or pirnav.com
-      const emailRegex =
-        /^[a-zA-Z0-9._%+-]{1,30}@(gmail\.com|pirnav\.com)$/;
+    // =========================
+// EMAIL VALIDATION
+// =========================
+const email = empForm.email.trim().toLowerCase();
 
-      if (!emailRegex.test(email)) {
-        nextErrors.email =
-          "Only @gmail.com or @pirnav.com emails are allowed";
-      } else if (email.length > 40) {
-        nextErrors.email =
-          "Email should not exceed 40 characters";
-      } else if (!isEditMode) {
-        const emailExists = empList.some(
-          (emp) =>
-            String(emp.email).toLowerCase() === email
-        );
+if (!email) {
+  nextErrors.email = "Email is required";
+} else if (!isEditMode) {
+  const emailExists = empList.some(
+    (emp) => String(emp.email).toLowerCase() === email
+  );
 
-        if (emailExists) {
-          nextErrors.email = "Email already exists.";
-        }
-      }
-    }
+  if (emailExists) {
+    nextErrors.email = "Email already exists.";
+  }
+}
 
     // =========================
     // OTHER VALIDATIONS
@@ -362,6 +354,7 @@ function EmployeeList() {
 
     return Object.keys(nextErrors).length === 0;
   };
+
 
   const handleEmployeeSubmit = async () => {
     if (!validateEmployee()) return;
@@ -710,14 +703,7 @@ function EmployeeList() {
             ))}
           </select>
 
-          <input
-            type="date"
-            className="emp-filter-select"
-            value={joiningDateFilter}
-            onChange={(event) =>
-              setJoiningDateFilter(event.target.value)
-            }
-          />
+          
 
           <select
             className="emp-filter-select"

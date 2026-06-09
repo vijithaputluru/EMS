@@ -70,7 +70,10 @@ public class EmployeeLeaveService : IEmployeeLeaveService
                 message = "You already applied leave for this date"
             });
 
-        int workingDays = await CalculateWorkingDays(fromDate, toDate);
+        int workingDays = await CalculateSandwichLeaveDays(
+     employee.Employee_Id,
+     fromDate,
+     toDate);
 
         if (workingDays == 0)
         {
@@ -171,7 +174,10 @@ public class EmployeeLeaveService : IEmployeeLeaveService
 
         }
 
-        int days = await CalculateWorkingDays(fromDate, toDate);
+        int days = await CalculateSandwichLeaveDays(
+    leave.EmployeeId,
+    fromDate,
+    toDate);
 
         var leaveType = leave.LeaveType?.Trim().ToLower();
 
@@ -181,75 +187,75 @@ public class EmployeeLeaveService : IEmployeeLeaveService
 
         //---------------------------------------
 
-        if (oldStatus != "Approved" && status == "Approved")
+        //if (oldStatus != "Approved" && status == "Approved")
 
-        {
+        //{
 
-            switch (leaveType)
+        //    switch (leaveType)
 
-            {
+        //    {
 
-                case "casual":
+        //        case "casual":
 
-                    balance.Casual_Used += days;
+        //            balance.Casual_Used += days;
 
-                    break;
+        //            break;
 
-                case "sick":
+        //        case "sick":
 
-                    balance.Sick_Used += days;
+        //            balance.Sick_Used += days;
 
-                    break;
+        //            break;
 
-                case "earned":
+        //        case "earned":
 
-                case "earned leave":
+        //        case "earned leave":
 
-                    balance.Earned_Used += days;
+        //            balance.Earned_Used += days;
 
-                    break;
+        //            break;
 
-            }
+        //    }
 
-        }
+        //}
 
-        //---------------------------------------
+        ////---------------------------------------
 
-        // ✅ CASE 2: Approved → Rejected
+        //// ✅ CASE 2: Approved → Rejected
 
-        //---------------------------------------
+        ////---------------------------------------
 
-        if (oldStatus == "Approved" && status == "Rejected")
+        //if (oldStatus == "Approved" && status == "Rejected")
 
-        {
+        //{
 
-            switch (leaveType)
+        //    switch (leaveType)
 
-            {
+        //    {
 
-                case "casual":
+        //        case "casual":
 
-                    balance.Casual_Used -= days;
+        //            balance.Casual_Used -= days;
 
-                    break;
+        //            break;
 
-                case "sick":
+        //        case "sick":
 
-                    balance.Sick_Used -= days;
+        //            balance.Sick_Used -= days;
 
-                    break;
+        //            break;
 
-                case "earned":
+        //        case "earned":
 
-                case "earned leave":
+        //        case "earned leave":
 
-                    balance.Earned_Used -= days;
+        //            balance.Earned_Used -= days;
 
-                    break;
+        //            break;
 
-            }
+        //    }
 
-        }
+        //}
 
         //---------------------------------------
 
@@ -280,6 +286,7 @@ public class EmployeeLeaveService : IEmployeeLeaveService
         });
 
         await _context.SaveChangesAsync();
+        await RecalculateLeaveBalance(leave.EmployeeId);
 
         return new OkObjectResult("Leave updated successfully");
 
@@ -500,62 +507,16 @@ public class EmployeeLeaveService : IEmployeeLeaveService
             return new BadRequestObjectResult("Already rejected");
 
         // 👉 If already approved → revert balance
-
-        if (leave.Status == "Approved")
-
-        {
-
-            var balance = await _context.EmployeeLeaveBalances
-
-                .FirstOrDefaultAsync(b => b.Employee_Id == employee.Employee_Id);
-
-            if (balance != null)
-
-            {
-
-                var fromDate = DateTime.SpecifyKind(leave.FromDate, DateTimeKind.Utc);
-
-                var toDate = DateTime.SpecifyKind(leave.ToDate, DateTimeKind.Utc);
-
-                int days = await CalculateWorkingDays(fromDate, toDate);
-
-                var leaveType = leave.LeaveType?.Trim().ToLower();
-
-                switch (leaveType)
-
-                {
-
-                    case "casual":
-
-                        balance.Casual_Used -= days;
-
-                        break;
-
-                    case "sick":
-
-                        balance.Sick_Used -= days;
-
-                        break;
-
-                    case "earned":
-
-                    case "earned leave":
-
-                        balance.Earned_Used -= days;
-
-                        break;
-
-                }
-
-            }
-
-        }
-
         leave.Status = "Cancelled";
 
         await _context.SaveChangesAsync();
 
+        await RecalculateLeaveBalance(employee.Employee_Id);
+
         return new OkObjectResult("Leave cancelled successfully");
+       
+
+        
 
     }
 
@@ -579,6 +540,148 @@ public class EmployeeLeaveService : IEmployeeLeaveService
         }
 
         return days;
+    }
+
+    private async Task<int> CalculateSandwichLeaveDays(
+    string employeeId,
+    DateTime fromDate,
+    DateTime toDate)
+    {
+        // CASE 1:
+        // Count ALL days inside the selected leave range
+        // (including weekends and holidays)
+
+        int leaveDays = (toDate.Date - fromDate.Date).Days + 1;
+
+        // CASE 2:
+        // Check previous approved leave
+        var previousLeave = await _context.EmployeeLeaves
+            .Where(x =>
+                x.EmployeeId == employeeId &&
+                x.Status == "Approved" &&
+                x.ToDate.Date < fromDate.Date)
+            .OrderByDescending(x => x.ToDate)
+            .FirstOrDefaultAsync();
+
+        if (previousLeave != null)
+        {
+            var gapStart = previousLeave.ToDate.Date.AddDays(1);
+            var gapEnd = fromDate.Date.AddDays(-1);
+
+            if (gapStart <= gapEnd)
+            {
+                bool sandwichGap = true;
+
+                for (var d = gapStart; d <= gapEnd; d = d.AddDays(1))
+                {
+                    bool isWeekend =
+                        d.DayOfWeek == DayOfWeek.Saturday ||
+                        d.DayOfWeek == DayOfWeek.Sunday;
+
+                    bool isHoliday = await _context.Holidays
+                        .AnyAsync(h => h.Holiday_Date.Date == d.Date);
+
+                    if (!isWeekend && !isHoliday)
+                    {
+                        sandwichGap = false;
+                        break;
+                    }
+                }
+
+                if (sandwichGap)
+                {
+                    leaveDays += (gapEnd - gapStart).Days + 1;
+                }
+            }
+        }
+
+        // CASE 3:
+        // Check next approved leave
+        var nextLeave = await _context.EmployeeLeaves
+            .Where(x =>
+                x.EmployeeId == employeeId &&
+                x.Status == "Approved" &&
+                x.FromDate.Date > toDate.Date)
+            .OrderBy(x => x.FromDate)
+            .FirstOrDefaultAsync();
+
+        if (nextLeave != null)
+        {
+            var gapStart = toDate.Date.AddDays(1);
+            var gapEnd = nextLeave.FromDate.Date.AddDays(-1);
+
+            if (gapStart <= gapEnd)
+            {
+                bool sandwichGap = true;
+
+                for (var d = gapStart; d <= gapEnd; d = d.AddDays(1))
+                {
+                    bool isWeekend =
+                        d.DayOfWeek == DayOfWeek.Saturday ||
+                        d.DayOfWeek == DayOfWeek.Sunday;
+
+                    bool isHoliday = await _context.Holidays
+                        .AnyAsync(h => h.Holiday_Date.Date == d.Date);
+
+                    if (!isWeekend && !isHoliday)
+                    {
+                        sandwichGap = false;
+                        break;
+                    }
+                }
+
+                if (sandwichGap)
+                {
+                    leaveDays += (gapEnd - gapStart).Days + 1;
+                }
+            }
+        }
+
+        return leaveDays;
+    }
+    private async Task RecalculateLeaveBalance(string employeeId)
+    {
+        var balance = await _context.EmployeeLeaveBalances
+            .FirstOrDefaultAsync(x => x.Employee_Id == employeeId);
+
+        if (balance == null)
+            return;
+
+        balance.Casual_Used = 0;
+        balance.Sick_Used = 0;
+        balance.Earned_Used = 0;
+
+        var approvedLeaves = await _context.EmployeeLeaves
+            .Where(x =>
+                x.EmployeeId == employeeId &&
+                x.Status == "Approved")
+            .ToListAsync();
+
+        foreach (var leave in approvedLeaves)
+        {
+            int days = await CalculateSandwichLeaveDays(
+                employeeId,
+                leave.FromDate,
+                leave.ToDate);
+
+            switch (leave.LeaveType?.Trim().ToLower())
+            {
+                case "casual":
+                    balance.Casual_Used += days;
+                    break;
+
+                case "sick":
+                    balance.Sick_Used += days;
+                    break;
+
+                case "earned":
+                case "earned leave":
+                    balance.Earned_Used += days;
+                    break;
+            }
+        }
+
+        await _context.SaveChangesAsync();
     }
 }
 

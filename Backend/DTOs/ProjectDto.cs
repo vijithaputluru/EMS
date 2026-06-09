@@ -20,7 +20,7 @@ public class ProjectDto
     public string? Team_Members { get; set; }
 
     // Actual members
-    public List<ProjectMemberDto> ProjectMembers { get; set; }
+    public List<ProjectMemberDto>? ProjectMembers { get; set; }
         = new();
 
     public string Status { get; set; }

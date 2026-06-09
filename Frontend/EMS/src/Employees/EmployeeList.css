@@ -147,9 +147,9 @@
 
 .emp-toolbar {
   display: grid;
-  grid-template-columns: minmax(300px, 1.7fr) repeat(3, minmax(160px, 0.92fr));
+  grid-template-columns: 2fr 1fr 1fr 1fr;
   gap: 12px;
-  align-items: stretch;
+  align-items: center;
   margin-bottom: 18px;
 }
 

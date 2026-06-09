@@ -58,21 +58,14 @@ namespace EmployeeManagementSystem.Services
         {
 
             return status switch
-
             {
-
                 "P" => "Present",
-
                 "A" => "Absent",
-
                 "L" => "On Leave",
-
                 "W" => "Weekend",
-
                 "H" => "Holiday",
-
+                "LOP" => "Loss Of Pay",
                 _ => status
-
             };
 
         }
@@ -106,12 +99,27 @@ namespace EmployeeManagementSystem.Services
         //---------------------------------------
         public async Task<IActionResult> CheckIn(ClaimsPrincipal user)
         {
+           
             var emp = await GetEmployee(user);
 
             if (emp == null)
                 return new UnauthorizedObjectResult("Invalid user");
 
             var today = DateTime.UtcNow.Date;
+            var monday = today.AddDays(
+    -(int)(today.DayOfWeek == DayOfWeek.Sunday
+        ? 6
+        : today.DayOfWeek - DayOfWeek.Monday));
+
+            var sunday = monday.AddDays(7);
+
+            var missedCheckoutCount = await _context.Attendance
+    .CountAsync(a =>
+        a.Employee_Id == emp.Employee_Id &&
+        a.Attendance_Date >= monday &&
+        a.Attendance_Date < today &&
+        a.Check_In != null &&
+        a.Check_Out == null);
 
             var existing = await _context.Attendance
                 .FirstOrDefaultAsync(x =>
@@ -128,9 +136,34 @@ namespace EmployeeManagementSystem.Services
                     "Check-in is allowed only after 08:55 AM");
             }
 
-            string status = ist.TimeOfDay > new TimeSpan(9, 15, 0)
-                ? "Late"
-                : "Present";
+            string status = "Present";
+
+            // =========================
+            // MISSED CHECKOUT POLICY
+            // 2 missed checkouts -> next day LOP
+            // =========================
+            if (missedCheckoutCount >= 2)
+            {
+                status = "LOP";
+            }
+            else if (ist.TimeOfDay > new TimeSpan(9, 15, 0))
+            {
+                var lateCount = await _context.Attendance
+                    .CountAsync(a =>
+                        a.Employee_Id == emp.Employee_Id &&
+                        a.Attendance_Date >= monday &&
+                        a.Attendance_Date < sunday &&
+                        a.Status == "Late");
+
+                if (lateCount >= 2)
+                {
+                    status = "LOP";
+                }
+                else
+                {
+                    status = "Late";
+                }
+            }
 
             var employeeName = emp.Name;
 
@@ -174,8 +207,15 @@ namespace EmployeeManagementSystem.Services
             });
 
             await _context.SaveChangesAsync();
-
-            return new OkObjectResult("Check-in successful");
+            return new OkObjectResult(new
+            {
+                Message = "Check-in successful",
+                MissedCheckouts = missedCheckoutCount,
+                Reminder = missedCheckoutCount > 0
+    ? $"You have {missedCheckoutCount} missed checkout(s) this week. On the 3rd missed checkout, LOP will be applied."
+    : null
+        });
+           
         }
 
         //---------------------------------------
@@ -220,9 +260,14 @@ namespace EmployeeManagementSystem.Services
                 att.Status = "Half Day";
             else if (hours >= 4)
             {
-                if (att.Status != "Late")
+                if (att.Status != "Late" &&
+                    att.Status != "LOP" &&
+                    att.Status != "Half Day")
+                {
                     att.Status = "Present";
-            }
+                }
+            
+        }
             else
                 att.Status = "Absent";
 
@@ -364,7 +409,9 @@ namespace EmployeeManagementSystem.Services
                     days.Add(new AdminAttendanceDayDto
                     {
                         Day = d,
-                        Status = att != null ? MapStatus(att.Status) : "Absent",
+                        Status = date.Date > DateTime.UtcNow.Date
+    ? "-"
+    : (att != null ? MapStatus(att.Status) : "Absent"),
                         CheckIn = att?.Check_In != null ? ConvertToIST(att.Check_In.Value) : null,
                         CheckOut = att?.Check_Out != null ? ConvertToIST(att.Check_Out.Value) : null,
                         WorkingMinutes = att?.WorkingMinutes ?? 0
@@ -462,42 +509,46 @@ namespace EmployeeManagementSystem.Services
                     continue;
                 }
                 var att = attendances
-
-                    .FirstOrDefault(a => a.Attendance_Date.Date == date.Date);
+    .FirstOrDefault(a => a.Attendance_Date.Date == date.Date);
 
                 DateTime? checkIn = null;
-
                 DateTime? checkOut = null;
 
-
                 if (att?.Check_In != null)
-
                     checkIn = ConvertToIST(att.Check_In.Value);
 
                 if (att?.Check_Out != null)
-
                     checkOut = ConvertToIST(att.Check_Out.Value);
+
+                var todayIst = ConvertToIST(DateTime.UtcNow).Date;
+
+                string status;
+
+                if (date.Date > todayIst)
+                    status = "-";
+                else if (att != null)
+                    status = att.Status == "Half Day" ? "HD"
+                           : att.Status == "Present" ? "P"
+                           : att.Status == "Late" ? "P"
+                           : att.Status;
+                else
+                    status = "A";
 
                 result.Add(new
                 {
                     Day = date.DayOfWeek.ToString(),
-                    Date = date.ToString("dd MMM yyyy"),   // ✅ ADD
-                    Status = att != null
-                    ? (att.Status == "Half Day" ? "HD"
-                    : att.Status == "Present" ? "P"
-                    : att.Status == "Late" ? "P"
-                    : att.Status)
-                    : "A",
+                    Date = date.ToString("dd MMM yyyy"),
+                    Status = status,
                     CheckIn = checkIn?.ToString("hh:mm tt"),
                     CheckOut = checkOut?.ToString("hh:mm tt"),
                     Hours = att != null ? FormatHours(att.WorkingMinutes) : "0h 0m"
                 });
-
             }
 
-            return new OkObjectResult(result);
+                return new OkObjectResult(result);
 
-        }
+            }
+        
 
         public async Task<IActionResult> GetPreviousWeekAttendance(ClaimsPrincipal user)
 
@@ -582,11 +633,11 @@ namespace EmployeeManagementSystem.Services
                     Day = date.DayOfWeek.ToString(),
                     Date = date.ToString("dd MMM yyyy"),
                     Status = att != null
-                        ? (att.Status == "Half Day" ? "HD"
-                        : att.Status == "Present" ? "P"
-                        : att.Status == "Late" ? "P"
-                        : att.Status)
-                        : "A",
+    ? (att.Status == "Half Day" ? "HD"
+    : att.Status == "Present" ? "P"
+    : att.Status == "Late" ? "P"
+    : att.Status)
+    : "A",
 
                     CheckIn = checkIn?.ToString("hh:mm tt"),
                     CheckOut = checkOut?.ToString("hh:mm tt"),
@@ -737,13 +788,14 @@ namespace EmployeeManagementSystem.Services
                 result.Add(new
                 {
                     Day = day,
-                    Status = att != null
+                    Status = date.Date > DateTime.UtcNow.Date
+    ? "-"
+    : (att != null
         ? (att.Status == "Half Day" ? "HD"
-        : att.Status == "Present" ? "P"
-        : att.Status == "Late" ? "P"
-        : att.Status)
-        : "A",
-
+          : att.Status == "Present" ? "P"
+          : att.Status == "Late" ? "P"
+          : att.Status)
+        : "A"),
                     CheckIn = checkIn?.ToString("hh:mm tt"),
                     CheckOut = checkOut?.ToString("hh:mm tt"),
                     Hours = att != null ? FormatHours(att.WorkingMinutes) : "0h 0m"
@@ -865,12 +917,14 @@ namespace EmployeeManagementSystem.Services
                 result.Add(new
                 {
                     Day = day,
-                    Status = att != null
-                        ? (att.Status == "Half Day" ? "HD"
-                        : att.Status == "Present" ? "P"
-                        : att.Status == "Late" ? "P"
-                        : att.Status)
-                        : "A",
+                    Status = date.Date > DateTime.UtcNow.Date
+    ? "-"
+    : (att != null
+        ? (att.Status == "Half Day" ? "HD"
+          : att.Status == "Present" ? "P"
+          : att.Status == "Late" ? "P"
+          : att.Status)
+        : "A"),
 
                     CheckIn = checkIn?.ToString("hh:mm tt"),
                     CheckOut = checkOut?.ToString("hh:mm tt"),
@@ -885,68 +939,9 @@ namespace EmployeeManagementSystem.Services
         public async Task CheckMissedCheckIns() { }
 
         public async Task CheckMissingCheckouts()
-
         {
-            Console.WriteLine("Auto checkout running...");
-            var nowUtc = DateTime.UtcNow;
-            var today = nowUtc.Date;
-
-            var istNow = ConvertToIST(nowUtc);
-
-            var officeEndTime = new TimeSpan(18, 15, 0); // 6:15 PM
-            var autoCheckoutTime = officeEndTime;
-            if (istNow.TimeOfDay < autoCheckoutTime)
-                return;
-
-            var records = await _context.Attendance
-                .Where(a =>
-                    a.Attendance_Date.Date == today &&
-                    a.Check_In != null &&
-                    a.Check_Out == null)
-                .ToListAsync();
-
-            var istZone = TimeZoneInfo.FindSystemTimeZoneById("India Standard Time");
-
-            foreach (var att in records)
-            {
-                // save checkout as 6:00 PM
-                var autoCheckoutIst = new DateTime(
-                    istNow.Year,
-                    istNow.Month,
-                    istNow.Day,
-                    officeEndTime.Hours,
-                    officeEndTime.Minutes,
-                    0,
-                    DateTimeKind.Unspecified
-                );
-
-                var autoCheckoutUtc = TimeZoneInfo.ConvertTimeToUtc(autoCheckoutIst, istZone);
-
-                att.Check_Out = autoCheckoutUtc;
-
-                var minutes = (int)(att.Check_Out.Value - att.Check_In.Value).TotalMinutes;
-                att.WorkingMinutes = minutes;
-
-                var hours = minutes / 60.0;
-
-                if (hours >= 3 && hours < 4)
-                {
-                    att.Status = "Half Day";
-                }
-                else if (hours >= 4)
-                {
-                    if (att.Status != "Late")
-                        att.Status = "Present";
-                }
-                else
-                {
-                    att.Status = "Absent";
-                }
-            }
-
-            await _context.SaveChangesAsync();
-        }
-
+            
+}
         public async Task<object> GetTodayStats()
         {
             await CheckMissingCheckouts();
@@ -1075,12 +1070,14 @@ namespace EmployeeManagementSystem.Services
                 {
                     Day = i,
                     Date = date.ToString("dd MMM yyyy"),
-                    Status = att != null
-                        ? (att.Status == "Half Day" ? "HD"
-                          : att.Status == "Present" ? "P"
-                          : att.Status == "Late" ? "P"
-                          : att.Status)
-                        : "A",
+                    Status = date.Date > DateTime.UtcNow.Date
+    ? "-"
+    : (att != null
+        ? (att.Status == "Half Day" ? "HD"
+          : att.Status == "Present" ? "P"
+          : att.Status == "Late" ? "P"
+          : att.Status)
+        : "A"),
                     HolidayName = (string?)null,
                     LeaveType = (string?)null,
                     CheckIn = checkIn?.ToString("hh:mm tt"),
@@ -1314,6 +1311,7 @@ namespace EmployeeManagementSystem.Services
             decimal present = 0;
 
             int absent = 0;
+            int lopDays = 0;
 
             int totalDays = DateTime.DaysInMonth(year, month);
 
@@ -1380,40 +1378,36 @@ namespace EmployeeManagementSystem.Services
                 // Attendance
 
                 if (attendanceLookup.TryGetValue(date.Date, out var att))
-
                 {
-
-                    if (att.Status == "Half Day")
-
+                    if (att.Status == "LOP")
+                    {
+                        lopDays++;
+                    }
+                    else if (att.Status == "Half Day")
+                    {
                         present += 0.5m;
-
+                    }
                     else
-
+                    {
                         present += 1m;
-
+                    }
                 }
-
                 else
-
                 {
-
                     absent++;
-
                 }
-
             }
 
-            return new AttendanceSummaryDto
+                return new AttendanceSummaryDto
+                {
+                    PresentDays = present,
+                    AbsentDays = absent,
+                    LopDays = lopDays
+                };
 
-            {
-
-                PresentDays = present,
-
-                AbsentDays = absent
-
-            };
-
-        }
+            }
+        
+        
 
 
         public async Task<IActionResult> GetEmployeeWorkingHours(
@@ -1558,6 +1552,7 @@ namespace EmployeeManagementSystem.Services
                 int weekendCount = 0;
                 int halfDayCount = 0;
                 int holidayCount = 0;
+                int lopCount = 0;
                 worksheet.Cell(row, 1).Value = emp.EmployeeId;
                 worksheet.Cell(row, 2).Value = emp.EmployeeName;
 
@@ -1598,6 +1593,11 @@ namespace EmployeeManagementSystem.Services
                         case "H":
                             holidayCount++;
                             break;
+
+                        case "LOP":
+                        case "Loss Of Pay":
+                            lopCount++;
+                            break;
                     }
 
 
@@ -1613,6 +1613,9 @@ namespace EmployeeManagementSystem.Services
                 worksheet.Cell(row, totalDays + 7).Value = weekendCount;
                 worksheet.Cell(row, totalDays + 8).Value = halfDayCount;
                 worksheet.Cell(row, totalDays + 9).Value = holidayCount;
+                worksheet.Cell(1, totalDays + 10).Value = "LOP";
+
+                worksheet.Cell(row, totalDays + 10).Value = lopCount;
 
                 row++;
             }
@@ -1899,33 +1902,26 @@ namespace EmployeeManagementSystem.Services
                 .Where(a => a.Attendance_Date.Date == date)
                 .ToListAsync();
             var reportData = employees
-    .Select(emp =>
-    {
-        var att = attendanceData
-            .FirstOrDefault(a => a.Employee_Id == emp.Employee_Id);
 
-        var status = att != null
-            ? MapStatus(att.Status)
-            : "Absent";
+        .Select(emp => {
+            var att = attendanceData.FirstOrDefault(a => a.Employee_Id == emp.Employee_Id);
 
-        return new
-        {
-            Employee = emp,
-            Attendance = att,
-            Status = status
-        };
-    })
-    .OrderBy(x =>
-        x.Status == "Present" ? 1 :
-        x.Status == "Late" ? 2 :
-        x.Status == "Half Day" ? 3 :
-        x.Status == "On Leave" ? 4 :
-        5)
-    .ThenBy(x => x.Attendance?.Check_In);
+            var status = att != null
+        ? MapStatus(att.Status)
+        : "Absent";
+
+            return new
+            {
+                Employee = emp,
+                Attendance = att,
+                Status = status
+            };
+
+        }).OrderBy(x => x.Status == "Present" ? 1 : x.Status == "Late" ? 2 : x.Status == "Half Day" ? 3 : x.Status == "On Leave" ? 4 : 5).ThenBy(x => x.Attendance?.Check_In);
 
             var presentEmployees = reportData
-    .Where(x => x.Attendance != null)
-    .ToList();
+
+        .Where(x => x.Attendance != null).ToList();
 
             var absentEmployees = reportData
                 .Where(x => x.Attendance == null)
@@ -1954,7 +1950,8 @@ namespace EmployeeManagementSystem.Services
             //=====================================
 
             presentSheet.Cell(1, 1).Value =
-      "Present Employees Report";
+
+        "Present Employees Report";
 
             presentSheet.Cell(2, 1).Value =
                 $"Report Date : {date:dd-MMM-yyyy}";
@@ -1974,7 +1971,8 @@ namespace EmployeeManagementSystem.Services
             presentSheet.Cell(5, 7).Value = "Working Hours";
 
             var presentHeader =
-     presentSheet.Range(5, 1, 5, 7);
+
+        presentSheet.Range(5, 1, 5, 7);
 
             presentHeader.Style.Font.Bold = true;
             presentHeader.Style.Fill.BackgroundColor =
@@ -2015,10 +2013,13 @@ namespace EmployeeManagementSystem.Services
                     : "-";
 
                 presentSheet.Cell(presentRow, 7).Value =
-                    att != null
-                    ? FormatHours(att.WorkingMinutes)
-                    : "0h 0m";
-
+                    att != null && att.Check_In != null
+                        ? FormatHours(
+                            att.Check_Out != null
+                                ? att.WorkingMinutes
+                                : (int)(DateTime.UtcNow - att.Check_In.Value).TotalMinutes
+                          )
+                        : "0h 0m";
                 presentRow++;
             }
 
@@ -2030,7 +2031,8 @@ namespace EmployeeManagementSystem.Services
             //=====================================
 
             absentSheet.Cell(1, 1).Value =
-     "Absent Employees Report";
+
+        "Absent Employees Report";
 
             absentSheet.Cell(2, 1).Value =
                 $"Report Date : {date:dd-MMM-yyyy}";
@@ -2048,7 +2050,8 @@ namespace EmployeeManagementSystem.Services
             absentSheet.Cell(5, 5).Value = "Status";
 
             var absentHeader =
-    absentSheet.Range(5, 1, 5, 5);
+
+        absentSheet.Range(5, 1, 5, 5);
 
             absentHeader.Style.Font.Bold = true;
             absentHeader.Style.Fill.BackgroundColor =
@@ -2087,7 +2090,8 @@ namespace EmployeeManagementSystem.Services
             //=====================================
 
             lateSheet.Cell(1, 1).Value =
-     "Late Employees Report";
+
+        "Late Employees Report";
 
             lateSheet.Cell(2, 1).Value =
                 $"Report Date : {date:dd-MMM-yyyy}";
@@ -2106,7 +2110,8 @@ namespace EmployeeManagementSystem.Services
             lateSheet.Cell(5, 6).Value = "Late By";
 
             var lateHeader =
-    lateSheet.Range(5, 1, 5, 6);
+
+        lateSheet.Range(5, 1, 5, 6);
 
             lateHeader.Style.Font.Bold = true;
             lateHeader.Style.Fill.BackgroundColor =
@@ -2208,6 +2213,12 @@ namespace EmployeeManagementSystem.Services
                 case "On Leave":
                     cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E9D5FF");
                     cell.Value = "L";
+                    break;
+
+                case "LOP":
+                case "Loss Of Pay":
+                    cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#FFB3B3");
+                    cell.Value = "LOP";
                     break;
 
                 default:

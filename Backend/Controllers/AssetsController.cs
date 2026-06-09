@@ -108,8 +108,27 @@ namespace EmployeeManagementSystem.Controllers
 
         }
 
-        
+        [HttpGet("export-report")]
+
+        public async Task<IActionResult> ExportAssetsReport()
+
+        {
+
+            var fileBytes =
+
+                await _service.ExportAssetsReport();
+
+            return File(
+
+                fileBytes,
+
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+
+                $"Assets_Report_{DateTime.Now:dd_MMM_yyyy}.xlsx");
+
+        }
 
     }
 
 }
+

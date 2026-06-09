@@ -265,6 +265,11 @@ namespace EmployeeManagementSystem.Services
      .OrderBy(x => x.Employee_Id)
      .ToListAsync();
 
+            var employeeDocuments = await _context.EmployeeDocuments
+    .AsNoTracking()
+    .ToListAsync();
+
+
             var employeeLookup = employees.ToDictionary(
                 e => e.Employee_Id,
                 e => e.Name);
@@ -293,6 +298,23 @@ namespace EmployeeManagementSystem.Services
             masterSheet.Cell(2, 7).Value =
     $"Inactive Employees : {employees.Count(x => x.Status != "Active")}";
 
+            var employeesWithDocuments = employeeDocuments
+    .Select(x => x.Employee_Id)
+    .Distinct()
+    .Count();
+
+            masterSheet.Cell(2, 9).Value =
+                $"Documents Started : {employeesWithDocuments}";
+
+            var pendingVerification = employeeDocuments
+    .Count(x => x.Verification_Status == "Pending");
+
+            masterSheet.Cell(2, 10).Value =
+                $"Pending Verification : {pendingVerification}";
+
+            masterSheet.Cell(2, 10).Style.Font.Bold = true;
+            masterSheet.Cell(2, 10).Style.Font.FontColor = XLColor.DarkGreen;
+
             masterSheet.Cell(2, 7).Style.Font.Bold = true;
 
             masterSheet.Cell(3, 1).Value = "Employee ID";
@@ -303,9 +325,11 @@ namespace EmployeeManagementSystem.Services
             masterSheet.Cell(3, 6).Value = "Status";
             masterSheet.Cell(3, 7).Value = "Joining Date";
             masterSheet.Cell(3, 8).Value = "CTC";
+            masterSheet.Cell(3, 9).Value = "Document Status";
+            masterSheet.Cell(3, 10).Value = "Documents Verified";
 
             var masterHeader =
-    masterSheet.Range(3, 1, 3, 8);
+    masterSheet.Range(3, 1, 3, 10);
             masterHeader.Style.Font.Bold = true;
             masterHeader.Style.Fill.BackgroundColor = XLColor.DarkBlue;
             masterHeader.Style.Font.FontColor = XLColor.White;
@@ -329,6 +353,71 @@ namespace EmployeeManagementSystem.Services
                 masterSheet.Cell(masterRow, 6).Value = emp.Status;
                 masterSheet.Cell(masterRow, 7).Value = emp.JoiningDate.ToString("dd-MMM-yyyy");
                 masterSheet.Cell(masterRow, 8).Value = emp.CTC;
+
+                var uploadedDocs = employeeDocuments
+    .Count(x => x.Employee_Id == emp.Employee_Id);
+
+                string documentStatus;
+
+                if (uploadedDocs == 0)
+                {
+                    documentStatus = "Not Started";
+                }
+                else if (uploadedDocs >= 13)
+                {
+                    documentStatus = "Complete";
+                }
+                else
+                {
+                    documentStatus = $"{uploadedDocs}/13 Uploaded";
+                }
+
+                masterSheet.Cell(masterRow, 9).Value =
+                    documentStatus;
+
+                var verifiedDocs = employeeDocuments
+    .Count(x =>
+        x.Employee_Id == emp.Employee_Id &&
+        x.Verification_Status == "Approved");
+
+                masterSheet.Cell(masterRow, 10).Value =
+                    $"{verifiedDocs}/{uploadedDocs} Verified";
+
+                masterSheet.Cell(masterRow, 10).Value =
+    $"{verifiedDocs}/{uploadedDocs} Verified";
+
+                if (uploadedDocs > 0 &&
+    verifiedDocs == uploadedDocs)
+                {
+                    masterSheet.Cell(masterRow, 10)
+                        .Style.Font.FontColor = XLColor.Green;
+                }
+                else if (verifiedDocs == 0)
+                {
+                    masterSheet.Cell(masterRow, 10)
+                        .Style.Font.FontColor = XLColor.Red;
+                }
+                else
+                {
+                    masterSheet.Cell(masterRow, 10)
+                        .Style.Font.FontColor = XLColor.DarkOrange;
+                }
+
+                if (documentStatus == "Complete")
+                {
+                    masterSheet.Cell(masterRow, 9)
+                        .Style.Font.FontColor = XLColor.Green;
+                }
+                else if (documentStatus == "Not Started")
+                {
+                    masterSheet.Cell(masterRow, 9)
+                        .Style.Font.FontColor = XLColor.Red;
+                }
+                else
+                {
+                    masterSheet.Cell(masterRow, 9)
+                        .Style.Font.FontColor = XLColor.DarkOrange;
+                }
 
                 masterRow++;
             }
@@ -774,6 +863,118 @@ namespace EmployeeManagementSystem.Services
                 experienceRow++;
             }
 
+            var documentSheet =
+    workbook.Worksheets.Add("Document Summary");
+            documentSheet.Cell(1, 1).Value =
+    "Employee Documents Summary";
+
+            var completedEmployees = employees.Count(emp =>
+            {
+                var uploaded = employeeDocuments
+                    .Count(x => x.Employee_Id == emp.Employee_Id);
+
+                var verified = employeeDocuments
+                    .Count(x =>
+                        x.Employee_Id == emp.Employee_Id &&
+                        x.Verification_Status == "Approved");
+
+                return uploaded > 0 &&
+                       uploaded == verified;
+            });
+
+            documentSheet.Cell(2, 1).Value =
+                $"Total Employees : {employees.Count}";
+
+            documentSheet.Cell(2, 4).Value =
+                $"Completed : {completedEmployees}";
+
+            documentSheet.Cell(2, 7).Value =
+                $"Pending : {employees.Count - completedEmployees}";
+
+            documentSheet.Cell(1, 1)
+                .Style.Font.Bold = true;
+
+            documentSheet.Cell(1, 1)
+                .Style.Font.FontSize = 16;
+
+            documentSheet.Cell(3, 1).Value = "Employee ID";
+            documentSheet.Cell(3, 2).Value = "Employee Name";
+            documentSheet.Cell(3, 3).Value = "Uploaded Documents";
+            documentSheet.Cell(3, 4).Value = "Verified Documents";
+            documentSheet.Cell(3, 5).Value = "Pending Verification";
+            documentSheet.Cell(3, 6).Value = "Rejected Documents";
+            documentSheet.Cell(3, 7).Value = "Status";
+
+            var documentHeader =
+    documentSheet.Range(3, 1, 3, 7);
+
+            documentHeader.Style.Font.Bold = true;
+
+            documentHeader.Style.Fill.BackgroundColor =
+                XLColor.DarkBlue;
+
+            documentHeader.Style.Font.FontColor =
+                XLColor.White;
+
+            int documentRow = 4;
+
+            foreach (var emp in employees)
+            {
+                var uploadedDocs = employeeDocuments
+                    .Count(x => x.Employee_Id == emp.Employee_Id);
+
+                var verifiedDocs = employeeDocuments
+                    .Count(x =>
+                        x.Employee_Id == emp.Employee_Id &&
+                        x.Verification_Status == "Approved");
+
+                var rejectedDocs = employeeDocuments
+                    .Count(x =>
+                        x.Employee_Id == emp.Employee_Id &&
+                        x.Verification_Status == "Rejected");
+
+                var pendingDocs =
+                    uploadedDocs - verifiedDocs - rejectedDocs;
+
+                documentSheet.Cell(documentRow, 1).Value =
+                    emp.Employee_Id;
+
+                documentSheet.Cell(documentRow, 2).Value =
+                    emp.Name;
+
+                documentSheet.Cell(documentRow, 3).Value =
+                    uploadedDocs;
+
+                documentSheet.Cell(documentRow, 4).Value =
+                    verifiedDocs;
+
+                documentSheet.Cell(documentRow, 5).Value =
+                    pendingDocs;
+
+                documentSheet.Cell(documentRow, 6).Value =
+                    rejectedDocs;
+
+                if (uploadedDocs == 0)
+                {
+                    documentSheet.Cell(documentRow, 7).Value =
+                        "Not Started";
+                }
+                else if (uploadedDocs > 0 &&
+          verifiedDocs == uploadedDocs)
+                {
+                    documentSheet.Cell(documentRow, 7).Value =
+                        "Complete";
+                }
+                else
+                {
+                    documentSheet.Cell(documentRow, 7).Value =
+                        "In Progress";
+                }
+
+                documentRow++;
+            }
+
+
 
 
             masterSheet.Columns().AdjustToContents();
@@ -781,6 +982,7 @@ namespace EmployeeManagementSystem.Services
             bankSheet.Columns().AdjustToContents();
             educationSheet.Columns().AdjustToContents();
             experienceSheet.Columns().AdjustToContents();
+            documentSheet.Columns().AdjustToContents();
 
             using var stream = new MemoryStream();
 

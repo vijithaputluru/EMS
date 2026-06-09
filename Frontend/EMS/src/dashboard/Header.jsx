@@ -249,17 +249,18 @@ function Header({ collapsed = false, isMobileViewport = false, onToggle }) {
                   <strong>{profileLabel}</strong>
                   <span>{email}</span>
                 </div>
-
-                <button
-                  type="button"
-                  className="profile-item"
-                  onClick={handleProfileClick}
-                >
-                  <span className="profile-item-icon">
-                    <FaUser />
-                  </span>
-                  <span>My Profile</span>
-                </button>
+{role?.toLowerCase() !== "admin" && (
+  <button
+    type="button"
+    className="profile-item"
+    onClick={handleProfileClick}
+  >
+    <span className="profile-item-icon">
+      <FaUser />
+    </span>
+    <span>My Profile</span>
+  </button>
+)}
 
                 <button
                   type="button"

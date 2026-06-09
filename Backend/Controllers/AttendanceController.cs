@@ -340,26 +340,16 @@ namespace EmployeeManagementSystem.Controllers
 
         }
 
+
         [HttpGet("admin/download-daily")]
-
-        public async Task<IActionResult> DownloadDailyAttendance(
-
-    DateTime date)
-
+        public async Task<IActionResult> DownloadDaily(DateTime date)
         {
-
-            var fileBytes =
-
-                await _attendanceService.ExportDailyAttendance(date);
+            var file = await _attendanceService.ExportDailyAttendance(date);
 
             return File(
-
-                fileBytes,
-
+                file,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-
-                $"Daily_Attendance_{date:dd_MMM_yyyy}.xlsx");
-
+                $"daily-attendance-{date:yyyy-MM-dd}.xlsx");
         }
         [HttpGet("export-absent")]
         public async Task<IActionResult> ExportAbsent([FromQuery] DateTime date)

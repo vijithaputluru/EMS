@@ -90,7 +90,9 @@ namespace EmployeeManagementSystem.Services
             int totalWorkingDays =
                 (int)(presentDays + absentDays + weekendDays);
 
-            int lopDays = absentDays;
+            
+
+            int lopDays = summary.LopDays;
 
             decimal paidDays =
                 presentDays + weekendDays;
@@ -124,25 +126,29 @@ namespace EmployeeManagementSystem.Services
                 (monthlyCTC * ratio) - pf;
 
             decimal specialAllowance =
-                gross -
-                (basic + hra + conveyance + medical);
+     Math.Floor(
+         gross -
+         (basic + hra + conveyance + medical));
 
             decimal totalEarnings =
-                basic +
-                hra +
-                conveyance +
-                medical +
-                specialAllowance;
+                Math.Floor(
+                    basic +
+                    hra +
+                    conveyance +
+                    medical +
+                    specialAllowance);
 
-            decimal professionalTax = 200;
+            decimal professionalTax = 200m;
 
             decimal totalDeductions =
-                pf +
-                professionalTax +
-                OtherDeductions;
+                Math.Floor(
+                    pf +
+                    professionalTax +
+                    OtherDeductions);
 
             decimal netSalary =
-                totalEarnings - totalDeductions;
+                Math.Floor(
+                    totalEarnings - totalDeductions);
 
             if (netSalary < 0)
                 netSalary = 0;

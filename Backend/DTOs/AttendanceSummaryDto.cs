@@ -10,6 +10,8 @@
 
         public int AbsentDays { get; set; }
 
+        public int LopDays { get; set; }
+
     }
 
 }

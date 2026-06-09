@@ -227,7 +227,10 @@ public class ProjectsController : ControllerBase
 
             // IMPORTANT
 
-            Team_Members = dto.Team_Members,
+            Team_Members =
+    string.IsNullOrWhiteSpace(dto.Team_Members)
+        ? null
+        : dto.Team_Members,
 
             Status = dto.Status
 
@@ -269,7 +272,10 @@ public class ProjectsController : ControllerBase
 
         // IMPORTANT
 
-        project.Team_Members = dto.Team_Members;
+        project.Team_Members =
+     string.IsNullOrWhiteSpace(dto.Team_Members)
+         ? null
+         : dto.Team_Members;
 
         project.Status = dto.Status;
 

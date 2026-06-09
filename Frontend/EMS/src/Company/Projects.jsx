@@ -428,30 +428,6 @@ function Projects() {
   }, [projectsList, selectedProject?.id, showProjectDetails]);
 
   useEffect(() => {
-    if (!projectsShowModal || !projectsEditMode || !projectsForm.originalId) {
-      return undefined;
-    }
-
-    const latestProject = projectsList.find(
-      (project) => String(project.id) === String(projectsForm.originalId)
-    );
-
-    if (!latestProject || latestProject.members.length === 0) {
-      return undefined;
-    }
-
-    if (selectedEmployees.length === 0) {
-      setSelectedEmployees(dedupeEmployeesByKey(latestProject.members));
-    }
-  }, [
-    projectsList,
-    projectsShowModal,
-    projectsEditMode,
-    projectsForm.originalId,
-    selectedEmployees.length,
-  ]);
-
-  useEffect(() => {
     if (!projectsShowModal && !showDeletePopup) {
       document.body.style.overflow = "";
       return undefined;
@@ -561,21 +537,22 @@ function Projects() {
         if (!trimmedValue) {
           return "Project Name is required";
         }
- 
+
         if (trimmedValue.length < 3) {
           return "Project Name must be at least 3 characters";
         }
- 
+
         if (trimmedValue.length > 50) {
           return "Project Name cannot exceed 50 characters";
         }
- 
+
         if (!/^[A-Za-z\s]+$/.test(trimmedValue)) {
           return "Only alphabets are allowed";
         }
- 
+
         return "";
       }
+
       case "id": {
         if (!trimmedValue) {
           return "Project ID is required";
@@ -623,9 +600,6 @@ function Projects() {
         return "";
 
       case "team": {
-        if (selectedEmployees.length === 0) {
-          return "Please select at least one employee";
-        }
         return "";
       }
 
@@ -827,9 +801,9 @@ function Projects() {
     setSelectedEmployees(
       dedupeEmployeesByKey(
         (project.projectMembers || resolvedMembers || []).map((member) => ({
-            employee_Id: member.employee_Id,
-            employeeName: member.name || member.employeeName,
-            name: member.name || member.employeeName,
+          employee_Id: member.employee_Id,
+          employeeName: member.name || member.employeeName,
+          name: member.name || member.employeeName,
         }))
       )
     );
@@ -869,8 +843,8 @@ function Projects() {
     () =>
       dedupeEmployeesByKey(
         selectedProject?.projectMembers ||
-          selectedProject?.members ||
-          []
+        selectedProject?.members ||
+        []
       ),
     [selectedProject]
   );
@@ -928,8 +902,8 @@ function Projects() {
                   No projects available.
                 </td>
               </tr>
-              ) : (
-                projectsList.map((project, index) => (
+            ) : (
+              projectsList.map((project, index) => (
                 <tr
                   key={`${project.id}-${index}`}
                   className="project-row-clickable"
@@ -1016,7 +990,7 @@ function Projects() {
                     </div>
                   </td>
                 </tr>
-                ))
+              ))
             )}
           </tbody>
         </table>
@@ -1071,20 +1045,21 @@ function Projects() {
                   <label htmlFor="project-name-input">
                     Project Name <span aria-hidden="true">*</span>
                   </label>
-                 <input
-  ref={projectNameInputRef}
-  id="project-name-input"
-  name="name"
-  type="text"
-  value={projectsForm.name}
-  onChange={handleProjectsChange}
-  onBlur={handleProjectsBlur}
-  aria-invalid={Boolean(formErrors.name)}
-  aria-describedby={formErrors.name ? "project-name-error" : undefined}
-  className={formErrors.name ? "has-error" : ""}
-  maxLength={50}
-  autoComplete="off"
-/> {formErrors.name && (
+                  <input
+                    ref={projectNameInputRef}
+                    id="project-name-input"
+                    name="name"
+                    type="text"
+                    value={projectsForm.name}
+                    onChange={handleProjectsChange}
+                    onBlur={handleProjectsBlur}
+                    aria-invalid={Boolean(formErrors.name)}
+                    aria-describedby={formErrors.name ? "project-name-error" : undefined}
+                    className={formErrors.name ? "has-error" : ""}
+                    maxLength={100}
+                    autoComplete="off"
+                  />
+                  {formErrors.name && (
                     <p id="project-name-error" className="projects-field-error">
                       {formErrors.name}
                     </p>
@@ -1156,7 +1131,7 @@ function Projects() {
                       }
                     >
                       <span>
-                          {selectedEmployees.length > 0
+                        {selectedEmployees.length > 0
                           ? `${selectedEmployees.length} Employees Selected`
                           : "Select Employees"}
                       </span>
@@ -1307,15 +1282,20 @@ function Projects() {
 
                         <button
                           type="button"
-                          onClick={() =>
-                            setSelectedEmployees((prev) =>
-                              prev.filter(
-                                (item) =>
-                                  getEmployeeSelectionKey(item) !==
-                                  getEmployeeSelectionKey(emp)
-                              )
-                            )
-                          }
+                          onClick={() => {
+                            const updatedEmployees = selectedEmployees.filter(
+                              (item) =>
+                                getEmployeeSelectionKey(item) !==
+                                getEmployeeSelectionKey(emp)
+                            );
+
+                            setSelectedEmployees(updatedEmployees);
+
+                            setProjectsForm((prev) => ({
+                              ...prev,
+                              team: String(updatedEmployees.length),
+                            }));
+                          }}
                         >
                           ×
                         </button>

@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useMemo, useState, useCallback, useRef } from "react";
+ import React, { memo, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import "./AttendanceTable.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -618,23 +618,46 @@ function AttendanceTable({
     const resolvedDays =
       attendanceDays.map((d) => {
 
-        const status =
+        const currentDate =
+          getAttendanceRecordDate(d);
+
+        const formattedDate =
+          getInputDateValue(currentDate);
+
+        const futureAttendance =
+          formattedDate &&
+          isFutureDate(formattedDate);
+
+        let status =
           getResolvedStatus(d);
 
-        if (status === "Present") present++;
-        if (status === "Absent") absent++;
-        if (status === "On Leave") onLeave++;
-        if (status === "Late") late++;
-        if (status === "Half Day") halfDay++;
-        if (status === "Weekend") weekends++;
+        // REMOVE FUTURE ABSENT
+        if (
+          futureAttendance &&
+          status === "Absent"
+        ) {
+          status = "";
+        }
 
+        // COUNT ONLY NON-FUTURE DAYS
+        if (!futureAttendance) {
+
+          if (status === "Present") present++;
+
+          if (status === "Absent") absent++;
+
+          if (status === "On Leave") onLeave++;
+
+          if (status === "Late") late++;
+
+          if (status === "Half Day") halfDay++;
+
+          if (status === "Weekend") weekends++;
+        }
         const resolvedHours =
           getResolvedAttendanceHours(d);
 
         totalHours += resolvedHours;
-
-        const currentDate =
-          getAttendanceRecordDate(d);
 
         if (currentDate) {
 
@@ -671,7 +694,11 @@ function AttendanceTable({
         return {
           ...d,
           resolvedDate: currentDate,
-          resolvedStatus: status,
+          resolvedStatus:
+            futureAttendance &&
+              status === ""
+              ? "-"
+              : status,
           resolvedCheckIn: getCheckIn(d),
           resolvedCheckOut: getCheckOut(d),
           resolvedHours
@@ -1222,13 +1249,37 @@ function AttendanceTable({
 
         dayMap[dayNum] = normalizedDay;
 
-        if (normalizedDay.status === "Present") present++;
-        else if (normalizedDay.status === "Absent") absent++;
-        else if (normalizedDay.status === "On Leave") onLeave++;
-        else if (normalizedDay.status === "Late") late++;
-        else if (normalizedDay.status === "Weekend") weekend++;
-        else if (normalizedDay.status === "Half Day") halfDay++;
-        else if (normalizedDay.status === "Holiday") holiday++;
+        const currentDate = new Date();
+        const todayDay = currentDate.getDate();
+        const currentMonth = currentDate.getMonth() + 1;
+        const currentYear = currentDate.getFullYear();
+
+        const isFutureAttendanceDate =
+          yearNum > currentYear ||
+          (yearNum === currentYear && monthNum > currentMonth) ||
+          (
+            yearNum === currentYear &&
+            monthNum === currentMonth &&
+            dayNum > todayDay
+          );
+
+        // DO NOT COUNT FUTURE DAYS
+        if (!isFutureAttendanceDate) {
+
+          if (normalizedDay.status === "Present") present++;
+
+          else if (normalizedDay.status === "Absent") absent++;
+
+          else if (normalizedDay.status === "On Leave") onLeave++;
+
+          else if (normalizedDay.status === "Late") late++;
+
+          else if (normalizedDay.status === "Weekend") weekend++;
+
+          else if (normalizedDay.status === "Half Day") halfDay++;
+
+          else if (normalizedDay.status === "Holiday") holiday++;
+        }
       });
 
       return {
@@ -2155,12 +2206,11 @@ function AttendanceTable({
 
     return selectedAttendance.days.filter((d) => {
 
-      const currentDate =
-        d?.resolvedDate ||
+      const attendanceDate =
         getAttendanceRecordDate(d);
 
       const formattedDate =
-        getInputDateValue(currentDate);
+        getInputDateValue(attendanceDate);
 
       if (!formattedDate) {
         return true;
@@ -2555,7 +2605,7 @@ function AttendanceTable({
           >
             {isDailyDownloading
               ? "Downloading..."
-              : "Download Daily"}
+              : "Download Today"}
           </button>
 
           <button
@@ -2590,8 +2640,12 @@ function AttendanceTable({
                   return (
                     <div
                       key={`${getEmployeeId(emp)}-${getEmployeeName(emp)}-${i}`}
-                      className="attendance-row attendance-row-5 attendance-clickable-row"
-                      onClick={() => openAttendanceDetails(emp)}
+                      className="attendance-row attendance-row-5"
+                        onClick={() => {
+                        if (viewMode === "monthly") {
+                          openAttendanceDetails(emp);
+                        }
+                      }}
                     >
                       <div className="attendance-employee">
                         <div className="avatar">

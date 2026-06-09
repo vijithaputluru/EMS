@@ -85,6 +85,9 @@ builder.Services.AddHostedService<AutoCheckoutService>();
 builder.Services.AddScoped<ExperienceOfferLetterService>();
 
 builder.Services.AddScoped<ModuleSearchService>();
+builder.Services.AddScoped<
+    IEmployeeDocumentService,
+    EmployeeDocumentService>();
 
 // ================= CORS =================
 
