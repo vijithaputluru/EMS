@@ -454,7 +454,19 @@ function UserAttendance() {
  
     setLoading(false);
   };
- 
+ const currentTime = new Date();
+const isBefore855 =
+  currentTime.getHours() < 8 ||
+  (
+    currentTime.getHours() === 8 &&
+    currentTime.getMinutes() < 55
+  );
+const isAfter615 =
+  currentTime.getHours() > 18 ||
+  (
+    currentTime.getHours() === 18 &&
+    currentTime.getMinutes() >= 15
+  );
   const getStatusClass = (status) => {
     const value = normalizeStatus(status).toLowerCase().replace(/\s+/g, "");
  
@@ -532,22 +544,51 @@ function UserAttendance() {
  
           <div className="attendance-buttons">
             <button
-              className="checkin-btn"
-              onClick={handleCheckIn}
-              disabled={checkedIn || loading}
-            >
-              <FaSignInAlt />
-              {loading ? "Processing..." : "Check In"}
-            </button>
+  className="checkin-btn"
+  onClick={handleCheckIn}
+  disabled={
+    checkedIn ||
+    loading ||
+    isBefore855
+  }
+  title={
+    isBefore855
+      ? "Check-in opens at 8:55 AM"
+      : ""
+  }
+>
+  <FaSignInAlt />
+
+  {isBefore855
+    ? "Check In Opens 8:55 AM"
+    : loading
+      ? "Processing..."
+      : "Check In"}
+</button>
  
             <button
-              className="checkout-btn"
-              onClick={handleCheckOut}
-              disabled={!checkedIn || checkedOut || loading}
-            >
-              <FaSignOutAlt />
-              {loading ? "Processing..." : "Check Out"}
-            </button>
+  className="checkout-btn"
+  onClick={handleCheckOut}
+  disabled={
+    !checkedIn ||
+    checkedOut ||
+    loading ||
+    isAfter615
+  }
+  title={
+    isAfter615
+      ? "Checkout disabled after 6:15 PM"
+      : ""
+  }
+>
+  <FaSignOutAlt />
+
+  {isAfter615
+    ? "Checkout Closed"
+    : loading
+      ? "Processing..."
+      : "Check Out"}
+</button>
           </div>
  
           <div

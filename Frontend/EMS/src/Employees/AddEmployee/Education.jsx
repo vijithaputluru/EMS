@@ -68,8 +68,13 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
   const [successMsg, setSuccessMsg] = useState("");
   const [apiError, setApiError] = useState("");
   const [loading, setLoading] = useState(false);
- 
+
   const isEditMode = Array.isArray(data) && data.length > 0;
+
+  const getFieldClassName = (index, field, extraClass = "") =>
+    [extraClass, errors[index]?.[field] ? "is-invalid" : ""]
+      .filter(Boolean)
+      .join(" ");
  
   useEffect(() => {
     if (!Array.isArray(data) || data.length === 0) {
@@ -364,7 +369,10 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
         </div>
       ) : (
         educations.map((education, index) => (
-          <div className="form-card" key={`education-${index}`}>
+        <div
+          className={`form-card${errors[index]?.row || errors[index]?.duplicate ? " validation-card-error" : ""}`}
+          key={`education-${index}`}
+        >
             <div className="card-header">
               <h4>Education {index + 1}</h4>
  
@@ -380,9 +388,9 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
               )}
             </div>
  
-            {errors[index]?.row && <p className="education-feedback error">{errors[index].row}</p>}
+            {errors[index]?.row && <p className="education-feedback error" role="alert">{errors[index].row}</p>}
             {errors[index]?.duplicate && (
-              <p className="education-feedback error">{errors[index].duplicate}</p>
+              <p className="education-feedback error" role="alert">{errors[index].duplicate}</p>
             )}
  
             <div className="form-grid">
@@ -391,6 +399,7 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
                 <select
                   value={education.Graduation}
                   onChange={(event) => handleQualificationChange(index, event.target.value)}
+                  className={getFieldClassName(index, "Graduation")}
                   disabled={viewMode}
                 >
                   <option value="">Select Qualification</option>
@@ -400,7 +409,7 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
                     </option>
                   ))}
                 </select>
-                {errors[index]?.Graduation && <span className="error">{errors[index].Graduation}</span>}
+                {errors[index]?.Graduation && <span className="error" role="alert">{errors[index].Graduation}</span>}
  
                 {education.Graduation === "Other" && (
                   <>
@@ -411,11 +420,11 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
                       onChange={(event) =>
                         handleChange(index, "customGraduation", event.target.value)
                       }
+                      className={`education-custom-input ${getFieldClassName(index, "customGraduation")}`.trim()}
                       disabled={viewMode}
-                      style={{ marginTop: "8px" }}
                     />
                     {errors[index]?.customGraduation && (
-                      <span className="error">{errors[index].customGraduation}</span>
+                      <span className="error" role="alert">{errors[index].customGraduation}</span>
                     )}
                   </>
                 )}
@@ -426,9 +435,10 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
                 <input
                   value={education.university}
                   onChange={(event) => handleChange(index, "university", event.target.value)}
+                  className={getFieldClassName(index, "university")}
                   disabled={viewMode}
                 />
-                {errors[index]?.university && <span className="error">{errors[index].university}</span>}
+                {errors[index]?.university && <span className="error" role="alert">{errors[index].university}</span>}
               </div>
  
               <div className="form-group">
@@ -436,9 +446,10 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
                 <input
                   value={education.year}
                   onChange={(event) => handleYearChange(index, event.target.value)}
+                  className={getFieldClassName(index, "year")}
                   disabled={viewMode}
                 />
-                {errors[index]?.year && <span className="error">{errors[index].year}</span>}
+                {errors[index]?.year && <span className="error" role="alert">{errors[index].year}</span>}
               </div>
  
               <div className="form-group">
@@ -446,9 +457,10 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
                 <input
                   value={education.percentage}
                   onChange={(event) => handlePercentageChange(index, event.target.value)}
+                  className={getFieldClassName(index, "percentage")}
                   disabled={viewMode}
                 />
-                {errors[index]?.percentage && <span className="error">{errors[index].percentage}</span>}
+                {errors[index]?.percentage && <span className="error" role="alert">{errors[index].percentage}</span>}
               </div>
  
               <div className="form-group full">
@@ -456,10 +468,11 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
                 <input
                   value={education.specialization}
                   onChange={(event) => handleChange(index, "specialization", event.target.value)}
+                  className={getFieldClassName(index, "specialization")}
                   disabled={viewMode}
                 />
                 {errors[index]?.specialization && (
-                  <span className="error">{errors[index].specialization}</span>
+                  <span className="error" role="alert">{errors[index].specialization}</span>
                 )}
               </div>
             </div>
@@ -471,7 +484,7 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
         <div className="education-add-wrapper">
           <button
             type="button"
-            className="add-education-btn"
+            className="btn primary add-education-btn"
             onClick={addEducation}
             disabled={loading}
           >
@@ -481,7 +494,7 @@ function Education({ onNext, onBack, employeeId, viewMode, data }) {
       )}
  
       <div className="step-actions">
-        <button className="btn secondary" onClick={onBack} disabled={loading}>
+        <button type="button" className="btn secondary" onClick={onBack} disabled={loading}>
           Back
         </button>
  

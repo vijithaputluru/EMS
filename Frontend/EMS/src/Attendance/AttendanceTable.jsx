@@ -1,4 +1,4 @@
- import React, { memo, useEffect, useMemo, useState, useCallback, useRef } from "react";
+import React, { memo, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import "./AttendanceTable.css";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -618,46 +618,23 @@ function AttendanceTable({
     const resolvedDays =
       attendanceDays.map((d) => {
 
-        const currentDate =
-          getAttendanceRecordDate(d);
-
-        const formattedDate =
-          getInputDateValue(currentDate);
-
-        const futureAttendance =
-          formattedDate &&
-          isFutureDate(formattedDate);
-
-        let status =
+        const status =
           getResolvedStatus(d);
 
-        // REMOVE FUTURE ABSENT
-        if (
-          futureAttendance &&
-          status === "Absent"
-        ) {
-          status = "";
-        }
+        if (status === "Present") present++;
+        if (status === "Absent") absent++;
+        if (status === "On Leave") onLeave++;
+        if (status === "Late") late++;
+        if (status === "Half Day") halfDay++;
+        if (status === "Weekend") weekends++;
 
-        // COUNT ONLY NON-FUTURE DAYS
-        if (!futureAttendance) {
-
-          if (status === "Present") present++;
-
-          if (status === "Absent") absent++;
-
-          if (status === "On Leave") onLeave++;
-
-          if (status === "Late") late++;
-
-          if (status === "Half Day") halfDay++;
-
-          if (status === "Weekend") weekends++;
-        }
         const resolvedHours =
           getResolvedAttendanceHours(d);
 
         totalHours += resolvedHours;
+
+        const currentDate =
+          getAttendanceRecordDate(d);
 
         if (currentDate) {
 
@@ -694,11 +671,7 @@ function AttendanceTable({
         return {
           ...d,
           resolvedDate: currentDate,
-          resolvedStatus:
-            futureAttendance &&
-              status === ""
-              ? "-"
-              : status,
+          resolvedStatus: status,
           resolvedCheckIn: getCheckIn(d),
           resolvedCheckOut: getCheckOut(d),
           resolvedHours
@@ -723,6 +696,15 @@ function AttendanceTable({
   };
 
   const formatHoursWorked = (emp) => {
+    const attendanceDate =
+      getAttendanceRecordDate(emp);
+
+    if (
+      attendanceDate &&
+      attendanceDate > new Date()
+    ) {
+      return "--";
+    }
 
     const checkIn =
       getCheckIn(emp);
@@ -978,6 +960,36 @@ function AttendanceTable({
   };
 
   const getResolvedStatus = (employeeRecord) => {
+
+    const attendanceDate =
+      getAttendanceRecordDate(employeeRecord);
+
+    // FUTURE DATE CHECK
+    if (
+      attendanceDate &&
+      attendanceDate > new Date()
+    ) {
+
+      const futureStatus =
+        normalizeStatus(
+          employeeRecord?.status ??
+          employeeRecord?.attendanceStatus ??
+          employeeRecord?.markStatus ??
+          employeeRecord?.dayStatus ??
+          employeeRecord?.dailyStatus
+        );
+
+      // ALLOW WEEKEND/HOLIDAY FROM API
+      if (
+        futureStatus === "Weekend" ||
+        futureStatus === "Holiday"
+      ) {
+        return futureStatus;
+      }
+
+      return "Upcoming";
+    }
+
     const normalizedStatus = normalizeStatus(
       employeeRecord?.status ??
       employeeRecord?.attendanceStatus ??
@@ -990,7 +1002,10 @@ function AttendanceTable({
       return normalizedStatus;
     }
 
-    if (getCheckIn(employeeRecord) || getCheckOut(employeeRecord)) {
+    if (
+      getCheckIn(employeeRecord) ||
+      getCheckOut(employeeRecord)
+    ) {
       return "Present";
     }
 
@@ -1006,6 +1021,7 @@ function AttendanceTable({
     if (s === "Late") return "badge-late";
     if (s === "Half Day") return "badge-halfday";
     if (s === "Weekend") return "badge-weekend";
+    if (s === "Upcoming") return "badge-upcoming";
     if (s === "Holiday") return "badge-holiday";
 
     return "badge-default";
@@ -1013,16 +1029,17 @@ function AttendanceTable({
 
   const getDayCellText = (dayObj, futureDay = false) => {
 
-    const status = normalizeStatus(dayObj?.status || "");
+    const status =
+      normalizeStatus(dayObj?.status || "");
 
-    // SHOW EVEN FOR FUTURE DAYS
+    // SHOW WEEKEND/HOLIDAY FROM API
     if (status === "Weekend") return "W";
     if (status === "Holiday") return "H";
     if (status === "On Leave") return "OL";
 
-    // OTHER FUTURE DAYS
+    // FUTURE DATES
     if (futureDay) {
-      return "-";
+      return "";
     }
 
     if (status === "Present") return "P";
@@ -1035,11 +1052,12 @@ function AttendanceTable({
 
   const getDayCellClass = (dayObj, futureDay = false) => {
 
-    const status = normalizeStatus(dayObj?.status || "");
+    const status =
+      normalizeStatus(dayObj?.status || "");
 
     // FUTURE EMPTY DAYS
     if (futureDay && !status) {
-      return "";
+      return "monthly-status upcoming";
     }
 
     if (status === "Present") return "monthly-status present";
@@ -1249,37 +1267,13 @@ function AttendanceTable({
 
         dayMap[dayNum] = normalizedDay;
 
-        const currentDate = new Date();
-        const todayDay = currentDate.getDate();
-        const currentMonth = currentDate.getMonth() + 1;
-        const currentYear = currentDate.getFullYear();
-
-        const isFutureAttendanceDate =
-          yearNum > currentYear ||
-          (yearNum === currentYear && monthNum > currentMonth) ||
-          (
-            yearNum === currentYear &&
-            monthNum === currentMonth &&
-            dayNum > todayDay
-          );
-
-        // DO NOT COUNT FUTURE DAYS
-        if (!isFutureAttendanceDate) {
-
-          if (normalizedDay.status === "Present") present++;
-
-          else if (normalizedDay.status === "Absent") absent++;
-
-          else if (normalizedDay.status === "On Leave") onLeave++;
-
-          else if (normalizedDay.status === "Late") late++;
-
-          else if (normalizedDay.status === "Weekend") weekend++;
-
-          else if (normalizedDay.status === "Half Day") halfDay++;
-
-          else if (normalizedDay.status === "Holiday") holiday++;
-        }
+        if (normalizedDay.status === "Present") present++;
+        else if (normalizedDay.status === "Absent") absent++;
+        else if (normalizedDay.status === "On Leave") onLeave++;
+        else if (normalizedDay.status === "Late") late++;
+        else if (normalizedDay.status === "Weekend") weekend++;
+        else if (normalizedDay.status === "Half Day") halfDay++;
+        else if (normalizedDay.status === "Holiday") holiday++;
       });
 
       return {
@@ -2206,11 +2200,12 @@ function AttendanceTable({
 
     return selectedAttendance.days.filter((d) => {
 
-      const attendanceDate =
+      const currentDate =
+        d?.resolvedDate ||
         getAttendanceRecordDate(d);
 
       const formattedDate =
-        getInputDateValue(attendanceDate);
+        getInputDateValue(currentDate);
 
       if (!formattedDate) {
         return true;
@@ -2521,100 +2516,229 @@ function AttendanceTable({
       />
 
       <div className="attendance-table">
-        <div className="attendance-table-actions">
+        {/* =========================================
+    TOP SECTION
+========================================= */}
 
-          <button
-            type="button"
-            className="attendance-download-btn attendance-primary-report-btn"
-            disabled={isDailyDownloading}
-            onClick={async () => {
-              try {
+        <div className="attendance-top-section">
 
-                setIsDailyDownloading(true);
+          {/* LEFT SIDE SUMMARY CARDS */}
 
-                const now = new Date();
+          {viewMode === "daily" ? (
 
-                const todayDate =
-                  `${now.getFullYear()}-${String(
-                    now.getMonth() + 1
-                  ).padStart(2, "0")}-${String(
-                    now.getDate()
-                  ).padStart(2, "0")}`;
+            loading ? (
 
-                const response = await api.get(
-                  API_ENDPOINTS.attendance.downloadDaily,
-                  {
-                    params: {
-                      date: todayDate,
-                    },
-                    responseType: "arraybuffer",
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                    },
-                  }
-                );
+              <div className="attendance-summary-skeleton">
 
-                const blob = new Blob(
-                  [response.data],
-                  {
-                    type:
-                      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                  }
-                );
+                {[1, 2, 3, 4, 5, 6].map((item) => (
+                  <div
+                    key={item}
+                    className="attendance-summary-box skeleton-card"
+                  >
+                    <div className="skeleton skeleton-label"></div>
+                    <div className="skeleton skeleton-number"></div>
+                  </div>
+                ))}
 
-                const downloadUrl =
-                  window.URL.createObjectURL(blob);
+              </div>
 
-                const link =
-                  document.createElement("a");
+            ) : (
 
-                link.href = downloadUrl;
+              <div className="attendance-summary-top">
 
-                link.download =
-                  `daily-attendance-${todayDate}.xlsx`;
+                {/* DAILY SUMMARY CARDS */}
 
-                document.body.appendChild(link);
+                <div className="attendance-summary-box present">
+                  <span className="summary-label">Present</span>
+                  <h3>
+                    {
+                      filteredDailyData.filter(
+                        (emp) =>
+                          getResolvedStatus(emp) === "Present"
+                      ).length
+                    }
+                  </h3>
+                </div>
 
-                link.click();
+                <div className="attendance-summary-box absent">
+                  <span className="summary-label">Absent</span>
+                  <h3>
+                    {
+                      filteredDailyData.filter(
+                        (emp) =>
+                          getResolvedStatus(emp) === "Absent"
+                      ).length
+                    }
+                  </h3>
+                </div>
 
-                document.body.removeChild(link);
+                <div className="attendance-summary-box leave">
+                  <span className="summary-label">On Leave</span>
+                  <h3>
+                    {
+                      filteredDailyData.filter(
+                        (emp) =>
+                          getResolvedStatus(emp) === "On Leave"
+                      ).length
+                    }
+                  </h3>
+                </div>
 
-                window.URL.revokeObjectURL(downloadUrl);
+                <div className="attendance-summary-box late">
+                  <span className="summary-label">Late</span>
+                  <h3>
+                    {
+                      filteredDailyData.filter(
+                        (emp) =>
+                          getResolvedStatus(emp) === "Late"
+                      ).length
+                    }
+                  </h3>
+                </div>
 
-                toast.success(
-                  "Daily attendance downloaded successfully."
-                );
+                <div className="attendance-summary-box halfday">
+                  <span className="summary-label">Half Day</span>
+                  <h3>
+                    {
+                      filteredDailyData.filter(
+                        (emp) =>
+                          getResolvedStatus(emp) === "Half Day"
+                      ).length
+                    }
+                  </h3>
+                </div>
 
-              } catch (error) {
+                <div className="attendance-summary-box total">
+                  <span className="summary-label">Total</span>
+                  <h3>{filteredDailyData.length}</h3>
+                </div>
 
-                logPerformanceError(
-                  "Daily attendance download error:",
-                  error
-                );
+              </div>
 
-                toast.error(
-                  "Failed to download daily attendance."
-                );
+            )
 
-              } finally {
+          ) : (
 
-                setIsDailyDownloading(false);
+            <div className="monthly-legend-top">
 
-              }
-            }}
-          >
-            {isDailyDownloading
-              ? "Downloading..."
-              : "Download Today"}
-          </button>
+              <span><i className="legend-dot present"></i> Present</span>
 
-          <button
-            type="button"
-            className="attendance-download-btn attendance-primary-report-btn"
-            onClick={openDownloadModal}
-          >
-            Download Attendance
-          </button>
+              <span><i className="legend-dot absent"></i> Absent</span>
+
+              <span><i className="legend-dot leave"></i> On Leave</span>
+
+              <span><i className="legend-dot late"></i> Late</span>
+
+              <span><i className="legend-dot weekend"></i> Weekend</span>
+
+              <span><i className="legend-dot halfday"></i> Half Day</span>
+
+              <span><i className="legend-dot holiday"></i> Holiday</span>
+
+              <span><i className="legend-dot upcoming"></i> Upcoming</span>
+
+            </div>
+
+          )}
+
+          {/* RIGHT SIDE BUTTONS */}
+
+          <div className="attendance-table-actions">
+
+            <button
+              type="button"
+              className="attendance-download-btn attendance-primary-report-btn"
+              disabled={isDailyDownloading}
+              onClick={async () => {
+                try {
+
+                  setIsDailyDownloading(true);
+
+                  const now = new Date();
+
+                  const todayDate =
+                    `${now.getFullYear()}-${String(
+                      now.getMonth() + 1
+                    ).padStart(2, "0")}-${String(
+                      now.getDate()
+                    ).padStart(2, "0")}`;
+
+                  const response = await api.get(
+                    API_ENDPOINTS.attendance.downloadDaily,
+                    {
+                      params: {
+                        date: todayDate,
+                      },
+                      responseType: "arraybuffer",
+                      headers: {
+                        Authorization: `Bearer ${token}`,
+                      },
+                    }
+                  );
+
+                  const blob = new Blob(
+                    [response.data],
+                    {
+                      type:
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    }
+                  );
+
+                  const downloadUrl =
+                    window.URL.createObjectURL(blob);
+
+                  const link =
+                    document.createElement("a");
+
+                  link.href = downloadUrl;
+
+                  link.download =
+                    `daily-attendance-${todayDate}.xlsx`;
+
+                  document.body.appendChild(link);
+
+                  link.click();
+
+                  document.body.removeChild(link);
+
+                  window.URL.revokeObjectURL(downloadUrl);
+
+                  toast.success(
+                    "Daily attendance downloaded successfully."
+                  );
+
+                } catch (error) {
+
+                  logPerformanceError(
+                    "Daily attendance download error:",
+                    error
+                  );
+
+                  toast.error(
+                    "Failed to download daily attendance."
+                  );
+
+                } finally {
+
+                  setIsDailyDownloading(false);
+
+                }
+              }}
+            >
+              {isDailyDownloading
+                ? "Downloading..."
+                : "Download Daily"}
+            </button>
+
+            <button
+              type="button"
+              className="attendance-download-btn attendance-primary-report-btn"
+              onClick={openDownloadModal}
+            >
+              Download Attendance
+            </button>
+
+          </div>
 
         </div>
 
@@ -2641,7 +2765,7 @@ function AttendanceTable({
                     <div
                       key={`${getEmployeeId(emp)}-${getEmployeeName(emp)}-${i}`}
                       className="attendance-row attendance-row-5"
-                        onClick={() => {
+                      onClick={() => {
                         if (viewMode === "monthly") {
                           openAttendanceDetails(emp);
                         }
@@ -2932,8 +3056,8 @@ function AttendanceTable({
 
                             const status =
                               futureDay &&
-                                normalizeStatus(dayObj?.status) === "Absent"
-                                ? ""
+                                !normalizeStatus(dayObj?.status)
+                                ? "Upcoming"
                                 : normalizeStatus(dayObj?.status);
 
                             return (
@@ -2983,7 +3107,10 @@ function AttendanceTable({
                                       : getDayCellClass(dayObj, futureDay)
                                   }
                                 >
-                                  {getDayCellText(dayObj, futureDay)}
+                                  {futureDay &&
+                                    !normalizeStatus(dayObj?.status)
+                                    ? ""
+                                    : getDayCellText(dayObj, futureDay)}
                                 </span>
                               </div>
                             );
@@ -3116,16 +3243,6 @@ function AttendanceTable({
                       );
                     })}
                   </div>
-                </div>
-
-                <div className="monthly-legend">
-                  <span><span className="legend-dot present" /> Present</span>
-                  <span><span className="legend-dot absent" /> Absent</span>
-                  <span><span className="legend-dot leave" /> On Leave</span>
-                  <span><span className="legend-dot late" /> Late</span>
-                  <span><span className="legend-dot weekend" /> Weekend</span>
-                  <span><span className="legend-dot halfday" /> Half Day</span>
-                  <span><span className="legend-dot holiday" /> Holiday</span>
                 </div>
 
                 {renderPaginationControls(

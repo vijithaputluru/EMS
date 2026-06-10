@@ -67,19 +67,11 @@ public class EmployeeLeaveController : ControllerBase
     }
 
     [HttpPut("approve-reject/{id}")]
-
-    public async Task<IActionResult> ApproveOrRejectLeave(int id, [FromQuery] string status)
-
+    public async Task<IActionResult> ApproveOrRejectLeave(
+       int id,
+       [FromQuery] string status)
     {
-
-        var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-
-        // Only Admin can approve/reject
-
-       
-
-        return await _service.UpdateStatus(id, status);
-
+        return await _service.UpdateStatus(id, status, User);
     }
 
     // Employee leave balance
@@ -97,13 +89,11 @@ public class EmployeeLeaveController : ControllerBase
     // Admin approves/rejects leave
 
     [HttpPut("update-status/{id}")]
-
-    public async Task<IActionResult> UpdateStatus(int id, [FromQuery] string status)
-
+    public async Task<IActionResult> UpdateStatus(
+    int id,
+    [FromQuery] string status)
     {
-
-        return await _service.UpdateStatus(id, status);
-
+        return await _service.UpdateStatus(id, status, User);
     }
 
     // Delete leave

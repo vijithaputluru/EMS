@@ -41,32 +41,63 @@ namespace EmployeeManagementSystem.Controllers
         }
 
         [HttpGet("download/{id}")]
+
         public async Task<IActionResult> DownloadDocument(int id)
+
         {
+
             var fileBytes =
+
                 await _service.DownloadDocument(id);
 
             if (fileBytes.Length == 0)
+
                 return NotFound("File not found");
 
+            var document =
+
+                await _service.GetDocumentById(id);
+
             return File(
+
                 fileBytes,
-                "application/octet-stream",
-                $"Document_{id}");
+
+                "application/pdf",
+
+                document?.File_Name ?? $"Document_{id}.pdf");
+
         }
+
 
         [HttpGet("view/{id}")]
         public async Task<IActionResult> ViewDocument(int id)
         {
-            var path = await _service.GetDocumentPath(id);
+            var document = await _service.GetDocumentById(id);
 
-            if (string.IsNullOrEmpty(path))
+            if (document == null)
                 return NotFound("Document not found");
 
-            return Ok(new
+            var filePath = Path.Combine(
+                Directory.GetCurrentDirectory(),
+                "wwwroot",
+                document.File_Path.TrimStart('/'));
+
+            if (!System.IO.File.Exists(filePath))
+                return NotFound("File not found");
+
+            var extension = Path.GetExtension(document.File_Name)
+                .ToLower();
+
+            var contentType = extension switch
             {
-                filePath = path
-            });
+                ".pdf" => "application/pdf",
+                ".jpg" => "image/jpeg",
+                ".jpeg" => "image/jpeg",
+                ".png" => "image/png",
+                _ => "application/octet-stream"
+            };
+
+            return PhysicalFile(filePath, contentType);
         }
 
         [HttpDelete("{id}")]

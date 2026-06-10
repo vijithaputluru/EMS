@@ -7,6 +7,23 @@
   overflow: visible;
 }
 
+.monthly-legend-top {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+  padding-left: 10px;
+}
+
+.monthly-legend-top span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
+}
+
 /* ================= HEADER ================= */
 .attendance-header {
   display: flex;
@@ -16,7 +33,190 @@
   gap: 16px;
   flex-wrap: nowrap;
 }
+/* =========================================
+   TOP ATTENDANCE STRIP
+========================================= */
 
+.attendance-top-section {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 18px;
+
+  padding: 12px 7px;
+
+  background: #ffffff;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 22px;
+
+  margin-bottom: 12px;
+
+  flex-wrap: nowrap;
+}
+
+/* =========================================
+   SUMMARY STRIP
+========================================= */
+
+.attendance-summary-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  flex: 1;
+  overflow-x: auto;
+
+  scrollbar-width: none;
+}
+
+.attendance-summary-top::-webkit-scrollbar {
+  display: none;
+}
+
+/* =========================================
+   SMALL CARDS
+========================================= */
+
+.attendance-summary-box {
+  min-width: 130px;
+  max-width: 130px;
+
+  height: 70px;
+
+  background: #fff;
+
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+
+  padding: 12px 14px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+
+  transition: 0.2s ease;
+}
+
+.attendance-summary-box:hover {
+  transform: translateY(-2px);
+}
+
+/* LABEL */
+.summary-label {
+  font-size: 11px;
+  font-weight: 700;
+
+  color: #64748b;
+
+  margin-bottom: 8px;
+}
+
+
+/* NUMBER */
+.attendance-summary-box h3 {
+  margin: 0;
+
+  font-size: 18px;
+  font-weight: 800;
+
+  line-height: 1;
+}
+
+/* =========================================
+   COLORS
+========================================= */
+
+.present h3 {
+  color: #16a34a;
+}
+
+.absent h3 {
+  color: #dc2626;
+}
+
+.leave h3 {
+  color: #9333ea;
+}
+
+.late h3 {
+  color: #ea580c;
+}
+
+.halfday h3 {
+  color: #2563eb;
+}
+
+.total h3 {
+  color: #0f172a;
+}
+
+/* =========================================
+   BUTTON SECTION
+========================================= */
+
+.attendance-table-actions {
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  flex-shrink: 0;
+}
+
+.attendance-table-actions {
+  border: 1px solid #edf1f5 !important;
+  box-shadow: none !important;
+  padding: 8px 10px !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+}
+
+/* BUTTON */
+.attendance-download-btn {
+  height: 54px;
+
+  padding: 0 24px;
+
+  border-radius: 16px;
+
+  border: 1px solid #93c5fd;
+
+  background: #eff6ff;
+  color: #2563eb;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: 0.2s ease;
+}
+
+.attendance-download-btn:hover {
+  background: #dbeafe;
+  transform: translateY(-1px);
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 1200px) {
+
+  .attendance-top-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .attendance-table-actions {
+    justify-content: flex-end;
+  }
+}
 
 
 .page-shell .attendance-page .attendance-header {
@@ -159,6 +359,7 @@
   background: #f8fafc;
   flex-wrap: wrap;
 }
+
 
 .attendance-download-btn {
   border: 1px solid #93c5fd;
@@ -968,24 +1169,6 @@
   background: #fff;
 }
 
-/* ================= LEGEND ================= */
-.monthly-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 13px 18px;
-  border-top: 1px solid #e5e7eb;
-  background: #fafafa;
-  font-size: 13px;
-  color: #475569;
-}
-
-.monthly-legend span {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .legend-dot {
   width: 12px;
   height: 12px;
@@ -1021,6 +1204,79 @@
   background: #ea580c;
 }
 
+
+/* =========================
+   SUMMARY SKELETON
+========================= */
+
+.attendance-summary-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.skeleton-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #e5e7eb;
+  border-radius: 8px;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -150px;
+  width: 120px;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,0.7),
+    transparent
+  );
+  animation: skeleton-loading 1.2s infinite;
+}
+
+.skeleton-label {
+  width: 70px;
+  height: 12px;
+  margin-bottom: 14px;
+}
+
+.skeleton-number {
+  width: 40px;
+  height: 24px;
+}
+
+@keyframes skeleton-loading {
+  100% {
+    left: 150%;
+  }
+}
+
+.badge-upcoming {
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
+}
+
+.monthly-status.upcoming {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.disabled-future-day {
+  cursor: not-allowed;
+  opacity: 0.9;
+}
 /* ================= COUNT COLORS ================= */
 .present-text {
   color: #16a34a;

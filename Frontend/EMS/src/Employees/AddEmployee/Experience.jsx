@@ -3,7 +3,141 @@ import "./AddEmployee.css";
 import api from "../../api/axiosInstance";
 import { API_ENDPOINTS } from "../../api/endpoints";
 import AppDatePicker from "../../components/AppDatePicker";
-import { toIsoDateString } from "../../utils/date";
+import { parseDate, toIsoDateString } from "../../utils/date";
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+const getDaysInMonth = (year, monthIndex) =>
+  new Date(year, monthIndex + 1, 0).getDate();
+
+const normalizeDate = (value) => {
+  const parsedDate = parseDate(value);
+
+  if (!parsedDate) {
+    return null;
+  }
+
+  return new Date(
+    parsedDate.getFullYear(),
+    parsedDate.getMonth(),
+    parsedDate.getDate()
+  );
+};
+
+const getTodayDate = () => {
+  const today = new Date();
+
+  return new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+};
+
+const addYearsClamped = (date, years) => {
+  const year = date.getFullYear() + years;
+  const month = date.getMonth();
+  const day = Math.min(date.getDate(), getDaysInMonth(year, month));
+
+  return new Date(year, month, day);
+};
+
+const addMonthsClamped = (date, months) => {
+  const totalMonths = date.getMonth() + months;
+  const year = date.getFullYear() + Math.floor(totalMonths / 12);
+  const month = ((totalMonths % 12) + 12) % 12;
+  const day = Math.min(date.getDate(), getDaysInMonth(year, month));
+
+  return new Date(year, month, day);
+};
+
+const formatDurationUnit = (value, label) =>
+  `${value} ${value === 1 ? label : `${label}s`}`;
+
+const calculateExperienceDuration = (fromValue, toValue) => {
+  const startDate = normalizeDate(fromValue);
+
+  if (!startDate) {
+    return {
+      label: "",
+      yearsValue: 0,
+    };
+  }
+
+  const endDate = normalizeDate(toValue) ?? getTodayDate();
+
+  if (endDate < startDate) {
+    return {
+      label: "",
+      yearsValue: 0,
+    };
+  }
+
+  let years = endDate.getFullYear() - startDate.getFullYear();
+
+  if (
+    endDate.getMonth() < startDate.getMonth() ||
+    (endDate.getMonth() === startDate.getMonth() &&
+      endDate.getDate() < startDate.getDate())
+  ) {
+    years -= 1;
+  }
+
+  if (years < 0) {
+    years = 0;
+  }
+
+  const afterYears = addYearsClamped(startDate, years);
+
+  let months =
+    (endDate.getFullYear() - afterYears.getFullYear()) * 12 +
+    (endDate.getMonth() - afterYears.getMonth());
+
+  if (endDate.getDate() < afterYears.getDate()) {
+    months -= 1;
+  }
+
+  if (months < 0) {
+    months = 0;
+  }
+
+  const afterMonths = addMonthsClamped(afterYears, months);
+  const days = Math.max(
+    0,
+    Math.floor(
+      (Date.UTC(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate()
+      ) -
+        Date.UTC(
+          afterMonths.getFullYear(),
+          afterMonths.getMonth(),
+          afterMonths.getDate()
+        )) /
+        ONE_DAY_MS
+    )
+  );
+
+  const parts = [];
+
+  if (years > 0) {
+    parts.push(formatDurationUnit(years, "Year"));
+  }
+
+  if (months > 0) {
+    parts.push(formatDurationUnit(months, "Month"));
+  }
+
+  if (days > 0 || parts.length === 0) {
+    parts.push(formatDurationUnit(days, "Day"));
+  }
+
+  return {
+    label: parts.join(" "),
+    yearsValue: years,
+  };
+};
  
 function Experience({ employeeId, viewMode, data, onNext, onBack }) {
   const emptyExperience = {
@@ -13,6 +147,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
     from: "",
     to: "",
     years: "",
+    yearsValue: 0,
     reason: "",
     description: "",
   };
@@ -27,23 +162,46 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
  
     console.log("📥 Incoming data:", data);
  
-    const mapped = data.map((exp) => ({
-      id: exp.id || 0,
-      company: exp.companyName || "",
-      designation: exp.designation || "",
-      from: exp.fromDate ? exp.fromDate.split("T")[0] : "",
-      to: exp.toDate ? exp.toDate.split("T")[0] : "",
-      years: exp.years ? String(exp.years) : "",
-      reason: exp.reasonForLeaving || "",
-      description: exp.description || "",
-    }));
+    const mapped = data.map((exp) => {
+      const fromDate = exp.fromDate ? exp.fromDate.split("T")[0] : "";
+      const toDate = exp.toDate ? exp.toDate.split("T")[0] : "";
+      const duration = calculateExperienceDuration(fromDate, toDate);
+      const fallbackYears = Number.parseInt(exp.years, 10);
+
+      return {
+        id: exp.id || 0,
+        company: exp.companyName || "",
+        designation: exp.designation || "",
+        from: fromDate,
+        to: toDate,
+        years: duration.label || (Number.isFinite(fallbackYears) ? String(fallbackYears) : ""),
+        yearsValue: duration.label
+          ? duration.yearsValue
+          : Number.isFinite(fallbackYears)
+            ? fallbackYears
+            : 0,
+        reason: exp.reasonForLeaving || "",
+        description: exp.description || "",
+      };
+    });
  
     setExperiences(mapped);
   }, [data]);
  
   const handleChange = (index, e) => {
     const updated = [...experiences];
-    updated[index][e.target.name] = e.target.value;
+    const { name, value } = e.target;
+    updated[index][name] = value;
+
+    if (name === "from" || name === "to") {
+      const duration = calculateExperienceDuration(
+        updated[index].from,
+        updated[index].to
+      );
+      updated[index].years = duration.label;
+      updated[index].yearsValue = duration.yearsValue;
+    }
+
     setExperiences(updated);
   };
  
@@ -112,7 +270,7 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
         Designation: exp.designation?.trim() || "",
         FromDate: toIsoDateString(exp.from),
         ToDate: toIsoDateString(exp.to),
-        Years: exp.years ? parseInt(exp.years) : 0,
+        Years: Number.isFinite(exp.yearsValue) ? exp.yearsValue : 0,
         ReasonForLeaving: exp.reason?.trim() || "",
         Description: exp.description?.trim() || "",
       };
@@ -217,11 +375,13 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
             <div className="form-group">
               <label>Years of Experience</label>
               <input
-                type="number"
+                type="text"
                 name="years"
                 value={exp.years || ""}
-                onChange={(e) => handleChange(index, e)}
+                readOnly
+                placeholder="Auto-calculated duration"
                 disabled={viewMode}
+                className="experience-years-input"
               />
             </div>
  
@@ -250,7 +410,11 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
       ))}
  
       {!viewMode && (
-        <button type="button" className="add-btn" onClick={addExperience}>
+        <button
+          type="button"
+          className="btn primary add-experience-btn"
+          onClick={addExperience}
+        >
           + Add Another Experience
         </button>
       )}
@@ -265,38 +429,16 @@ function Experience({ employeeId, viewMode, data, onNext, onBack }) {
           Back
         </button>
         {successMsg && (
-          <p
-            style={{
-              color: "#28a745",
-              backgroundColor: "#e6f9ed",
-              border: "1px solid #28a745",
-              padding: "10px 15px",
-              borderRadius: "6px",
-              marginBottom: "10px",
-              fontWeight: "500",
-            }}
-          >
+          <p className="workflow-feedback success">
             {successMsg}
           </p>
         )}
  
         <button
           type="button"
-          className="btn success"
+          className="btn primary"
           onClick={handleSave}
           disabled={loading}
-          style={{
-            background: "#11cfd4",
-            color: "#000",
-            border: "none",
-            borderRadius: "14px",
-            padding: "14px 28px",
-            fontSize: "14px",
-            fontWeight: "450",
-            cursor: "pointer",
-            minWidth: "190px",
-            transition: "0.2s ease",
-          }}
         >
           {loading
             ? isEditMode

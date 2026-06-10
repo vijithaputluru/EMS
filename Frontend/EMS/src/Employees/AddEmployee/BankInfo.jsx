@@ -15,7 +15,6 @@ const BankInfo = forwardRef(({ onNext, onBack, employeeId, viewMode, data }, ref
   const [successMsg, setSuccessMsg] = useState("");
   const [apiError, setApiError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     if (!data) return;
@@ -37,10 +36,7 @@ const BankInfo = forwardRef(({ onNext, onBack, employeeId, viewMode, data }, ref
     },
   }));
 
-  // ❌ VALIDATION REMOVED COMPLETELY
-
   const handleSaveNext = async () => {
-
     const finalBankName = bankName === "Other" ? manualBank : bankName;
     setApiError("");
     setSuccessMsg("");
@@ -59,29 +55,21 @@ const BankInfo = forwardRef(({ onNext, onBack, employeeId, viewMode, data }, ref
         pF_Account_Number: pf,
       };
 
-      let response;
-
-      if (data) {
-        response = await api.put(
-          API_ENDPOINTS.employeeBankDetails.byEmployeeId(employeeId),
-          payload,
-          {
+      const response = data
+        ? await api.put(
+            API_ENDPOINTS.employeeBankDetails.byEmployeeId(employeeId),
+            payload,
+            {
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          )
+        : await api.post(API_ENDPOINTS.employeeBankDetails.list, payload, {
             headers: {
               "Content-Type": "application/json",
             },
-          }
-        );
-      } else {
-        response = await api.post(
-          API_ENDPOINTS.employeeBankDetails.list,
-          payload,
-          {
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
-      }
+          });
 
       setSuccessMsg(data ? "Bank details updated!" : "Bank details saved!");
 
@@ -96,86 +84,28 @@ const BankInfo = forwardRef(({ onNext, onBack, employeeId, viewMode, data }, ref
     }
   };
 
-  const sectionStyle = {
-    background: "white",
-    padding: "25px",
-    borderRadius: "14px",
-    border: "1px solid #eee",
-    margin: "15px",
-  };
-
-  const cardStyle = {
-    background: "#fafafa",
-    padding: "20px",
-    borderRadius: "12px",
-  };
-
-  const gridStyle = {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "18px",
-    marginTop: "20px",
-  };
-
-  const groupStyle = {
-    display: "flex",
-    flexDirection: "column",
-  };
-
-  const labelStyle = {
-    fontSize: "13px",
-    marginBottom: "6px",
-    color: "#555",
-  };
-
-  const inputStyle = {
-    padding: "10px 12px",
-    borderRadius: "8px",
-    border: "1px solid #ddd",
-    background: "#f5f7fa",
-    fontSize: "14px",
-    outline: "none",
-  };
-
-  const btnContainer = {
-    display: "flex",
-    justifyContent: "flex-end",
-    gap: "10px",
-    marginTop: "20px",
-  };
-
-  const backBtn = {
-    padding: "10px 18px",
-    border: "none",
-    borderRadius: "8px",
-    background: "#e5e7eb",
-    cursor: "pointer",
-  };
-
-  const saveNextBtn = {
-    padding: "10px 18px",
-    border: "none",
-    borderRadius: "8px",
-    background: "#11cfd4",
-    color: "#000",
-    cursor: "pointer",
-  };
-
   return (
-    <div style={sectionStyle}>
+    <div className="form-section bank-info-section">
       <h3>Bank Information</h3>
 
-      <div style={cardStyle}>
-        <div style={gridStyle}>
-
-          <div style={groupStyle}>
-            <label style={labelStyle}>Customer ID</label>
-            <input style={inputStyle} value={customerId || ""} onChange={(e) => setCustomerId(e.target.value)} disabled={viewMode} />
+      <div className="form-card bank-info-card">
+        <div className="form-grid bank-info-grid">
+          <div className="form-group">
+            <label>Customer ID</label>
+            <input
+              value={customerId || ""}
+              onChange={(e) => setCustomerId(e.target.value)}
+              disabled={viewMode}
+            />
           </div>
 
-          <div style={groupStyle}>
-            <label style={labelStyle}>Bank Name</label>
-            <select style={inputStyle} value={bankName || ""} onChange={(e) => setBankName(e.target.value)} disabled={viewMode}>
+          <div className="form-group">
+            <label>Bank Name</label>
+            <select
+              value={bankName || ""}
+              onChange={(e) => setBankName(e.target.value)}
+              disabled={viewMode}
+            >
               <option value="">Select Bank</option>
               <option>State Bank of India</option>
               <option>HDFC Bank</option>
@@ -191,92 +121,79 @@ const BankInfo = forwardRef(({ onNext, onBack, employeeId, viewMode, data }, ref
           </div>
 
           {bankName === "Other" && (
-            <div style={groupStyle}>
-              <label style={labelStyle}>Enter Bank Name</label>
-              <input style={inputStyle} value={manualBank || ""} onChange={(e) => setManualBank(e.target.value)} disabled={viewMode} />
+            <div className="form-group full">
+              <label>Enter Bank Name</label>
+              <input
+                value={manualBank || ""}
+                onChange={(e) => setManualBank(e.target.value)}
+                disabled={viewMode}
+              />
             </div>
           )}
 
-          <div style={groupStyle}>
-            <label style={labelStyle}>Account Holder Name</label>
-            <input style={inputStyle} value={accountHolder || ""} onChange={(e) => setAccountHolder(e.target.value)} disabled={viewMode} />
+          <div className="form-group">
+            <label>Account Holder Name</label>
+            <input
+              value={accountHolder || ""}
+              onChange={(e) => setAccountHolder(e.target.value)}
+              disabled={viewMode}
+            />
           </div>
 
-          <div style={groupStyle}>
-            <label style={labelStyle}>Account Number</label>
-            <input style={inputStyle} value={accountNumber || ""} onChange={(e) => setAccountNumber(e.target.value)} disabled={viewMode} />
+          <div className="form-group">
+            <label>Account Number</label>
+            <input
+              value={accountNumber || ""}
+              onChange={(e) => setAccountNumber(e.target.value)}
+              disabled={viewMode}
+            />
           </div>
 
-          <div style={groupStyle}>
-            <label style={labelStyle}>IFSC Code</label>
-            <input style={inputStyle} value={ifsc || ""} onChange={(e) => setIfsc(e.target.value)} disabled={viewMode} />
+          <div className="form-group">
+            <label>IFSC Code</label>
+            <input
+              value={ifsc || ""}
+              onChange={(e) => setIfsc(e.target.value)}
+              disabled={viewMode}
+            />
           </div>
 
-          <div style={groupStyle}>
-            <label style={labelStyle}>Branch Name</label>
-            <input style={inputStyle} value={branch || ""} onChange={(e) => setBranch(e.target.value)} disabled={viewMode} />
+          <div className="form-group">
+            <label>Branch Name</label>
+            <input
+              value={branch || ""}
+              onChange={(e) => setBranch(e.target.value)}
+              disabled={viewMode}
+            />
           </div>
 
-          <div style={groupStyle}>
-            <label style={labelStyle}>UAN Number</label>
-            <input style={inputStyle} value={uan || ""} onChange={(e) => setUan(e.target.value)} disabled={viewMode} />
+          <div className="form-group">
+            <label>UAN Number</label>
+            <input
+              value={uan || ""}
+              onChange={(e) => setUan(e.target.value)}
+              disabled={viewMode}
+            />
           </div>
 
-          <div style={groupStyle}>
-            <label style={labelStyle}>PF Account Number</label>
-            <input style={inputStyle} value={pf || ""} onChange={(e) => setPf(e.target.value)} disabled={viewMode} />
+          <div className="form-group">
+            <label>PF Account Number</label>
+            <input
+              value={pf || ""}
+              onChange={(e) => setPf(e.target.value)}
+              disabled={viewMode}
+            />
           </div>
-
         </div>
       </div>
 
-      <div style={btnContainer}>
-
-        {successMsg && (
-          <p style={{
-            color: "#28a745",
-            backgroundColor: "#e6f9ed",
-            border: "1px solid #28a745",
-            padding: "10px 15px",
-            borderRadius: "6px",
-            marginBottom: "10px",
-            fontWeight: "500",
-            width: "40%",
-          }}>
-            {successMsg}
-          </p>
-        )}
-
-        {apiError && (
-          <p style={{
-            color: "#b42318",
-            backgroundColor: "#fef3f2",
-            border: "1px solid #f04438",
-            padding: "10px 15px",
-            borderRadius: "6px",
-            marginBottom: "10px",
-            fontWeight: "500",
-            width: "40%",
-          }}>
-            {apiError}
-          </p>
-        )}
+      <div className="step-actions bank-step-actions">
+        {successMsg && <p className="workflow-feedback success">{successMsg}</p>}
+        {apiError && <p className="workflow-feedback error">{apiError}</p>}
 
         {!viewMode && (
-          <button style={backBtn} onClick={onBack} disabled={saving}>
+          <button type="button" className="btn secondary" onClick={onBack} disabled={saving}>
             Back
-          </button>
-        )}
-
-        {!viewMode && (
-          <button style={saveNextBtn} onClick={handleSaveNext} disabled={saving}>
-            {saving
-              ? data
-                ? "Updating..."
-                : "Saving..."
-              : data
-                ? "Update & Next"
-                : "Save & Next"}
           </button>
         )}
 
@@ -285,7 +202,7 @@ const BankInfo = forwardRef(({ onNext, onBack, employeeId, viewMode, data }, ref
             type="button"
             className="btn secondary"
             onClick={() => {
-              console.log("⏭️ Skipped Bank Details");
+              setApiError("");
               setSuccessMsg("Skipped");
 
               setTimeout(() => {
@@ -294,8 +211,26 @@ const BankInfo = forwardRef(({ onNext, onBack, employeeId, viewMode, data }, ref
                 }
               }, 500);
             }}
+            disabled={saving}
           >
             Skip
+          </button>
+        )}
+
+        {!viewMode && (
+          <button
+            type="button"
+            className="btn primary"
+            onClick={handleSaveNext}
+            disabled={saving}
+          >
+            {saving
+              ? data
+                ? "Updating..."
+                : "Saving..."
+              : data
+                ? "Update & Next"
+                : "Save & Next"}
           </button>
         )}
       </div>

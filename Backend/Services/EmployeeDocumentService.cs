@@ -1,9 +1,14 @@
 ﻿using EmployeeManagementSystem.Data;
 using EmployeeManagementSystem.DTOs;
+using EmployeeManagementSystem.DTOs;
 using EmployeeManagementSystem.Interfaces;
 using EmployeeManagementSystem.Models;
 using Microsoft.EntityFrameworkCore;
-using EmployeeManagementSystem.DTOs;
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace EmployeeManagementSystem.Services
 {
@@ -77,24 +82,33 @@ namespace EmployeeManagementSystem.Services
                 }
 
                 var document = new EmployeeDocument
-                {
-                    Employee_Id = dto.EmployeeId,
-                    Document_Type = Path.GetFileNameWithoutExtension(file.FileName),
 
-                    File_Name = fileName,
+                {
+
+                    Employee_Id = dto.EmployeeId,
+
+                    Document_Type = dto.DocumentType,
+
+                    File_Name = file.FileName,
 
                     File_Path =
-                        $"/uploads/employee-documents/{dto.EmployeeId}/{fileName}",
+
+        $"/uploads/employee-documents/{dto.EmployeeId}/{fileName}",
 
                     File_Size_MB =
-                        Math.Round(
-                            (decimal)file.Length / 1024 / 1024,
-                            2),
+
+        Math.Round(
+
+            (decimal)file.Length / 1024 / 1024,
+
+            2),
 
                     Verification_Status = "Pending",
 
                     Uploaded_Date = DateTime.Now
+
                 };
+
 
                 _context.EmployeeDocuments.Add(document);
             }
@@ -256,6 +270,11 @@ namespace EmployeeManagementSystem.Services
             }
 
             return result;
+        }
+        public async Task<EmployeeDocument?> GetDocumentById(int id)
+        {
+            return await _context.EmployeeDocuments
+                .FirstOrDefaultAsync(x => x.Id == id);
         }
     }
 }

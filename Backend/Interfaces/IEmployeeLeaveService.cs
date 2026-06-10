@@ -16,8 +16,10 @@ public interface IEmployeeLeaveService
 
     Task<IActionResult> GetBalance(ClaimsPrincipal user);
 
-    Task<IActionResult> UpdateStatus(int id, string status);
-
+    Task<IActionResult> UpdateStatus(
+        int id,
+        string status,
+        ClaimsPrincipal user);
     Task<IActionResult> Delete(int id);
     Task<byte[]> ExportLeavesExcel();
 

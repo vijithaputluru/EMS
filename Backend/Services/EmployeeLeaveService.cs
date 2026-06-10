@@ -92,6 +92,8 @@ public class EmployeeLeaveService : IEmployeeLeaveService
             ToDate = toDate,
             Reason = dto.Reason,
             Status = "Pending",
+            ManagerStatus = "Pending",
+            HRStatus = "Pending",
             CreatedAt = DateTime.UtcNow
         };
 
@@ -102,7 +104,7 @@ public class EmployeeLeaveService : IEmployeeLeaveService
         {
             Title = "Leave Request",
             Message = $"{employee.Name} applied for leave",
-            UserRole = "Admin",
+            UserRole = "Manager",
             IsRead = false,
             CreatedAt = DateTime.UtcNow
         });
@@ -114,8 +116,10 @@ public class EmployeeLeaveService : IEmployeeLeaveService
             message = "Leave applied successfully"
         });
     }
-    public async Task<IActionResult> UpdateStatus(int id, string status)
-
+    public async Task<IActionResult> UpdateStatus(
+        int id,
+        string status,
+        ClaimsPrincipal user)
     {
 
         var leave = await _context.EmployeeLeaves.FindAsync(id);
@@ -180,115 +184,141 @@ public class EmployeeLeaveService : IEmployeeLeaveService
     toDate);
 
         var leaveType = leave.LeaveType?.Trim().ToLower();
+        var email = user.FindFirst(ClaimTypes.Email)?.Value?.Trim().ToLower();
 
-        //---------------------------------------
+        var loggedInUser = await _context.Employees
+            .FirstOrDefaultAsync(x => x.Email.ToLower() == email);
 
-        // ✅ CASE 1: Pending/Rejected → Approved
-
-        //---------------------------------------
-
-        //if (oldStatus != "Approved" && status == "Approved")
-
-        //{
-
-        //    switch (leaveType)
-
-        //    {
-
-        //        case "casual":
-
-        //            balance.Casual_Used += days;
-
-        //            break;
-
-        //        case "sick":
-
-        //            balance.Sick_Used += days;
-
-        //            break;
-
-        //        case "earned":
-
-        //        case "earned leave":
-
-        //            balance.Earned_Used += days;
-
-        //            break;
-
-        //    }
-
-        //}
-
-        ////---------------------------------------
-
-        //// ✅ CASE 2: Approved → Rejected
-
-        ////---------------------------------------
-
-        //if (oldStatus == "Approved" && status == "Rejected")
-
-        //{
-
-        //    switch (leaveType)
-
-        //    {
-
-        //        case "casual":
-
-        //            balance.Casual_Used -= days;
-
-        //            break;
-
-        //        case "sick":
-
-        //            balance.Sick_Used -= days;
-
-        //            break;
-
-        //        case "earned":
-
-        //        case "earned leave":
-
-        //            balance.Earned_Used -= days;
-
-        //            break;
-
-        //    }
-
-        //}
-
-        //---------------------------------------
-
-        // UPDATE STATUS
-
-        //---------------------------------------
-
-        leave.Status = status;
-
-        _context.UserNotifications.Add(new UserNotification
-
+        if (loggedInUser == null)
         {
+            return new UnauthorizedObjectResult("User not found");
+        }
 
-            Employee_Id = leave.EmployeeId,
+        var role = loggedInUser.RoleName?.Trim();
 
-            Title = "Leave Status Update",
 
-            Message = status == "Approved"
 
-        ? "Your leave request has been approved"
+        // ========================================
+        // MANAGER APPROVAL
+        // ========================================
 
-        : "Your leave request has been rejected",
+        if (string.Equals(role, "Manager",
+            StringComparison.OrdinalIgnoreCase))
+        {
+            if (leave.ManagerStatus == "Approved")
+            {
+                return new BadRequestObjectResult(
+                    "Manager already approved this leave");
+            }
 
-            IsRead = false,
+            leave.ManagerStatus = status;
 
-            CreatedAt = DateTime.UtcNow
+            if (status == "Approved")
+            {
+                leave.Status = "Waiting for HR Approval";
 
-        });
+                // Notify Employee
 
-        await _context.SaveChangesAsync();
-        await RecalculateLeaveBalance(leave.EmployeeId);
+                _context.UserNotifications.Add(new UserNotification
+                {
+                    Employee_Id = leave.EmployeeId,
+                    Title = "Leave Approved By Manager",
+                    Message = "Manager approved your leave request. Waiting for HR confirmation.",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                });
 
-        return new OkObjectResult("Leave updated successfully");
+                // Notify HR
+
+                _context.AdminNotifications.Add(new AdminNotification
+                {
+                    Title = "Leave Approval Required",
+                    Message = $"{leave.EmployeeName}'s leave is waiting for HR approval",
+                    UserRole = "HR",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                leave.Status = "Rejected";
+
+                _context.UserNotifications.Add(new UserNotification
+                {
+                    Employee_Id = leave.EmployeeId,
+                    Title = "Leave Rejected",
+                    Message = "Your leave request has been rejected by Manager.",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            await _context.SaveChangesAsync();
+
+            return new OkObjectResult("Manager action completed");
+        }
+        // ========================================
+        // HR APPROVAL
+        // ========================================
+
+        if (string.Equals(role, "HR",
+            StringComparison.OrdinalIgnoreCase))
+        {
+            if (leave.HRStatus == "Approved")
+            {
+                return new BadRequestObjectResult(
+                    "HR already approved this leave");
+            }
+
+            if (leave.ManagerStatus != "Approved")
+            {
+                return new BadRequestObjectResult(
+                    "Manager approval pending");
+            }
+
+            leave.HRStatus = status;
+
+            if (status == "Approved")
+            {
+                leave.Status = "Approved";
+
+                _context.UserNotifications.Add(new UserNotification
+                {
+                    Employee_Id = leave.EmployeeId,
+                    Title = "Leave Approved",
+                    Message = "Your leave request has been approved by HR.",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _context.SaveChangesAsync();
+
+                await RecalculateLeaveBalance(leave.EmployeeId);
+
+                return new OkObjectResult("HR approved leave");
+            }
+            else
+            {
+                leave.Status = "Rejected";
+
+                _context.UserNotifications.Add(new UserNotification
+                {
+                    Employee_Id = leave.EmployeeId,
+                    Title = "Leave Rejected",
+                    Message = "Your leave request has been rejected by HR.",
+                    IsRead = false,
+                    CreatedAt = DateTime.UtcNow
+                });
+
+                await _context.SaveChangesAsync();
+
+                return new OkObjectResult("HR rejected leave");
+            }
+        }
+    
+
+        return new BadRequestObjectResult(
+            "Only Manager or HR can approve leave");
 
     }
 

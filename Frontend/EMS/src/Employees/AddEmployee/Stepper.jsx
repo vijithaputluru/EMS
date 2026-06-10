@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 
 const steps = [
   {
@@ -19,8 +19,12 @@ const steps = [
   },
   {
     id: 5,
-    label: "Review",
+    label: "Documents",
   },
+  {
+    id: 6,
+    label: "Review",
+  }
 ];
 
 function Stepper({ step, setStep, maxStep }) {
@@ -31,18 +35,22 @@ function Stepper({ step, setStep, maxStep }) {
   };
 
   return (
-    <div className="stepper">
+    <nav className="stepper" aria-label="Add employee steps">
       {steps.map((item) => (
-        <div
+        <button
+          type="button"
           key={item.id}
           className={`step ${step === item.id ? "active" : ""} ${maxStep < item.id ? "disabled" : ""}`.trim()}
+          data-step={item.id}
+          aria-current={step === item.id ? "step" : undefined}
+          disabled={maxStep < item.id}
           onClick={() => handleStepClick(item.id)}
         >
           {item.label}
-        </div>
+        </button>
       ))}
-    </div>
+    </nav>
   );
 }
 
-export default Stepper;
+export default memo(Stepper);

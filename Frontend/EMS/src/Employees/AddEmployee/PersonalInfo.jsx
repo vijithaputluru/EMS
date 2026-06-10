@@ -299,12 +299,6 @@ function PersonalInfo({ onNext, viewMode, data }) {
     } else if (!/^[A-Za-z,\s]+$/.test(formData.city)) {
       nextErrors.city =
         "Only alphabets, spaces and comma are allowed";
-    } else {
-      const cityWords = formData.city.trim().split(/\s+/);
-
-       if (!formData.city.trim()) {
-        nextErrors.city = "City is required";
-      }
     }
 
     if (!formData.district.trim()) {
@@ -424,20 +418,17 @@ function PersonalInfo({ onNext, viewMode, data }) {
   const renderError = (field) =>
     errors[field] ? (
       <span
-        style={{
-          color: "#dc3545",
-          backgroundColor: "#fdeaea",
-          border: "1px solid #dc3545",
-          padding: "5px 10px",
-          borderRadius: "4px",
-          display: "inline-block",
-          marginTop: "5px",
-          fontSize: "13px",
-        }}
+        className="field-error"
+        role="alert"
       >
         {errors[field]}
       </span>
     ) : null;
+
+  const getFieldClassName = (field, extraClass = "") =>
+    [extraClass, errors[field] ? "is-invalid" : ""]
+      .filter(Boolean)
+      .join(" ");
 
   return (
     <div className="form-section">
@@ -447,31 +438,31 @@ function PersonalInfo({ onNext, viewMode, data }) {
         <div className="form-grid">
           <div className="form-group">
             <label>Employee ID<span className="required">*</span></label>
-            <input type="text" name="employeeId" value={formData.employeeId} onChange={handleChange} disabled={viewMode} />
+            <input type="text" name="employeeId" value={formData.employeeId} onChange={handleChange} className={getFieldClassName("employeeId")} disabled={viewMode} />
             {renderError("employeeId")}
           </div>
 
           <div className="form-group">
             <label>First Name<span className="required">*</span></label>
-            <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} disabled={viewMode} />
+            <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} className={getFieldClassName("firstName")} disabled={viewMode} />
             {renderError("firstName")}
           </div>
 
           <div className="form-group">
             <label>Middle Name</label>
-            <input type="text" name="middleName" value={formData.middleName} onChange={handleChange} disabled={viewMode} />
+            <input type="text" name="middleName" value={formData.middleName} onChange={handleChange} className={getFieldClassName("middleName")} disabled={viewMode} />
             {renderError("middleName")}
           </div>
 
           <div className="form-group">
             <label>Last Name<span className="required">*</span></label>
-            <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} disabled={viewMode} />
+            <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} className={getFieldClassName("lastName")} disabled={viewMode} />
             {renderError("lastName")}
           </div>
 
           <div className="form-group">
             <label>Gender<span className="required">*</span></label>
-            <select name="gender" value={formData.gender} onChange={handleChange} disabled={viewMode}>
+            <select name="gender" value={formData.gender} onChange={handleChange} className={getFieldClassName("gender")} disabled={viewMode}>
               <option value="">Select</option>
               <option value="Male">Male</option>
               <option value="Female">Female</option>
@@ -482,7 +473,7 @@ function PersonalInfo({ onNext, viewMode, data }) {
 
           <div className="form-group">
             <label>Marital Status<span className="required">*</span></label>
-            <select name="maritalStatus" value={formData.maritalStatus} onChange={handleChange} disabled={viewMode}>
+            <select name="maritalStatus" value={formData.maritalStatus} onChange={handleChange} className={getFieldClassName("maritalStatus")} disabled={viewMode}>
               <option value="">Select</option>
               <option value="Single">Single</option>
               <option value="Married">Married</option>
@@ -492,37 +483,37 @@ function PersonalInfo({ onNext, viewMode, data }) {
 
           <div className="form-group">
             <label>Date of Birth<span className="required">*</span></label>
-            <AppDatePicker name="dob" value={formData.dob} onChange={handleChange} disabled={viewMode} />
+            <AppDatePicker name="dob" value={formData.dob} onChange={handleChange} className={getFieldClassName("dob")} disabled={viewMode} />
             {renderError("dob")}
           </div>
 
           <div className="form-group">
             <label>Phone Number<span className="required">*</span></label>
-            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} disabled={viewMode} />
+            <input type="tel" name="phone" value={formData.phone} onChange={handleChange} className={getFieldClassName("phone")} disabled={viewMode} />
             {renderError("phone")}
           </div>
 
           <div className="form-group">
             <label>Email<span className="required">*</span></label>
-            <input type="email" name="email" value={formData.email} onChange={handleChange} disabled={viewMode} />
+            <input type="email" name="email" value={formData.email} onChange={handleChange} className={getFieldClassName("email")} disabled={viewMode} />
             {renderError("email")}
           </div>
 
           <div className="form-group">
             <label>Aadhaar Number<span className="required">*</span></label>
-            <input type="text" name="aadhaar" value={formData.aadhaar} onChange={handleChange} disabled={viewMode} />
+            <input type="text" name="aadhaar" value={formData.aadhaar} onChange={handleChange} className={getFieldClassName("aadhaar")} disabled={viewMode} />
             {renderError("aadhaar")}
           </div>
 
           <div className="form-group">
             <label>PAN Number<span className="required">*</span></label>
-            <input type="text" name="pan" value={formData.pan} onChange={handleChange} disabled={viewMode} />
+            <input type="text" name="pan" value={formData.pan} onChange={handleChange} className={getFieldClassName("pan")} disabled={viewMode} />
             {renderError("pan")}
           </div>
 
           <div className="form-group">
             <label>Department<span className="required">*</span></label>
-            <select name="department" value={formData.department} onChange={handleChange} disabled={viewMode}>
+            <select name="department" value={formData.department} onChange={handleChange} className={getFieldClassName("department")} disabled={viewMode}>
               <option value="">Select</option>
               {departments.map((department) => (
                 <option key={department.id} value={department.departmentName}>
@@ -535,7 +526,7 @@ function PersonalInfo({ onNext, viewMode, data }) {
 
           <div className="form-group">
             <label>Designation<span className="required">*</span></label>
-            <select name="designation" value={formData.designation} onChange={handleChange} disabled={viewMode}>
+            <select name="designation" value={formData.designation} onChange={handleChange} className={getFieldClassName("designation")} disabled={viewMode}>
               <option value="">Select</option>
               <option value="Associate Software Engineer">Associate Software Engineer</option>
               <option value="Senior Software Engineer">Senior Software Engineer</option>
@@ -560,6 +551,7 @@ function PersonalInfo({ onNext, viewMode, data }) {
               name="joiningDate"
               value={formData.joiningDate}
               onChange={handleChange}
+              className={getFieldClassName("joiningDate")}
               disabled={viewMode}
             />
             {renderError("joiningDate")}
@@ -582,7 +574,7 @@ function PersonalInfo({ onNext, viewMode, data }) {
 
           <div className="form-group">
             <label>Blood Group<span className="required">*</span></label>
-            <select name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} disabled={viewMode}>
+            <select name="bloodGroup" value={formData.bloodGroup} onChange={handleChange} className={getFieldClassName("bloodGroup")} disabled={viewMode}>
               <option value="">Select</option>
               <option value="A+">A+</option>
               <option value="A-">A-</option>
@@ -604,43 +596,43 @@ function PersonalInfo({ onNext, viewMode, data }) {
         <div className="form-grid">
           <div className="form-group">
             <label>House Number <span className="required">*</span></label>
-            <input type="text" name="houseNo" value={formData.houseNo} onChange={handleChange} placeholder="House Number" disabled={viewMode} />
+            <input type="text" name="houseNo" value={formData.houseNo} onChange={handleChange} placeholder="House Number" className={getFieldClassName("houseNo")} disabled={viewMode} />
             {renderError("houseNo")}
           </div>
 
           <div className="form-group">
             <label>Street / Area<span className="required">*</span></label>
-            <input type="text" name="street" value={formData.street} onChange={handleChange} disabled={viewMode} />
+            <input type="text" name="street" value={formData.street} onChange={handleChange} className={getFieldClassName("street")} disabled={viewMode} />
             {renderError("street")}
           </div>
 
           <div className="form-group">
             <label>City / Village<span className="required">*</span></label>
-            <input type="text" name="city" value={formData.city} onChange={handleChange} disabled={viewMode} />
+            <input type="text" name="city" value={formData.city} onChange={handleChange} className={getFieldClassName("city")} disabled={viewMode} />
             {renderError("city")}
           </div>
 
           <div className="form-group">
             <label>District<span className="required">*</span></label>
-            <input type="text" name="district" value={formData.district} onChange={handleChange} disabled={viewMode} />
+            <input type="text" name="district" value={formData.district} onChange={handleChange} className={getFieldClassName("district")} disabled={viewMode} />
             {renderError("district")}
           </div>
 
           <div className="form-group">
             <label>State<span className="required">*</span></label>
-            <input type="text" name="state" value={formData.state} onChange={handleChange} disabled={viewMode} />
+            <input type="text" name="state" value={formData.state} onChange={handleChange} className={getFieldClassName("state")} disabled={viewMode} />
             {renderError("state")}
           </div>
 
           <div className="form-group">
             <label>Country<span className="required">*</span></label>
-            <input type="text" name="country" value={formData.country} onChange={handleChange} disabled={viewMode} />
+            <input type="text" name="country" value={formData.country} onChange={handleChange} className={getFieldClassName("country")} disabled={viewMode} />
             {renderError("country")}
           </div>
 
           <div className="form-group">
             <label>Pincode<span className="required">*</span></label>
-            <input type="text" name="pincode" value={formData.pincode} onChange={handleChange} disabled={viewMode} />
+            <input type="text" name="pincode" value={formData.pincode} onChange={handleChange} className={getFieldClassName("pincode")} disabled={viewMode} />
             {renderError("pincode")}
           </div>
         </div>
@@ -648,15 +640,7 @@ function PersonalInfo({ onNext, viewMode, data }) {
         <div className="step-actions">
           {successMsg && (
             <p
-              style={{
-                color: "#28a745",
-                backgroundColor: "#e6f9ed",
-                border: "1px solid #28a745",
-                padding: "10px 15px",
-                borderRadius: "6px",
-                marginBottom: "10px",
-                fontWeight: "500",
-              }}
+              className="workflow-feedback success"
             >
               {successMsg}
             </p>
@@ -664,15 +648,7 @@ function PersonalInfo({ onNext, viewMode, data }) {
 
           {apiError && (
             <p
-              style={{
-                color: "#b42318",
-                backgroundColor: "#fef3f2",
-                border: "1px solid #f04438",
-                padding: "10px 15px",
-                borderRadius: "6px",
-                marginBottom: "10px",
-                fontWeight: "500",
-              }}
+              className="workflow-feedback error"
             >
               {apiError}
             </p>

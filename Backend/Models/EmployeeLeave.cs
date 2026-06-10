@@ -26,6 +26,9 @@ public class EmployeeLeave
     public string? Reason { get; set; }
 
     public string? Status { get; set; } = "Pending";
+    public string ManagerStatus { get; set; } = "Pending";
+
+    public string HRStatus { get; set; } = "Pending";
     public DateOnly? AppliedDate {  get; set; }
 
     public DateTime CreatedAt { get; set; }

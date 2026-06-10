@@ -16,6 +16,7 @@ public interface IEmployeeDocumentService
     Task<string> VerifyDocument(int id, string remarks);
 
     Task<string> RejectDocument(int id, string remarks);
+    Task<EmployeeDocument?> GetDocumentById(int id);
 
     Task<int> GetPendingDocumentsCount();
 

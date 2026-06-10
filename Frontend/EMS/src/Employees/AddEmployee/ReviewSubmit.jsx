@@ -1,5 +1,10 @@
-import React from "react";
-import { formatDate } from "../../utils/date";
+import React, { useEffect, useMemo, useState } from "react";
+import { formatDate, formatDateTime, parseDate } from "../../utils/date";
+import {
+  formatDocumentSize,
+  loadStoredDocuments,
+  mergeDocumentRecords,
+} from "./documentStore";
 import "./AddEmployee.css";
 
 const getDisplayValue = (value, fallback = "-") => {
@@ -34,6 +39,138 @@ const getAddress = (personalInfo) =>
     .map((value) => String(value || "").trim())
     .filter(Boolean)
     .join(", ");
+
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+const getDaysInMonth = (year, monthIndex) =>
+  new Date(year, monthIndex + 1, 0).getDate();
+
+const normalizeDate = (value) => {
+  const parsedDate = parseDate(value);
+
+  if (!parsedDate) {
+    return null;
+  }
+
+  return new Date(
+    parsedDate.getFullYear(),
+    parsedDate.getMonth(),
+    parsedDate.getDate()
+  );
+};
+
+const getTodayDate = () => {
+  const today = new Date();
+
+  return new Date(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+};
+
+const addYearsClamped = (date, years) => {
+  const year = date.getFullYear() + years;
+  const month = date.getMonth();
+  const day = Math.min(date.getDate(), getDaysInMonth(year, month));
+
+  return new Date(year, month, day);
+};
+
+const addMonthsClamped = (date, months) => {
+  const totalMonths = date.getMonth() + months;
+  const year = date.getFullYear() + Math.floor(totalMonths / 12);
+  const month = ((totalMonths % 12) + 12) % 12;
+  const day = Math.min(date.getDate(), getDaysInMonth(year, month));
+
+  return new Date(year, month, day);
+};
+
+const formatDurationUnit = (value, label) =>
+  `${value} ${value === 1 ? label : `${label}s`}`;
+
+const formatExperienceDuration = (fromValue, toValue) => {
+  const startDate = normalizeDate(fromValue);
+
+  if (!startDate) {
+    return "";
+  }
+
+  const endDate = normalizeDate(toValue) ?? getTodayDate();
+
+  if (endDate < startDate) {
+    return "";
+  }
+
+  let years = endDate.getFullYear() - startDate.getFullYear();
+
+  if (
+    endDate.getMonth() < startDate.getMonth() ||
+    (endDate.getMonth() === startDate.getMonth() &&
+      endDate.getDate() < startDate.getDate())
+  ) {
+    years -= 1;
+  }
+
+  if (years < 0) {
+    years = 0;
+  }
+
+  const afterYears = addYearsClamped(startDate, years);
+
+  let months =
+    (endDate.getFullYear() - afterYears.getFullYear()) * 12 +
+    (endDate.getMonth() - afterYears.getMonth());
+
+  if (endDate.getDate() < afterYears.getDate()) {
+    months -= 1;
+  }
+
+  if (months < 0) {
+    months = 0;
+  }
+
+  const afterMonths = addMonthsClamped(afterYears, months);
+  const days = Math.max(
+    0,
+    Math.floor(
+      (Date.UTC(
+        endDate.getFullYear(),
+        endDate.getMonth(),
+        endDate.getDate()
+      ) -
+        Date.UTC(
+          afterMonths.getFullYear(),
+          afterMonths.getMonth(),
+          afterMonths.getDate()
+        )) /
+        ONE_DAY_MS
+    )
+  );
+
+  const parts = [];
+
+  if (years > 0) {
+    parts.push(formatDurationUnit(years, "Year"));
+  }
+
+  if (months > 0) {
+    parts.push(formatDurationUnit(months, "Month"));
+  }
+
+  if (days > 0 || parts.length === 0) {
+    parts.push(formatDurationUnit(days, "Day"));
+  }
+
+  return parts.join(" ");
+};
+
+const getExperienceDurationValue = (item) => {
+  const durationLabel = formatExperienceDuration(item.fromDate, item.toDate);
+
+  return durationLabel || getDisplayValue(item.years);
+};
+
 
 function ReviewField({ label, value }) {
   return (
@@ -71,6 +208,7 @@ function ReviewSection({
 
 function ReviewSubmit({
   data,
+  employeeId,
   viewMode,
   submitting,
   successMsg,
@@ -83,6 +221,54 @@ function ReviewSubmit({
   const bankDetails = data?.bankDetails || {};
   const education = Array.isArray(data?.education) ? data.education : [];
   const experience = Array.isArray(data?.experience) ? data.experience : [];
+  const [cachedDocuments, setCachedDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(Boolean(employeeId));
+
+  const serverDocuments = Array.isArray(data?.documents) ? data.documents : [];
+
+  useEffect(() => {
+    let active = true;
+
+    const loadCachedDocuments = async () => {
+      if (!employeeId) {
+        if (active) {
+          setCachedDocuments([]);
+          setDocumentsLoading(false);
+        }
+
+        return;
+      }
+
+      if (active) {
+        setDocumentsLoading(true);
+      }
+
+      try {
+        const storedDocuments = await loadStoredDocuments(employeeId);
+
+        if (active) {
+          setCachedDocuments(storedDocuments);
+          setDocumentsLoading(false);
+        }
+      } catch {
+        if (active) {
+          setCachedDocuments([]);
+          setDocumentsLoading(false);
+        }
+      }
+    };
+
+    loadCachedDocuments();
+
+    return () => {
+      active = false;
+    };
+  }, [employeeId]);
+
+  const documents = useMemo(
+    () => mergeDocumentRecords(serverDocuments, cachedDocuments),
+    [cachedDocuments, serverDocuments]
+  );
 
   return (
     <div className="form-section">
@@ -183,7 +369,10 @@ function ReviewSubmit({
                   <ReviewField label="Designation" value={item.designation} />
                   <ReviewField label="From Date" value={formatDate(item.fromDate)} />
                   <ReviewField label="To Date" value={formatDate(item.toDate)} />
-                  <ReviewField label="Years of Experience" value={item.years} />
+                  <ReviewField
+                    label="Years of Experience"
+                    value={getExperienceDurationValue(item)}
+                  />
                   <ReviewField label="Reason for Leaving" value={item.reasonForLeaving} />
                   <div className="review-item review-item-full">
                     <span className="review-label">Description</span>
@@ -195,6 +384,83 @@ function ReviewSubmit({
           </div>
         ) : (
           <div className="review-empty-state">No experience details added.</div>
+        )}
+      </ReviewSection>
+
+      <ReviewSection
+        title={`Uploaded Documents (${documents.length})`}
+        stepNumber={5}
+        onEditSection={onEditSection}
+      >
+        {documentsLoading && documents.length === 0 ? (
+          <div className="review-empty-state">Loading uploaded documents...</div>
+        ) : documents.length > 0 ? (
+          <div className="review-stack">
+            {documents.map((doc, index) => (
+              <div
+                className="review-list-card"
+                key={`${doc.documentType || "document"}-${index}`}
+              >
+                <div className="review-section-subtitle">
+                  Document {index + 1}
+                </div>
+
+                <div className="review-item-grid">
+                  <ReviewField
+                    label="Document Type"
+                    value={
+                      doc.documentType ||
+                      "Document"
+                    }
+                  />
+
+                  <ReviewField
+                    label="File Name"
+                    value={
+                      doc.fileName ||
+                      doc.file_Name
+                    }
+                  />
+
+                  <ReviewField
+                    label="File Type"
+                    value={doc.fileType}
+                  />
+
+                  <ReviewField
+                    label="Size"
+                    value={formatDocumentSize(doc.size)}
+                  />
+
+                  <ReviewField
+                    label="Uploaded Date"
+                    value={formatDateTime(doc.uploadedAt || doc.createdAt)}
+                  />
+
+                  {doc.fileUrl && (
+                    <div className="review-item review-item-full">
+                      <span className="review-label">File</span>
+
+                      <span className="review-value">
+                        <a
+                          href={doc.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="document-link"
+                        >
+                          View Document
+                        </a>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="review-empty-state">
+            No documents uploaded.
+          </div>
         )}
       </ReviewSection>
 

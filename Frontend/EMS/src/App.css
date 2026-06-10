@@ -96,28 +96,22 @@
   min-width: 0;
 }
 
-.header-badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  z-index: 3;
-  min-width: 17px;
-  height: 17px;
-  padding: 0 4px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: #fa526b;
-  color: #ffffff;
-  border: 1.5px solid #fecdd3;
-  font-size: 9px;
-  font-weight: 800;
-  line-height: 1;
-  text-align: center;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.96);
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 220;
+  padding: 0 var(--layout-gutter);
+  background: rgba(245, 247, 250, 0.78);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  will-change: left, width;
+  transition:
+    left var(--layout-transition-duration) var(--layout-transition-easing),
+    width var(--layout-transition-duration) var(--layout-transition-easing),
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
- 
 
 .app-header-inner {
   width: 100%;

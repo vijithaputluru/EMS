@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import api from "../../api/axiosInstance";
 import { API_ENDPOINTS, buildApiUrl } from "../../api/endpoints";
 import { getStoredToken } from "../../utils/authStorage";
@@ -8,6 +10,7 @@ import PersonalInfo from "./PersonalInfo";
 import BankInfo from "./BankInfo";
 import Education from "./Education";
 import Experience from "./Experience";
+import Documents from "./Documents";
 import ReviewSubmit from "./ReviewSubmit";
 import "./AddEmployee.css";
 
@@ -62,9 +65,9 @@ function AddEmployee() {
 
         const hasData = Boolean(
           employee?.personalInfo ||
-            employee?.bankDetails ||
-            employee?.education?.length > 0 ||
-            employee?.experience?.length > 0
+          employee?.bankDetails ||
+          employee?.education?.length > 0 ||
+          employee?.experience?.length > 0
         );
 
         setNoDataMessage(
@@ -99,7 +102,7 @@ function AddEmployee() {
 
   useEffect(() => {
     if (viewMode) {
-      setMaxStep(5);
+      setMaxStep(6);
     }
   }, [viewMode]);
 
@@ -136,6 +139,12 @@ function AddEmployee() {
     await goToStep(5);
   };
 
+  const nextFromDocuments = async () => {
+    setReviewSuccess("");
+    setReviewError("");
+    await goToStep(6);
+  };
+
   const handleEditToggle = () => {
     setReviewSuccess("");
     setReviewError("");
@@ -147,13 +156,13 @@ function AddEmployee() {
     setReviewError("");
     setIsEditing(true);
     setStep(targetStep);
-    setMaxStep((prev) => Math.max(prev, 5, targetStep));
+    setMaxStep((prev) => Math.max(prev, 6, targetStep));
   };
 
   const handleReviewBack = () => {
     setReviewSuccess("");
     setReviewError("");
-    setStep(4);
+    setStep(5);
   };
 
   const handleFinalSubmit = async () => {
@@ -166,16 +175,18 @@ function AddEmployee() {
 
       if (!latestEmployee) {
         setReviewError("Unable to refresh the latest employee details.");
+        toast.error("Unable to refresh the latest employee details.");
         return;
       }
 
       setIsEditing(false);
-      setMaxStep((prev) => Math.max(prev, 5));
+      setMaxStep((prev) => Math.max(prev, 6));
       setReviewSuccess("Profile reviewed and submitted successfully.");
- setTimeout(() => {
-  setStep(1);
-  setMaxStep(1);
-}, 2000);
+      toast.success("Profile reviewed and submitted successfully.");
+      setTimeout(() => {
+        setStep(1);
+        setMaxStep(1);
+      }, 2000);
     } finally {
       setReviewSubmitting(false);
     }
@@ -192,6 +203,16 @@ function AddEmployee() {
 
   return (
     <div className="add-employee">
+      <ToastContainer
+        position="top-right"
+        autoClose={2500}
+        hideProgressBar
+        newestOnTop
+        closeButton={false}
+        pauseOnHover
+        theme="light"
+      />
+
       <div className="page-header-row">
         <div>
           <h2 className="page-title">{viewMode ? "Employee Details" : "My Profile"}</h2>
@@ -212,7 +233,7 @@ function AddEmployee() {
         </button>
       </div>
 
-      <Stepper step={step} setStep={setStep} maxStep={viewMode ? 5 : maxStep} />
+      <Stepper step={step} setStep={setStep} maxStep={viewMode ? 6 : maxStep} />
 
       <div className="step-content">
         {step === 1 && (
@@ -264,8 +285,18 @@ function AddEmployee() {
         )}
 
         {step === 5 && (
+          <Documents
+            onBack={() => setStep(4)}
+            onNext={nextFromDocuments}
+            employeeId={employeeId}
+            viewMode={!isEditing}
+          />
+        )}
+
+        {step === 6 && (
           <ReviewSubmit
             data={employeeData}
+            employeeId={employeeId}
             viewMode={!isEditing}
             submitting={reviewSubmitting}
             successMsg={reviewSuccess}
