@@ -922,7 +922,7 @@
   },
   {
     "ContainingType": "EmployeeManagementSystem.Controllers.EmployeeDocumentsController",
-    "Method": "GetDocuments",
+    "Method": "GetEmployeeDocuments",
     "RelativePath": "api/EmployeeDocuments/{employeeId}",
     "HttpMethod": "GET",
     "IsController": true,
@@ -1025,6 +1025,11 @@
     "Parameters": [
       {
         "Name": "EmployeeId",
+        "Type": "System.String",
+        "IsRequired": false
+      },
+      {
+        "Name": "DocumentType",
         "Type": "System.String",
         "IsRequired": false
       },

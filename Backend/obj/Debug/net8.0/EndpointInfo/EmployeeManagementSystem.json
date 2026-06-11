@@ -1386,6 +1386,9 @@
                   "EmployeeId": {
                     "type": "string"
                   },
+                  "DocumentType": {
+                    "type": "string"
+                  },
                   "Files": {
                     "type": "array",
                     "items": {
@@ -1397,6 +1400,9 @@
               },
               "encoding": {
                 "EmployeeId": {
+                  "style": "form"
+                },
+                "DocumentType": {
                   "style": "form"
                 },
                 "Files": {

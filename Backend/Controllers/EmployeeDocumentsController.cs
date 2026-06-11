@@ -30,14 +30,12 @@ namespace EmployeeManagementSystem.Controllers
             });
         }
 
+      
         [HttpGet("{employeeId}")]
-        public async Task<IActionResult> GetDocuments(
-    string employeeId)
+        public async Task<IActionResult> GetEmployeeDocuments(string employeeId)
         {
-            var data =
-                await _service.GetEmployeeDocuments(employeeId);
-
-            return Ok(data);
+            var result = await _service.GetEmployeeDocuments(employeeId);
+            return Ok(result);
         }
 
         [HttpGet("download/{id}")]

@@ -3,6 +3,7 @@ import { parseDate } from "../../utils/date";
 const DB_NAME = "ems_add_employee_documents";
 const DB_VERSION = 1;
 const STORE_NAME = "documents";
+const GENERIC_DOCUMENT_TYPE_LABEL = "Document";
 
 const isIndexedDbAvailable = () =>
   typeof window !== "undefined" && "indexedDB" in window;
@@ -14,6 +15,41 @@ const toSafeString = (value, fallback = "") => {
 
   const normalizedValue = String(value).trim();
   return normalizedValue || fallback;
+};
+
+const normalizeLower = (value) => toSafeString(value).toLowerCase();
+
+const hasMeaningfulDocumentType = (value) => {
+  const normalizedValue = toSafeString(value);
+
+  if (!normalizedValue) {
+    return false;
+  }
+
+  return normalizeLower(normalizedValue) !== GENERIC_DOCUMENT_TYPE_LABEL.toLowerCase();
+};
+
+export const normalizeDocumentTypeKey = (value) => normalizeLower(value);
+
+const isGenericDocumentRecord = (document = {}) =>
+  !hasMeaningfulDocumentType(
+    document.documentType ||
+      document.documentTypeName ||
+      document.document_type ||
+      document.category ||
+      document.type
+  );
+
+const getDocumentFileIdentityKey = (document = {}) => {
+  const normalizedDocument = normalizeDocumentRecord(document);
+  const fileName = normalizeLower(normalizedDocument.fileName);
+  const fileSize = String(Number(normalizedDocument.size || 0));
+
+  if (!fileName) {
+    return "";
+  }
+
+  return `${fileName}|${fileSize}`;
 };
 
 const createFallbackKey = (employeeKey, document) => {
@@ -32,6 +68,393 @@ const createFallbackKey = (employeeKey, document) => {
 const getTimestamp = (value) => {
   const parsedDate = parseDate(value);
   return parsedDate ? parsedDate.getTime() : Number.NaN;
+};
+
+const getDocumentServerId = (document = {}) =>
+  document.serverId ??
+  document.id ??
+  document.documentId ??
+  document.employeeDocumentId ??
+  null;
+
+const getDocumentFileName = (document = {}) =>
+  toSafeString(
+    document.file_Name ||
+    document.fileName ||
+    document.name ||
+    document.originalFileName ||
+    document.originalName
+  );
+
+const getDocumentType = (document = {}) =>
+  toSafeString(
+    document.documentType ||
+    document.documentTypeName ||
+    document.document_type ||
+    document.category ||
+    document.type
+  );
+
+const getDocumentFileType = (document = {}, fileName = "") =>
+  toSafeString(
+    document.fileType ||
+    document.mimeType ||
+    document.contentType ||
+    document.fileMimeType ||
+    (fileName.includes(".") ? fileName.split(".").pop() : "")
+  );
+
+const getDocumentSize = (document = {}) =>
+  Number(
+    document.size ??
+    document.fileSize ??
+    document.file_Size ??
+    document.file_size ??
+    0
+  ) || 0;
+
+const getDocumentUploadedAt = (document = {}) =>
+  document.uploadedAt ||
+  document.createdAt ||
+  document.uploadDate ||
+  document.created_At ||
+  document.updatedAt ||
+  "";
+
+const getDocumentFileUrl = (document = {}) =>
+  toSafeString(
+    document.fileUrl ||
+    document.url ||
+    document.fileURL ||
+    document.downloadUrl ||
+    document.downloadURL ||
+    ""
+  );
+
+const getDocumentLastModified = (document = {}) =>
+  Number(document.lastModified ?? document.fileLastModified ?? 0) || 0;
+
+const getDocumentIdentitySignatures = (document = {}) => {
+  const normalizedDocument = normalizeDocumentRecord(document);
+  const signatures = new Set();
+
+  if (normalizedDocument.serverId) {
+    signatures.add(`server:${normalizeLower(normalizedDocument.serverId)}`);
+  }
+
+  if (normalizedDocument.cacheKey) {
+    signatures.add(`cache:${normalizeLower(normalizedDocument.cacheKey)}`);
+  }
+
+  if (normalizedDocument.fileName && normalizedDocument.documentType) {
+    signatures.add(
+      `type-file-size:${normalizeLower(normalizedDocument.documentType)}|${normalizeLower(normalizedDocument.fileName)}|${String(Number(normalizedDocument.size || 0))}`
+    );
+  }
+
+  return Array.from(signatures);
+};
+
+export const areDocumentRecordsEquivalent = (left = {}, right = {}) => {
+  const leftNormalized = normalizeDocumentRecord(left);
+  const rightNormalized = normalizeDocumentRecord(right);
+
+  if (
+    leftNormalized.serverId &&
+    rightNormalized.serverId &&
+    String(leftNormalized.serverId) === String(rightNormalized.serverId)
+  ) {
+    return true;
+  }
+
+  if (
+    leftNormalized.cacheKey &&
+    rightNormalized.cacheKey &&
+    leftNormalized.cacheKey === rightNormalized.cacheKey
+  ) {
+    return true;
+  }
+
+  const leftSignatures = new Set(getDocumentIdentitySignatures(leftNormalized));
+
+  return getDocumentIdentitySignatures(rightNormalized).some((signature) =>
+    leftSignatures.has(signature)
+  );
+};
+
+const isGenericPlaceholderMatch = (storedDocument = {}, targetDocument = {}) => {
+  const storedNormalized = normalizeDocumentRecord(storedDocument);
+  const targetNormalized = normalizeDocumentRecord(targetDocument);
+
+  if (!isGenericDocumentRecord(storedNormalized)) {
+    return false;
+  }
+
+  const storedKey = getDocumentFileIdentityKey(storedNormalized);
+  const targetKey = getDocumentFileIdentityKey(targetNormalized);
+
+  return Boolean(storedKey && targetKey && storedKey === targetKey);
+};
+
+const pickPreferredTextValue = (currentValue, candidateValue) => {
+  const normalizedCurrentValue = toSafeString(currentValue);
+  const normalizedCandidateValue = toSafeString(candidateValue);
+
+  if (!normalizedCurrentValue && normalizedCandidateValue) {
+    return normalizedCandidateValue;
+  }
+
+  if (hasMeaningfulDocumentType(normalizedCandidateValue) && !hasMeaningfulDocumentType(normalizedCurrentValue)) {
+    return normalizedCandidateValue;
+  }
+
+  return normalizedCurrentValue || normalizedCandidateValue;
+};
+
+const pickPreferredDocumentType = (currentValue, candidateValue) => {
+  const normalizedCurrentValue = toSafeString(currentValue);
+  const normalizedCandidateValue = toSafeString(candidateValue);
+  const currentIsMeaningful = hasMeaningfulDocumentType(normalizedCurrentValue);
+  const candidateIsMeaningful = hasMeaningfulDocumentType(normalizedCandidateValue);
+
+  if (candidateIsMeaningful && !currentIsMeaningful) {
+    return normalizedCandidateValue;
+  }
+
+  if (currentIsMeaningful && !candidateIsMeaningful) {
+    return normalizedCurrentValue;
+  }
+
+  if (currentIsMeaningful && candidateIsMeaningful) {
+    return normalizedCurrentValue || normalizedCandidateValue;
+  }
+
+  return normalizedCurrentValue || normalizedCandidateValue || GENERIC_DOCUMENT_TYPE_LABEL;
+};
+
+const pickPreferredNumber = (currentValue, candidateValue) => {
+  const currentNumber = Number(currentValue) || 0;
+  const candidateNumber = Number(candidateValue) || 0;
+
+  if (currentNumber > 0) {
+    return currentNumber;
+  }
+
+  if (candidateNumber > 0) {
+    return candidateNumber;
+  }
+
+  return 0;
+};
+
+const pickPreferredUploadedAt = (currentValue, candidateValue) => {
+  const currentTimestamp = getTimestamp(currentValue);
+  const candidateTimestamp = getTimestamp(candidateValue);
+
+  if (Number.isFinite(currentTimestamp)) {
+    return currentValue;
+  }
+
+  if (Number.isFinite(candidateTimestamp)) {
+    return candidateValue;
+  }
+
+  return toSafeString(currentValue) || candidateValue || "";
+};
+
+const pickPreferredSource = (currentValue, candidateValue) => {
+  if (currentValue === "server" || candidateValue === "server") {
+    return "server";
+  }
+
+  return currentValue || candidateValue || "local";
+};
+
+const compareDocumentRichness = (left, right) => {
+  const scoreLeft = getDocumentRichnessScore(left);
+  const scoreRight = getDocumentRichnessScore(right);
+
+  if (scoreLeft !== scoreRight) {
+    return scoreRight - scoreLeft;
+  }
+
+  const leftSourcePriority = Number(left?.sourcePriority || 0);
+  const rightSourcePriority = Number(right?.sourcePriority || 0);
+
+  if (leftSourcePriority !== rightSourcePriority) {
+    return rightSourcePriority - leftSourcePriority;
+  }
+
+  const leftTime = Number.isFinite(left?.uploadedAtTimestamp)
+    ? left.uploadedAtTimestamp
+    : 0;
+  const rightTime = Number.isFinite(right?.uploadedAtTimestamp)
+    ? right.uploadedAtTimestamp
+    : 0;
+
+  if (leftTime !== rightTime) {
+    return rightTime - leftTime;
+  }
+
+  return Number(left?.inputIndex || 0) - Number(right?.inputIndex || 0);
+};
+
+const getDocumentRichnessScore = (document = {}) => {
+  const normalizedDocument = normalizeDocumentRecord(document);
+  let score = 0;
+
+  if (normalizedDocument.serverId) {
+    score += 20;
+  }
+
+  if (normalizedDocument.cacheKey) {
+    score += 6;
+  }
+
+  if (normalizedDocument.fileName) {
+    score += 10;
+  }
+
+  if (normalizedDocument.fileType) {
+    score += 8;
+  }
+
+  if (Number(normalizedDocument.size) > 0) {
+    score += 8;
+  }
+
+  if (Number.isFinite(normalizedDocument.uploadedAtTimestamp)) {
+    score += 10;
+  }
+
+  if (normalizedDocument.fileUrl || normalizedDocument.downloadUrl) {
+    score += 12;
+  }
+
+  if (normalizedDocument.blob instanceof Blob) {
+    score += 8;
+  }
+
+  if (hasMeaningfulDocumentType(normalizedDocument.documentType)) {
+    score += 16;
+  }
+
+  if (normalizedDocument.source === "server") {
+    score += 4;
+  }
+
+  if (Number(normalizedDocument.lastModified) > 0) {
+    score += 4;
+  }
+
+  return score;
+};
+
+const mergeDocumentPair = (currentDocument = {}, candidateDocument = {}) => {
+  const current = normalizeDocumentRecord(currentDocument);
+  const candidate = normalizeDocumentRecord(candidateDocument);
+
+  const merged = {
+    ...current,
+    ...candidate,
+    cacheKey:
+      current.cacheKey ||
+      candidate.cacheKey ||
+      createFallbackKey(current.employeeKey || candidate.employeeKey, {
+        fileName: current.fileName || candidate.fileName,
+        documentType: current.documentType || candidate.documentType,
+        fileType: current.fileType || candidate.fileType,
+        size: current.size || candidate.size,
+        uploadedAt: current.uploadedAt || candidate.uploadedAt,
+      }),
+    employeeKey: current.employeeKey || candidate.employeeKey,
+    serverId: current.serverId || candidate.serverId || null,
+    documentType: pickPreferredDocumentType(
+      current.documentType,
+      candidate.documentType
+    ),
+    fileName: pickPreferredTextValue(current.fileName, candidate.fileName),
+    fileType: pickPreferredTextValue(current.fileType, candidate.fileType),
+    size: pickPreferredNumber(current.size, candidate.size),
+    uploadedAt: pickPreferredUploadedAt(
+      current.uploadedAt,
+      candidate.uploadedAt
+    ),
+    fileUrl: pickPreferredTextValue(current.fileUrl, candidate.fileUrl),
+    downloadUrl: pickPreferredTextValue(
+      current.downloadUrl,
+      candidate.downloadUrl || candidate.fileUrl
+    ),
+    blob: current.blob || candidate.blob || null,
+    source: pickPreferredSource(current.source, candidate.source),
+    lastModified: pickPreferredNumber(
+      current.lastModified,
+      candidate.lastModified
+    ),
+  };
+
+  merged.uploadedAtTimestamp = getTimestamp(merged.uploadedAt);
+  merged.fileSize = merged.size;
+  merged.documentTypeIsGeneric = !hasMeaningfulDocumentType(merged.documentType);
+  delete merged.sourcePriority;
+  delete merged.inputIndex;
+
+  return merged;
+};
+
+const mergeDocumentGroup = (documents = []) => {
+  if (documents.length === 0) {
+    return null;
+  }
+
+  const sortedDocuments = [...documents].sort(compareDocumentRichness);
+  const [firstDocument, ...remainingDocuments] = sortedDocuments;
+
+  return remainingDocuments.reduce(
+    (mergedDocument, candidateDocument) =>
+      mergeDocumentPair(mergedDocument, candidateDocument),
+    firstDocument
+  );
+};
+
+const createUnionFind = (size) => {
+  const parent = Array.from({ length: size }, (_, index) => index);
+  const rank = Array.from({ length: size }, () => 0);
+
+  const find = (index) => {
+    if (parent[index] !== index) {
+      parent[index] = find(parent[index]);
+    }
+
+    return parent[index];
+  };
+
+  const union = (leftIndex, rightIndex) => {
+    const leftRoot = find(leftIndex);
+    const rightRoot = find(rightIndex);
+
+    if (leftRoot === rightRoot) {
+      return;
+    }
+
+    if (rank[leftRoot] < rank[rightRoot]) {
+      parent[leftRoot] = rightRoot;
+      return;
+    }
+
+    if (rank[leftRoot] > rank[rightRoot]) {
+      parent[rightRoot] = leftRoot;
+      return;
+    }
+
+    parent[rightRoot] = leftRoot;
+    rank[leftRoot] += 1;
+  };
+
+  return {
+    find,
+    union,
+  };
 };
 
 const openDatabase = () => {
@@ -120,68 +543,26 @@ export const normalizeDocumentRecord = (
   document = {},
   employeeKey = ""
 ) => {
-  const serverId =
-    document.serverId ??
-    document.id ??
-    document.documentId ??
-    document.employeeDocumentId ??
-    null;
-
-  const fileName = toSafeString(
-    document.file_Name ||
-      document.fileName ||
-      document.name ||
-      document.originalFileName ||
-      document.originalName
-  );
-
-  const documentType = toSafeString(
-    document.documentType ||
-      document.documentTypeName ||
-      document.document_type ||
-      document.category ||
-      document.type
-  );
-
-  const fileType = toSafeString(
-    document.fileType ||
-      document.mimeType ||
-      document.contentType ||
-      document.fileMimeType ||
-      (fileName.includes(".") ? fileName.split(".").pop() : "")
-  );
-
-  const size = Number(
-    document.size ??
-      document.fileSize ??
-      document.file_Size ??
-      document.file_size ??
-      0
-  ) || 0;
-
-  const uploadedAt =
-    document.uploadedAt ||
-    document.createdAt ||
-    document.uploadDate ||
-    document.created_At ||
-    document.updatedAt ||
-    "";
-
-  const blob = document.blob instanceof Blob ? document.blob : null;
-  const fileUrl =
-    document.fileUrl ||
-    document.url ||
-    document.fileURL ||
+  const fileName = getDocumentFileName(document);
+  const documentType = getDocumentType(document);
+  const fileType = getDocumentFileType(document, fileName);
+  const size = getDocumentSize(document);
+  const uploadedAt = getDocumentUploadedAt(document);
+  const fileUrl = getDocumentFileUrl(document);
+  const downloadUrl = toSafeString(
     document.downloadUrl ||
-    "";
-
+    document.downloadURL ||
+    fileUrl
+  );
+  const blob = document.blob instanceof Blob ? document.blob : null;
+  const serverId = getDocumentServerId(document);
   const cacheKey =
     toSafeString(
       document.cacheKey ||
-        document.localId ||
-        serverId ||
-        document.documentId ||
-        document.employeeDocumentId
+      document.localId ||
+      serverId ||
+      document.documentId ||
+      document.employeeDocumentId
     ) ||
     createFallbackKey(employeeKey, {
       fileName,
@@ -189,23 +570,31 @@ export const normalizeDocumentRecord = (
       fileType,
       size,
       uploadedAt,
+      lastModified: getDocumentLastModified(document),
     });
+  const normalizedEmployeeKey = toSafeString(
+    document.employeeKey || employeeKey
+  );
+  const lastModified = getDocumentLastModified(document);
 
   return {
+    ...document,
     cacheKey,
-    employeeKey: toSafeString(
-      document.employeeKey || employeeKey
-    ),
+    employeeKey: normalizedEmployeeKey,
     serverId: serverId ? String(serverId) : null,
-    documentType,
+    documentType: documentType || GENERIC_DOCUMENT_TYPE_LABEL,
     fileName,
     fileType,
     size,
+    fileSize: size,
     uploadedAt,
     uploadedAtTimestamp: getTimestamp(uploadedAt),
     fileUrl,
+    downloadUrl,
     blob,
+    lastModified,
     source: document.source || (blob ? "local" : "server"),
+    documentTypeIsGeneric: !hasMeaningfulDocumentType(documentType),
   };
 };
 
@@ -213,43 +602,72 @@ export const mergeDocumentRecords = (
   serverDocuments = [],
   cachedDocuments = []
 ) => {
-  const merged = new Map();
+  const normalizedDocuments = [
+    ...serverDocuments.map((document, inputIndex) => ({
+      ...normalizeDocumentRecord(document),
+      sourcePriority: 2,
+      inputIndex,
+    })),
+    ...cachedDocuments.map((document, inputIndex) => ({
+      ...normalizeDocumentRecord(document),
+      sourcePriority: 1,
+      inputIndex: serverDocuments.length + inputIndex,
+    })),
+  ];
 
-  const addDocument = (document, sourcePriority = 0) => {
-    const normalized = normalizeDocumentRecord(document);
-    const signature = [
-  normalized.fileName.toLowerCase(),
-  normalized.documentType.toLowerCase(),
-  String(normalized.size || 0),
-].join("|");
+  if (normalizedDocuments.length === 0) {
+    return [];
+  }
 
-    const current = merged.get(signature);
+  const { find, union } = createUnionFind(normalizedDocuments.length);
+  const signatureMap = new Map();
 
-    if (!current) {
-      merged.set(signature, {
-        ...normalized,
-        sourcePriority,
-      });
-      return;
+  normalizedDocuments.forEach((document, documentIndex) => {
+    getDocumentIdentitySignatures(document).forEach((signature) => {
+      if (signatureMap.has(signature)) {
+        union(documentIndex, signatureMap.get(signature));
+        return;
+      }
+
+      signatureMap.set(signature, documentIndex);
+    });
+  });
+
+  const groupedDocuments = new Map();
+
+  normalizedDocuments.forEach((document, documentIndex) => {
+    const rootIndex = find(documentIndex);
+
+    if (!groupedDocuments.has(rootIndex)) {
+      groupedDocuments.set(rootIndex, []);
     }
 
-    merged.set(signature, {
-      ...current,
-      ...normalized,
-      blob: normalized.blob || current.blob,
-      fileUrl: normalized.fileUrl || current.fileUrl,
-      source:
-        sourcePriority >= current.sourcePriority
-          ? normalized.source
-          : current.source,
-      sourcePriority: Math.max(current.sourcePriority, sourcePriority),
-    });
-  };
+    groupedDocuments.get(rootIndex).push(document);
+  });
 
-  serverDocuments.forEach((document) => addDocument(document, 2));
-  cachedDocuments.forEach((document) => addDocument(document, 1));
+  return Array.from(groupedDocuments.values())
+    .map((documents) => mergeDocumentGroup(documents))
+    .filter(Boolean)
+    .filter((document, _, allDocuments) => {
+      if (!isGenericDocumentRecord(document)) {
+        return true;
+      }
 
-  return Array.from(merged.values())
+      const fileIdentityKey = getDocumentFileIdentityKey(document);
+
+      return !allDocuments.some(
+        (candidate) =>
+          candidate !== document &&
+          !isGenericDocumentRecord(candidate) &&
+          getDocumentFileIdentityKey(candidate) === fileIdentityKey
+      );
+    })
+    .map((document) => {
+      const cleanDocument = { ...document };
+      delete cleanDocument.sourcePriority;
+      delete cleanDocument.inputIndex;
+      return cleanDocument;
+    })
     .sort((left, right) => {
       const leftTime = Number.isFinite(left.uploadedAtTimestamp)
         ? left.uploadedAtTimestamp
@@ -259,8 +677,7 @@ export const mergeDocumentRecords = (
         : 0;
 
       return rightTime - leftTime;
-    })
-    .map(({ sourcePriority, ...document }) => document);
+    });
 };
 
 const readAllStoredDocuments = async (db, employeeKey) => {
@@ -330,9 +747,7 @@ export const loadStoredDocuments = async (employeeKey) => {
     normalizedEmployeeKey
   );
 
-  return storedDocuments.map((document) =>
-    normalizeDocumentRecord(document, normalizedEmployeeKey)
-  );
+  return mergeDocumentRecords(storedDocuments, []);
 };
 
 export const saveStoredDocument = async (employeeKey, document) => {
@@ -354,6 +769,22 @@ export const saveStoredDocument = async (employeeKey, document) => {
       employeeKey: normalizedEmployeeKey,
     },
     normalizedEmployeeKey
+  );
+
+  const storedDocuments = await readAllStoredDocuments(
+    db,
+    normalizedEmployeeKey
+  );
+
+  const matchingDocuments = storedDocuments.filter((storedDocument) =>
+    areDocumentRecordsEquivalent(storedDocument, normalizedDocument) ||
+    isGenericPlaceholderMatch(storedDocument, normalizedDocument)
+  );
+
+  await Promise.all(
+    matchingDocuments.map((storedDocument) =>
+      removeStoredDocumentByKey(db, storedDocument.cacheKey)
+    )
   );
 
   await writeStoredDocument(db, normalizedDocument);
@@ -383,9 +814,9 @@ export const saveStoredDocuments = async (employeeKey, documents = []) => {
     )
   );
 
-  await Promise.all(
-    normalizedDocuments.map((document) => writeStoredDocument(db, document))
-  );
+  for (const document of normalizedDocuments) {
+    await saveStoredDocument(normalizedEmployeeKey, document);
+  }
 
   return normalizedDocuments;
 };
@@ -416,28 +847,18 @@ export const removeStoredDocument = async (
     normalizedEmployeeKey
   );
 
-  const match = storedDocuments.find((document) => {
-    if (
-      normalizedTarget.serverId &&
-      String(document.serverId || "") === normalizedTarget.serverId
-    ) {
-      return true;
-    }
+  const matches = storedDocuments.filter((document) =>
+    areDocumentRecordsEquivalent(document, normalizedTarget) ||
+    isGenericPlaceholderMatch(document, normalizedTarget)
+  );
 
-    return (
-      document.cacheKey === normalizedTarget.cacheKey ||
-      (
-        normalizedTarget.fileName &&
-        document.fileName === normalizedTarget.fileName &&
-        document.size === normalizedTarget.size
-      )
-    );
-  });
-
-  if (!match) {
+  if (matches.length === 0) {
     return null;
   }
 
-  await removeStoredDocumentByKey(db, match.cacheKey);
-  return normalizeDocumentRecord(match, normalizedEmployeeKey);
+  await Promise.all(
+    matches.map((document) => removeStoredDocumentByKey(db, document.cacheKey))
+  );
+
+  return mergeDocumentRecords(matches, [normalizedTarget])[0] || normalizeDocumentRecord(matches[0], normalizedEmployeeKey);
 };

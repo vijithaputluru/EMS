@@ -76,15 +76,45 @@
   display: none;
 }
 
+.badge-lop {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.badge-missed-checkout {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.badge-late-missed-checkout {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
+.monthly-status.lop {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.monthly-status.mc {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.monthly-status.lmc {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
 /* =========================================
    SMALL CARDS
 ========================================= */
 
 .attendance-summary-box {
-  min-width: 130px;
-  max-width: 130px;
+  min-width: 100px;
+  max-width: 100px;
 
-  height: 70px;
+  height: 85px;
 
   background: #fff;
 
@@ -102,8 +132,9 @@
   transition: 0.2s ease;
 }
 
-.attendance-summary-box:hover {
-  transform: translateY(-2px);
+.attendance-summary-top,
+.attendance-top-section {
+  overflow: visible !important;
 }
 
 /* LABEL */
@@ -1192,6 +1223,18 @@
   background: #7c3aed;
 }
 
+.legend-dot.lop {
+  background: #dc2626;
+}
+
+.legend-dot.mc {
+  background: #c2410c;
+}
+
+.legend-dot.lmc {
+  background: #be123c;
+}
+
 .legend-dot.halfday {
   background: #2563eb;
 }
@@ -1273,6 +1316,38 @@
   border: 1px solid #e2e8f0;
 }
 
+.attendance-summary-box.lop h3 {
+  color: #dc2626;
+}
+
+.attendance-summary-box.lop {
+  background: #fff1f2;
+  border-color: #fecdd3;
+}
+
+.attendance-summary-box.mc h3 {
+  color: #c2410c;
+}
+
+.attendance-summary-box.mc {
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.attendance-summary-box.lmc h3 {
+  color: #be123c;
+}
+
+.attendance-summary-box.lmc {
+  background: #fdf2f8;
+  border-color: #fbcfe8;
+}
+
+.badge-lop {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
 .disabled-future-day {
   cursor: not-allowed;
   opacity: 0.9;
@@ -1290,6 +1365,21 @@
 
 .late-text {
   color: #d97706;
+  font-weight: 700;
+}
+
+.lop-text {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.mc-text {
+  color: #c2410c;
+  font-weight: 700;
+}
+
+.lmc-text {
+  color: #be123c;
   font-weight: 700;
 }
 
@@ -1960,6 +2050,16 @@
 .summary-card.orange {
   background: #fff7ed;
   color: #ea580c;
+}
+
+.summary-card.amber {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.summary-card.rose {
+  background: #fff1f2;
+  color: #be123c;
 }
 
 .summary-card.gray {

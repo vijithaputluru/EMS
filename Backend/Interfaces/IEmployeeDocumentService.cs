@@ -5,7 +5,7 @@ public interface IEmployeeDocumentService
 {
     Task<string> UploadDocument(EmployeeDocumentDto dto);
 
-    Task<List<EmployeeDocument>> GetEmployeeDocuments(string employeeId);
+    Task<List<EmployeeDocumentResponseDto>> GetEmployeeDocuments(string employeeId);
 
     Task<byte[]> DownloadDocument(int id);
 

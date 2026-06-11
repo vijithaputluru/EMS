@@ -131,6 +131,4 @@ wwwroot\GeneratedPayslips\Payslip_P333_20260527115234.pdf
 wwwroot\GeneratedPayslips\Payslip_P254_20260601162437.pdf
 wwwroot\GeneratedPayslips\Payslip_P254_20260609142051.pdf
 wwwroot\GeneratedPayslips\Payslip_P254_20260609142505.pdf
-wwwroot\uploads\employee-documents\P259\2870b39c-9c69-491a-a3aa-12b10972c761.pdf
-wwwroot\uploads\employee-documents\P259\0a5f07c6-8b17-4f9a-8d73-87d018e9e527.pdf
-wwwroot\uploads\employee-documents\P234\bd0abd98-53b4-4a6c-8bb2-20144bcbd28c.pdf
+wwwroot\uploads\employee-documents\P259\9043e5fc-d958-437a-a6d6-09611ea077af.pdf

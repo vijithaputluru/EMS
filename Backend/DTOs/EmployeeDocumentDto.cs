@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-public class EmployeeDocumentDto
+﻿public class EmployeeDocumentDto
 {
     public string EmployeeId { get; set; } = string.Empty;
 

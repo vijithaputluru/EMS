@@ -18,12 +18,14 @@ function normalizeOption(option) {
     return {
       value: option,
       label: option,
+      disabled: false,
     };
   }
 
   return {
     value: option.value,
     label: option.label ?? String(option.value ?? ""),
+    disabled: Boolean(option.disabled),
   };
 }
 
@@ -116,6 +118,30 @@ function CompactSearchableDropdown({
     [filteredGroups]
   );
 
+  const findNextEnabledIndex = (startIndex, direction) => {
+    if (!filteredFlatOptions.length) {
+      return -1;
+    }
+
+    let nextIndex = startIndex;
+
+    for (let attempts = 0; attempts < filteredFlatOptions.length; attempts += 1) {
+      nextIndex += direction;
+
+      if (nextIndex < 0) {
+        nextIndex = filteredFlatOptions.length - 1;
+      } else if (nextIndex >= filteredFlatOptions.length) {
+        nextIndex = 0;
+      }
+
+      if (!filteredFlatOptions[nextIndex]?.disabled) {
+        return nextIndex;
+      }
+    }
+
+    return -1;
+  };
+
   const closeDropdown = () => {
     setIsOpen(false);
     setSearchValue("");
@@ -131,10 +157,19 @@ function CompactSearchableDropdown({
     setSearchValue("");
 
     const selectedIndex = flatOptions.findIndex(
-      (option) => option.value === value
+      (option) => option.value === value && !option.disabled
     );
 
-    setActiveIndex(selectedIndex >= 0 ? selectedIndex : 0);
+    if (selectedIndex >= 0) {
+      setActiveIndex(selectedIndex);
+      return;
+    }
+
+    const firstEnabledIndex = filteredFlatOptions.findIndex(
+      (option) => !option.disabled
+    );
+
+    setActiveIndex(firstEnabledIndex >= 0 ? firstEnabledIndex : 0);
   };
 
   const toggleDropdown = () => {
@@ -181,10 +216,26 @@ function CompactSearchableDropdown({
   }, [isOpen]);
 
   const safeActiveIndex = filteredFlatOptions.length
-    ? Math.max(
-        0,
-        Math.min(activeIndex, filteredFlatOptions.length - 1)
-      )
+    ? (() => {
+        const clampedIndex = Math.max(
+          0,
+          Math.min(activeIndex, filteredFlatOptions.length - 1)
+        );
+
+        if (!filteredFlatOptions[clampedIndex]?.disabled) {
+          return clampedIndex;
+        }
+
+        const nextIndex = findNextEnabledIndex(clampedIndex, 1);
+
+        if (nextIndex >= 0) {
+          return nextIndex;
+        }
+
+        const previousIndex = findNextEnabledIndex(clampedIndex, -1);
+
+        return previousIndex >= 0 ? previousIndex : clampedIndex;
+      })()
     : 0;
 
   useEffect(() => {
@@ -207,7 +258,7 @@ function CompactSearchableDropdown({
   }, [baseId, filteredFlatOptions, isOpen, safeActiveIndex]);
 
   const handleSelection = (option) => {
-    if (!option) {
+    if (!option || option.disabled) {
       return;
     }
 
@@ -246,15 +297,19 @@ function CompactSearchableDropdown({
 
     if (event.key === "ArrowDown") {
       event.preventDefault();
-      setActiveIndex((current) =>
-        Math.min(current + 1, filteredFlatOptions.length - 1)
-      );
+      setActiveIndex((current) => {
+        const nextIndex = findNextEnabledIndex(current, 1);
+        return nextIndex >= 0 ? nextIndex : current;
+      });
       return;
     }
 
     if (event.key === "ArrowUp") {
       event.preventDefault();
-      setActiveIndex((current) => Math.max(current - 1, 0));
+      setActiveIndex((current) => {
+        const previousIndex = findNextEnabledIndex(current, -1);
+        return previousIndex >= 0 ? previousIndex : current;
+      });
       return;
     }
 
@@ -382,8 +437,16 @@ function CompactSearchableDropdown({
                         aria-selected={isSelected}
                         className={`compact-dropdown-option${
                           isSelected ? " is-selected" : ""
-                        }${isActive ? " is-active" : ""}`.trim()}
-                        onMouseEnter={() => setActiveIndex(optionIndex)}
+                        }${isActive ? " is-active" : ""}${
+                          option.disabled ? " is-disabled" : ""
+                        }`.trim()}
+                        aria-disabled={option.disabled}
+                        disabled={option.disabled}
+                        onMouseEnter={() => {
+                          if (!option.disabled) {
+                            setActiveIndex(optionIndex);
+                          }
+                        }}
                         onClick={() => handleSelection(option)}
                       >
                         <span className="compact-dropdown-option-label">

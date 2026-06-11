@@ -23,10 +23,12 @@ import { SERVER_URL } from "../../api/config";
 import CompactSearchableDropdown from "../../components/CompactSearchableDropdown";
 import {
     extractDocumentRecords,
+    areDocumentRecordsEquivalent,
     formatDocumentSize,
     loadStoredDocuments,
     mergeDocumentRecords,
     normalizeDocumentRecord,
+    normalizeDocumentTypeKey,
     removeStoredDocument,
     saveStoredDocument,
 } from "./documentStore";
@@ -34,7 +36,7 @@ import { formatDateTime } from "../../utils/date";
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
 
-const DOCUMENT_TYPE_GROUPS = [
+const BASE_DOCUMENT_TYPE_GROUPS = [
     {
         label: "Education Certificates",
         options: [
@@ -87,6 +89,103 @@ const DOCUMENT_TYPE_GROUPS = [
     },
 ];
 
+const getDocumentTypeScore = (document = {}) => {
+    let score = 0;
+
+    if (document.serverId) {
+        score += 8;
+    }
+
+    if (document.documentType && normalizeDocumentTypeKey(document.documentType) !== "document") {
+        score += 6;
+    }
+
+    if (document.fileUrl || document.downloadUrl) {
+        score += 5;
+    }
+
+    if (document.fileName) {
+        score += 4;
+    }
+
+    if (Number(document.size) > 0) {
+        score += 3;
+    }
+
+    if (document.uploadedAt) {
+        score += 2;
+    }
+
+    return score;
+};
+
+const getBestMatchingResponseDocument = (responseData, fallbackDocument) => {
+    const normalizedFallbackDocument = fallbackDocument
+        ? normalizeDocumentRecord(fallbackDocument, fallbackDocument.employeeKey)
+        : null;
+    const responseDocuments = extractDocumentRecords(responseData).map(
+        (document) =>
+            normalizeDocumentRecord(
+                document,
+                normalizedFallbackDocument?.employeeKey
+            )
+    );
+
+    if (responseDocuments.length === 0) {
+        return null;
+    }
+
+    const mergedResponseDocuments = mergeDocumentRecords(
+        responseDocuments,
+        normalizedFallbackDocument ? [normalizedFallbackDocument] : []
+    );
+    const fallbackDocumentTypeKey = normalizeDocumentTypeKey(
+        normalizedFallbackDocument?.documentType
+    );
+
+    const matchedDocument =
+        mergedResponseDocuments.find((document) =>
+            normalizedFallbackDocument
+                ? areDocumentRecordsEquivalent(
+                    document,
+                    normalizedFallbackDocument
+                )
+                : false
+        ) ||
+        mergedResponseDocuments.find(
+            (document) =>
+                fallbackDocumentTypeKey &&
+                normalizeDocumentTypeKey(document.documentType) ===
+                fallbackDocumentTypeKey
+        ) ||
+        null;
+
+    if (matchedDocument) {
+        return matchedDocument;
+    }
+
+    return [...mergedResponseDocuments].sort(
+        (left, right) => getDocumentTypeScore(right) - getDocumentTypeScore(left)
+    )[0] || null;
+};
+
+const buildDocumentTypeGroups = (uploadedDocumentTypes = new Set()) =>
+    BASE_DOCUMENT_TYPE_GROUPS.map((group) => ({
+        label: group.label,
+        options: group.options.map((option) => {
+            const normalizedOptionType = normalizeDocumentTypeKey(option.value);
+            const isUploaded = uploadedDocumentTypes.has(normalizedOptionType);
+
+            return {
+                ...option,
+                disabled: isUploaded,
+                label: isUploaded
+                    ? `${option.label} (Uploaded)`
+                    : option.label,
+            };
+        }),
+    }));
+
 const getEmployeeKey = (employeeId, employeeCode) =>
     String(employeeCode || employeeId || "").trim();
 
@@ -102,24 +201,6 @@ const getDocumentServerId = (document) =>
     document?.employeeDocumentId ||
     null;
 
-const sameDocument = (left, right) => {
-    const leftServerId = getDocumentServerId(left);
-    const rightServerId = getDocumentServerId(right);
-
-    if (leftServerId && rightServerId) {
-        return String(leftServerId) === String(rightServerId);
-    }
-
-    return (
-        left.cacheKey === right.cacheKey ||
-        (
-            left.fileName === right.fileName &&
-            left.size === right.size &&
-            left.documentType === right.documentType
-        )
-    );
-};
-
 const buildLocalDocumentRecord = (file, documentType, employeeKey) =>
     normalizeDocumentRecord(
         {
@@ -132,27 +213,12 @@ const buildLocalDocumentRecord = (file, documentType, employeeKey) =>
             fileType: file.type || getFileExtension(file.name),
             size: file.size,
             uploadedAt: new Date().toISOString(),
+            lastModified: file.lastModified || 0,
             blob: file,
             source: "local",
         },
         employeeKey
     );
-
-const getLatestResponseDocument = (responseData) =>
-    extractDocumentRecords(responseData).find((document) =>
-        Boolean(
-            document &&
-            (
-                document.id ||
-                document.documentId ||
-                document.employeeDocumentId ||
-                document.fileName ||
-                document.file_Name ||
-                document.fileUrl ||
-                document.documentType
-            )
-        )
-    ) || null;
 
 const openBlobInNewTab = (blob) => {
     const url = window.URL.createObjectURL(blob);
@@ -211,8 +277,97 @@ function Documents({
 
     const fileInputRef = useRef(null);
     const isMountedRef = useRef(true);
+    const visibleDocuments = useMemo(
+        () => mergeDocumentRecords(documents, []),
+        [documents]
+    );
+    const uploadedDocumentTypes = useMemo(
+        () =>
+            new Set(
+                visibleDocuments
+                    .map((document) =>
+                        normalizeDocumentTypeKey(document.documentType)
+                    )
+                    .filter((documentTypeKey) =>
+                        documentTypeKey && documentTypeKey !== "document"
+                    )
+            ),
+        [visibleDocuments]
+    );
+    const documentTypeGroups = useMemo(
+        () => buildDocumentTypeGroups(uploadedDocumentTypes),
+        [uploadedDocumentTypes]
+    );
+    const documentProgressGroups = useMemo(
+        () =>
+            BASE_DOCUMENT_TYPE_GROUPS.map((group) => {
+                const options = group.options.map((option) => {
+                    const normalizedOptionType = normalizeDocumentTypeKey(
+                        option.value
+                    );
+                    const isUploaded = Boolean(
+                        normalizedOptionType &&
+                        uploadedDocumentTypes.has(normalizedOptionType)
+                    );
 
-    const documentCount = documents.length;
+                    return {
+                        ...option,
+                        key: normalizedOptionType || option.value,
+                        isUploaded,
+                    };
+                });
+
+                const uploadedCount = options.filter(
+                    (option) => option.isUploaded
+                ).length;
+                const totalCount = options.length;
+
+                return {
+                    label: group.label,
+                    options,
+                    uploadedCount,
+                    totalCount,
+                    pendingCount: Math.max(0, totalCount - uploadedCount),
+                    completionPercent: totalCount
+                        ? Math.round((uploadedCount / totalCount) * 100)
+                        : 0,
+                };
+            }),
+        [uploadedDocumentTypes]
+    );
+    const documentProgressSummary = useMemo(() => {
+        const totalTrackedTypes = documentProgressGroups.reduce(
+            (total, group) => total + group.totalCount,
+            0
+        );
+        const uploadedTrackedTypes = documentProgressGroups.reduce(
+            (total, group) => total + group.uploadedCount,
+            0
+        );
+
+        return {
+            totalTrackedTypes,
+            uploadedTrackedTypes,
+            remainingTrackedTypes: Math.max(
+                0,
+                totalTrackedTypes - uploadedTrackedTypes
+            ),
+            completionPercent: totalTrackedTypes
+                ? Math.round((uploadedTrackedTypes / totalTrackedTypes) * 100)
+                : 0,
+        };
+    }, [documentProgressGroups]);
+    const selectedDocumentTypeKey = normalizeDocumentTypeKey(
+        selectedDocumentType
+    );
+    const selectedDocumentTypeIsUploaded = Boolean(
+        selectedDocumentTypeKey &&
+        uploadedDocumentTypes.has(selectedDocumentTypeKey)
+    );
+    const selectedDocumentTypeError = selectedDocumentTypeIsUploaded
+        ? `${selectedDocumentType} has already been uploaded. Delete the existing document before uploading again.`
+        : "";
+    const documentCount = visibleDocuments.length;
 
     useEffect(
         () => () => {
@@ -258,28 +413,18 @@ function Documents({
             let serverError = "";
 
             try {
-                const [serverDocuments, cachedDocuments] = await Promise.all([
-                    api
-                        .get(API_ENDPOINTS.employeeDocuments.byEmployeeId(employeeKey))
-                        .then((response) => extractDocumentRecords(response.data))
-                        .catch((error) => {
-                            serverError =
-                                error?.response?.data?.message || "Failed to load documents";
-                            return [];
-                        }),
-                    loadStoredDocuments(employeeKey).catch(() => []),
-                ]);
+                const serverDocuments = await api
+                    .get(API_ENDPOINTS.employeeDocuments.byEmployeeId(employeeKey))
+                    .then((response) => extractDocumentRecords(response.data))
+                    .catch(() => []);
 
-                const mergedDocuments = mergeDocumentRecords(
-                    serverDocuments,
-                    cachedDocuments
-                );
+                setDocuments(serverDocuments);
 
                 if (!isMountedRef.current) {
                     return;
                 }
 
-                setDocuments(mergedDocuments);
+                setDocuments(serverDocuments);
 
                 if (serverError && mergedDocuments.length === 0) {
                     setLoadError(serverError);
@@ -315,14 +460,9 @@ function Documents({
         const file = event.target.files?.[0];
 
         if (!file) {
-    setSelectedFile(null);
-
-    if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-    }
-
-    return;
-}
+            setSelectedFile(null);
+            return;
+        }
 
         if (file.size > MAX_FILE_SIZE_BYTES) {
             const message = "File size should be less than 10MB";
@@ -348,6 +488,20 @@ function Documents({
             return;
         }
 
+        if (!selectedDocumentType) {
+            const message = "Please select a document type.";
+            setApiError(message);
+            toast.error(message);
+            return;
+        }
+
+        if (selectedDocumentTypeIsUploaded) {
+            const message = `${selectedDocumentType} has already been uploaded. Delete the existing document before uploading again.`;
+            setApiError(message);
+            toast.error(message);
+            return;
+        }
+
         if (!selectedFile) {
             const message = "Please select a file";
             setApiError(message);
@@ -360,9 +514,9 @@ function Documents({
             setApiError("");
 
             const formData = new FormData();
-         formData.append("EmployeeId", employeeKey);
-formData.append("DocumentType", selectedDocumentType);
-formData.append("Files", selectedFile);
+            formData.append("EmployeeId", employeeKey);
+            formData.append("DocumentType", selectedDocumentType);
+            formData.append("Files", selectedFile);
 
             const response = await api.post(
                 API_ENDPOINTS.employeeDocuments.upload,
@@ -374,60 +528,66 @@ formData.append("Files", selectedFile);
                 }
             );
 
-            const responseDocument = getLatestResponseDocument(response.data);
-            const normalizedResponseDocument = responseDocument
-                ? normalizeDocumentRecord(responseDocument, employeeKey)
-                : null;
             const fallbackDocument = buildLocalDocumentRecord(
                 selectedFile,
                 selectedDocumentType,
                 employeeKey
             );
-
-            const storedDocument = normalizedResponseDocument
-                ? normalizeDocumentRecord(
-                    {
-                        ...fallbackDocument,
-                        ...normalizedResponseDocument,
-                        employeeKey,
-                        documentType:
-                            normalizedResponseDocument.documentType ||
-                            selectedDocumentType ||
-                            fallbackDocument.documentType,
-                        fileName:
-                            normalizedResponseDocument.fileName || fallbackDocument.fileName,
-                        fileType:
-                            normalizedResponseDocument.fileType || fallbackDocument.fileType,
-                        size:
-                            normalizedResponseDocument.size || fallbackDocument.size,
-                        uploadedAt:
-                            normalizedResponseDocument.uploadedAt ||
-                            fallbackDocument.uploadedAt,
-                        blob: selectedFile,
-                        source: normalizedResponseDocument.serverId
-                            ? "server"
-                            : "local",
-                    },
-                    employeeKey
-                )
-                : fallbackDocument;
+            const responseDocument = getBestMatchingResponseDocument(
+                response.data,
+                fallbackDocument
+            );
+            const storedDocument = normalizeDocumentRecord(
+                {
+                    ...fallbackDocument,
+                    ...(responseDocument || {}),
+                    employeeKey,
+                    documentType:
+                        selectedDocumentType ||
+                        responseDocument?.documentType ||
+                        fallbackDocument.documentType,
+                    fileName:
+                        responseDocument?.fileName || fallbackDocument.fileName,
+                    fileType:
+                        responseDocument?.fileType || fallbackDocument.fileType,
+                    size: responseDocument?.size || fallbackDocument.size,
+                    uploadedAt:
+                        responseDocument?.uploadedAt ||
+                        fallbackDocument.uploadedAt,
+                    fileUrl: responseDocument?.fileUrl || fallbackDocument.fileUrl,
+                    downloadUrl:
+                        responseDocument?.downloadUrl ||
+                        responseDocument?.fileUrl ||
+                        fallbackDocument.downloadUrl,
+                    lastModified:
+                        responseDocument?.lastModified ||
+                        fallbackDocument.lastModified,
+                    serverId: responseDocument?.serverId || fallbackDocument.serverId,
+                    blob: selectedFile,
+                    source: responseDocument?.serverId ? "server" : "local",
+                },
+                employeeKey
+            );
 
             await saveStoredDocument(employeeKey, storedDocument);
 
             if (!isMountedRef.current) {
                 return;
             }
-await loadDocuments({ silent: true });
 
-setSelectedFile(null);
-setSelectedDocumentType("");
+            setDocuments((currentDocuments) =>
+                mergeDocumentRecords([storedDocument], currentDocuments)
+            );
+            setSelectedFile(null);
+            setSelectedDocumentType("");
+            setSuccessMsg("Document uploaded successfully.");
+            toast.success("Document uploaded successfully.");
 
-if (fileInputRef.current) {
-    fileInputRef.current.value = "";
-}
+            if (fileInputRef.current) {
+                fileInputRef.current.value = "";
+            }
 
-setSuccessMsg("Document uploaded successfully.");
-toast.success("Document uploaded successfully.");
+            loadDocuments({ silent: true });
         } catch (error) {
             if (!isMountedRef.current) {
                 return;
@@ -457,7 +617,10 @@ toast.success("Document uploaded successfully.");
             setDeletingId(documentToDelete.cacheKey || serverId || "");
             setApiError("");
             setDocuments((currentDocuments) =>
-                currentDocuments.filter((document) => !sameDocument(document, documentToDelete))
+                currentDocuments.filter(
+                    (document) =>
+                        !areDocumentRecordsEquivalent(document, documentToDelete)
+                )
             );
 
             await removeStoredDocument(employeeKey, documentToDelete);
@@ -465,6 +628,8 @@ toast.success("Document uploaded successfully.");
             if (serverId) {
                 await api.delete(API_ENDPOINTS.employeeDocuments.delete(serverId));
             }
+
+            await loadDocuments({ silent: true }).catch(() => { });
 
             if (!isMountedRef.current) {
                 return;
@@ -656,6 +821,75 @@ toast.success("Document uploaded successfully.");
                 </div>
             )}
 
+            <div className="documents-card documents-progress-card">
+                <div className="documents-progress-header">
+                    <div>
+                        <h4>Document Progress Tracker</h4>
+                        <p>
+                            Auto-updated completion summary based on the visible,
+                            deduplicated employee files.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="documents-progress-grid">
+                    {documentProgressGroups.map((group) => (
+                        <div
+                            className="documents-progress-category"
+                            key={group.label}
+                        >
+                            <div className="documents-progress-category-header">
+                                <div>
+                                    <h5>{group.label}</h5>
+                                    <p>
+                                        {group.uploadedCount} of {group.totalCount} uploaded
+                                    </p>
+                                </div>
+
+                                <div
+                                    className={`documents-progress-category-status ${group.completionPercent === 100
+                                        ? "is-complete"
+                                        : "is-pending"
+                                        }`}
+                                >
+                                    {group.completionPercent === 100
+                                        ? "Complete"
+                                        : `${group.pendingCount} pending`}
+                                </div>
+                            </div>
+
+                            <div className="documents-progress-category-bar">
+                                <div
+                                    className="documents-progress-category-fill"
+                                    style={{
+                                        width: `${group.completionPercent}%`,
+                                    }}
+                                />
+                            </div>
+
+                            <div className="documents-progress-type-list">
+                                {group.options.map((option) => (
+                                    <div
+                                        key={option.key}
+                                        className={`documents-progress-type-chip ${option.isUploaded
+                                            ? "is-uploaded"
+                                            : "is-pending"
+                                            }`}
+                                    >
+                                        <span>{option.label}</span>
+                                        <small>
+                                            {option.isUploaded
+                                                ? "Uploaded"
+                                                : "Pending"}
+                                        </small>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
             {!viewMode && (
                 <div className="documents-card premium-upload-card">
                     <div className="premium-upload-top">
@@ -671,70 +905,22 @@ toast.success("Document uploaded successfully.");
             </div> */}
                     </div>
 
-                    <div className="documents-checklist-card">
-                        <h4 className="checklist-title">What you need to upload</h4>
-                        <p className="checklist-subtitle">
-                            Pick a document type, attach the file, and save it in one step.
-                        </p>
-
-                        <div className="documents-checklist-grid">
-                            <div className="checklist-section">
-                                <h5>Education Certificates</h5>
-                                <ul>
-                                    <li>10th Certificate</li>
-                                    <li>Intermediate / 12th Certificate</li>
-                                    <li>Degree Certificate</li>
-                                    <li>Post-Graduation Certificate</li>
-                                </ul>
-                            </div>
-
-                            <div className="checklist-section">
-                                <h5>Identity Documents</h5>
-                                <ul>
-                                    <li>Aadhaar Card</li>
-                                    <li>PAN Card</li>
-                                    <li>Passport</li>
-                                    <li>Passport-size Photo</li>
-                                </ul>
-                            </div>
-
-                            <div className="checklist-section">
-                                <h5>Current Company</h5>
-                                <ul>
-                                    <li>Signed Offer Letter</li>
-                                </ul>
-                            </div>
-
-                            <div className="checklist-section">
-                                <h5>Previous Experience / Internship</h5>
-                                <ul>
-                                    <li>Previous - Offer Letter</li>
-                                    <li>Previous - Appointment Letter</li>
-                                    <li>Previous - Relieving / Experience Letter</li>
-                                </ul>
-                            </div>
-
-                            <div className="checklist-section">
-                                <h5>Last 3 Months Payslips</h5>
-                                <ul>
-                                    <li>Payslip - Month 1</li>
-                                    <li>Payslip - Month 2</li>
-                                    <li>Payslip - Month 3</li>
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-
                     <div className="premium-upload-grid">
                         <div className="premium-input-group">
                             <CompactSearchableDropdown
                                 label="Document Type"
                                 value={selectedDocumentType}
-                                onChange={setSelectedDocumentType}
+                                onChange={(value) => {
+                                    setSelectedDocumentType(value);
+                                    if (apiError) {
+                                        setApiError("");
+                                    }
+                                }}
                                 placeholder="Select Document Type"
                                 searchPlaceholder="Search document types"
-                                groups={DOCUMENT_TYPE_GROUPS}
+                                groups={documentTypeGroups}
                                 disabled={uploading}
+                                error={selectedDocumentTypeError}
                                 menuMaxHeight={180}
                             />
                         </div>
@@ -758,19 +944,16 @@ toast.success("Document uploaded successfully.");
                                     <FaFileAlt aria-hidden="true" />
 
                                     <span
-    className="document-remove-icon"
-    onClick={() => {
-        setSelectedFile(null);
-        setSelectedDocumentType("");
-
-        if (fileInputRef.current) {
-            fileInputRef.current.value = "";
-        };
-    }}
-    
->
-    ×
-</span>
+                                        className="document-remove-icon"
+                                        onClick={() => {
+                                            setSelectedFile(null);
+                                            if (fileInputRef.current) {
+                                                fileInputRef.current.value = "";
+                                            }
+                                        }}
+                                    >
+                                        ×
+                                    </span>
                                 </span>
 
                                 <div className="selected-file-body">
@@ -791,7 +974,12 @@ toast.success("Document uploaded successfully.");
                             type="button"
                             className="premium-upload-btn"
                             onClick={handleUpload}
-                            disabled={uploading || !selectedFile}
+                            disabled={
+                                uploading ||
+                                !selectedFile ||
+                                !selectedDocumentType ||
+                                selectedDocumentTypeIsUploaded
+                            }
                         >
                             {uploading ? (
                                 <>
@@ -863,7 +1051,7 @@ toast.success("Document uploaded successfully.");
                     </div>
                 ) : (
                     <div className="uploaded-documents-list">
-                        {documents.map((document, index) => (
+                        {visibleDocuments.map((document, index) => (
                             <div
                                 key={document.cacheKey || getDocumentServerId(document) || index}
                                 className="uploaded-document-item"
@@ -898,12 +1086,17 @@ toast.success("Document uploaded successfully.");
                                             <span className="document-meta-chip">
                                                 {document.fileType || "File"}
                                             </span>
-                                            <span className="document-meta-chip">
-                                                {formatDocumentSize(document.size)}
-                                            </span>
-                                            <span className="document-meta-chip">
-                                                {formatDateTime(document.uploadedAt)}
-                                            </span>
+                                            {(document.fileSize || document.size) > 0 && (
+                                                <span className="document-meta-chip">
+                                                    {formatDocumentSize(document.fileSize || document.size)}
+                                                </span>
+                                            )}
+
+                                            {document.uploadedAt && (
+                                                <span className="document-meta-chip">
+                                                    {formatDateTime(document.uploadedAt)}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

@@ -301,7 +301,22 @@
   background: #fef3c7;
   color: #d97706;
 }
- 
+
+.status.lop {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.status.mc {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.status.lmc {
+  background: #ffe4e6;
+  color: #be123c;
+}
+
 .status.halfday {
   background: #fde68a;
   color: #b45309;

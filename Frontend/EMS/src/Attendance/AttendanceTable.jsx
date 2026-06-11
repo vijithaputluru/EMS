@@ -210,18 +210,20 @@ function AttendanceTable({
   // HELPERS
   // =========================
   const getEmployeeId = (emp) => {
-    return (
-      emp?.employeeId ||
-      emp?.id ||
-      emp?._id ||
-      emp?.empId ||
-      emp?.staffId ||
-      emp?.userId ||
-      emp?.employee?.employeeId ||
-      emp?.employee?.id ||
-      emp?.employee?._id ||
-      ""
-    );
+  return (
+    emp?.employee_Id ||     // <-- add this
+    emp?.employeeId ||
+    emp?.id ||
+    emp?._id ||
+    emp?.empId ||
+    emp?.staffId ||
+    emp?.userId ||
+    emp?.employee?.employee_Id ||  // <-- add this too
+    emp?.employee?.employeeId ||
+    emp?.employee?.id ||
+    emp?.employee?._id ||
+    ""
+  );
   };
 
   const getEmployeeName = (emp) => {
@@ -913,7 +915,9 @@ function AttendanceTable({
   const normalizeStatus = (status) => {
     const normalizedStatus = String(status || "")
       .trim()
-      .toLowerCase();
+      .toLowerCase()
+      .replace(/[_-]+/g, " ")
+      .replace(/\s+/g, " ");
 
     if (!normalizedStatus) {
       return "";
@@ -927,16 +931,7 @@ function AttendanceTable({
       return "Absent";
     }
 
-    if (
-      normalizedStatus === "ol" ||
-      normalizedStatus === "on leave" ||
-      normalizedStatus === "leave" ||
-      normalizedStatus === "l"
-    ) {
-      return "On Leave";
-    }
-
-    if (normalizedStatus === "lt" || normalizedStatus === "late") {
+    if (normalizedStatus === "l" || normalizedStatus === "late" || normalizedStatus === "lt") {
       return "Late";
     }
 
@@ -948,12 +943,47 @@ function AttendanceTable({
       return "Half Day";
     }
 
+    if (
+      normalizedStatus === "ol" ||
+      normalizedStatus === "on leave" ||
+      normalizedStatus === "leave"
+    ) {
+      return "On Leave";
+    }
+
+    if (
+      normalizedStatus === "loss of pay" ||
+      normalizedStatus === "lop"
+    ) {
+      return "Loss Of Pay";
+    }
+
+    if (
+      normalizedStatus === "missed checkout" ||
+      normalizedStatus === "missed check out" ||
+      normalizedStatus === "mc"
+    ) {
+      return "Missed Checkout";
+    }
+
+    if (
+      normalizedStatus === "late & missed checkout" ||
+      normalizedStatus === "late & missed check out" ||
+      normalizedStatus === "lmc"
+    ) {
+      return "Late & Missed Checkout";
+    }
+
     if (normalizedStatus === "w" || normalizedStatus === "weekend") {
       return "Weekend";
     }
 
     if (normalizedStatus === "h" || normalizedStatus === "holiday") {
       return "Holiday";
+    }
+
+    if (normalizedStatus === "upcoming") {
+      return "Upcoming";
     }
 
     return "";
@@ -990,13 +1020,15 @@ function AttendanceTable({
       return "Upcoming";
     }
 
-    const normalizedStatus = normalizeStatus(
+    const apiStatus =
       employeeRecord?.status ??
       employeeRecord?.attendanceStatus ??
       employeeRecord?.markStatus ??
       employeeRecord?.dayStatus ??
-      employeeRecord?.dailyStatus
-    );
+      employeeRecord?.dailyStatus;
+
+    const normalizedStatus =
+      normalizeStatus(apiStatus);
 
     if (normalizedStatus) {
       return normalizedStatus;
@@ -1023,6 +1055,9 @@ function AttendanceTable({
     if (s === "Weekend") return "badge-weekend";
     if (s === "Upcoming") return "badge-upcoming";
     if (s === "Holiday") return "badge-holiday";
+    if (s === "Loss Of Pay") return "badge-lop";
+    if (s === "Missed Checkout") return "badge-missed-checkout";
+    if (s === "Late & Missed Checkout") return "badge-late-missed-checkout";
 
     return "badge-default";
   };
@@ -1036,6 +1071,9 @@ function AttendanceTable({
     if (status === "Weekend") return "W";
     if (status === "Holiday") return "H";
     if (status === "On Leave") return "OL";
+    if (status === "Loss Of Pay") return "LOP";
+    if (status === "Missed Checkout") return "MC";
+    if (status === "Late & Missed Checkout") return "LMC";
 
     // FUTURE DATES
     if (futureDay) {
@@ -1044,7 +1082,7 @@ function AttendanceTable({
 
     if (status === "Present") return "P";
     if (status === "Absent") return "A";
-    if (status === "Late") return "LT";
+    if (status === "Late") return "L";
     if (status === "Half Day") return "HD";
 
     return "";
@@ -1067,6 +1105,9 @@ function AttendanceTable({
     if (status === "Weekend") return "monthly-status weekend";
     if (status === "Half Day") return "monthly-status halfday";
     if (status === "Holiday") return "monthly-status holiday";
+    if (status === "Loss Of Pay") return "monthly-status lop";
+    if (status === "Missed Checkout") return "monthly-status mc";
+    if (status === "Late & Missed Checkout") return "monthly-status lmc";
 
     return "monthly-status empty";
   };
@@ -1252,6 +1293,9 @@ function AttendanceTable({
       let absent = 0;
       let onLeave = 0;
       let late = 0;
+      let lossOfPay = 0;
+      let missedCheckout = 0;
+      let lateMissedCheckout = 0;
       let weekend = 0;
       let halfDay = 0;
       let holiday = 0;
@@ -1271,6 +1315,9 @@ function AttendanceTable({
         else if (normalizedDay.status === "Absent") absent++;
         else if (normalizedDay.status === "On Leave") onLeave++;
         else if (normalizedDay.status === "Late") late++;
+        else if (normalizedDay.status === "Loss Of Pay") lossOfPay++;
+        else if (normalizedDay.status === "Missed Checkout") missedCheckout++;
+        else if (normalizedDay.status === "Late & Missed Checkout") lateMissedCheckout++;
         else if (normalizedDay.status === "Weekend") weekend++;
         else if (normalizedDay.status === "Half Day") halfDay++;
         else if (normalizedDay.status === "Holiday") holiday++;
@@ -1284,6 +1331,9 @@ function AttendanceTable({
           absent,
           onLeave,
           late,
+          lossOfPay,
+          missedCheckout,
+          lateMissedCheckout,
           weekend,
           halfDay,
           holiday
@@ -1354,7 +1404,10 @@ function AttendanceTable({
         Absent: "absent",
         "On Leave": "onLeave",
         Late: "late",
-        "Half Day": "halfDay"
+        "Half Day": "halfDay",
+        "Loss Of Pay": "lossOfPay",
+        "Missed Checkout": "missedCheckout",
+        "Late & Missed Checkout": "late&MissedCheckout"
       };
 
       const countKey =
@@ -2259,7 +2312,11 @@ function AttendanceTable({
     let onLeave = 0;
     let late = 0;
     let halfDay = 0;
+    let lossOfPay = 0;
+    let missedCheckout = 0;
+    let lateMissedCheckout = 0;
     let weekends = 0;
+    let holidays = 0;
 
     filteredDetailDays.forEach((dayRecord) => {
       const status =
@@ -2271,7 +2328,11 @@ function AttendanceTable({
       if (status === "On Leave") onLeave++;
       if (status === "Late") late++;
       if (status === "Half Day") halfDay++;
+      if (status === "Loss Of Pay") lossOfPay++;
+      if (status === "Missed Checkout") missedCheckout++;
+      if (status === "Late & Missed Checkout") late&MissedCheckout++;
       if (status === "Weekend") weekends++;
+      if (status === "Holiday") holidays++;
 
       totalHours +=
         Number(dayRecord?.resolvedHours || 0);
@@ -2292,7 +2353,11 @@ function AttendanceTable({
       onLeave,
       late,
       halfDay,
-      weekends
+      lossOfPay,
+      missedCheckout,
+      lateMissedCheckout,
+      weekends,
+      holidays
     };
   }, [
     filteredDetailDays,
@@ -2530,7 +2595,7 @@ function AttendanceTable({
 
               <div className="attendance-summary-skeleton">
 
-                {[1, 2, 3, 4, 5, 6].map((item) => (
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((item) => (
                   <div
                     key={item}
                     className="attendance-summary-box skeleton-card"
@@ -2608,11 +2673,46 @@ function AttendanceTable({
                   </h3>
                 </div>
 
+                <div className="attendance-summary-box lop">
+                  <span className="summary-label">Loss Of Pay</span>
+                  <h3>
+                    {
+                      filteredDailyData.filter(
+                        (emp) =>
+                          getResolvedStatus(emp) === "Loss Of Pay"
+                      ).length
+                    }
+                  </h3>
+                </div>
+
+                <div className="attendance-summary-box mc">
+                  <span className="summary-label">Missed Checkout</span>
+                  <h3>
+                    {
+                      filteredDailyData.filter(
+                        (emp) =>
+                          getResolvedStatus(emp) === "Missed Checkout"
+                      ).length
+                    }
+                  </h3>
+                </div>
+
+                <div className="attendance-summary-box lmc">
+                  <span className="summary-label">Late & Missed Checkout</span>
+                  <h3>
+                    {
+                      filteredDailyData.filter(
+                        (emp) =>
+                          getResolvedStatus(emp) === "Late & Missed Checkout"
+                      ).length
+                    }
+                  </h3>
+                </div>
+
                 <div className="attendance-summary-box total">
                   <span className="summary-label">Total</span>
                   <h3>{filteredDailyData.length}</h3>
                 </div>
-
               </div>
 
             )
@@ -2625,13 +2725,19 @@ function AttendanceTable({
 
               <span><i className="legend-dot absent"></i> Absent</span>
 
-              <span><i className="legend-dot leave"></i> On Leave</span>
-
               <span><i className="legend-dot late"></i> Late</span>
 
-              <span><i className="legend-dot weekend"></i> Weekend</span>
-
               <span><i className="legend-dot halfday"></i> Half Day</span>
+
+              <span><i className="legend-dot leave"></i> On Leave</span>
+
+              <span><i className="legend-dot lop"></i> Loss Of Pay</span>
+
+              <span><i className="legend-dot mc"></i> Missed Checkout</span>
+
+              <span><i className="legend-dot lmc"></i> Late & Missed Checkout</span>
+
+              <span><i className="legend-dot weekend"></i> Weekend</span>
 
               <span><i className="legend-dot holiday"></i> Holiday</span>
 
@@ -2776,12 +2882,19 @@ function AttendanceTable({
                           {getEmployeeName(emp).charAt(0).toUpperCase()}
                         </div>
 
-                        <div>
-                          <div className="emp-name" title={getEmployeeName(emp)}>
-                            {getEmployeeName(emp)}
-                          </div>
-                          <div className="emp-dept">{getEmployeeDept(emp)}</div>
-                        </div>
+                       <div>
+  <div className="emp-name" title={getEmployeeName(emp)}>
+    {getEmployeeName(emp)}
+  </div>
+
+  <div className="emp-dept">
+    EMP ID: {getEmployeeId(emp)}
+  </div>
+
+  <div className="emp-dept">
+    {getEmployeeDept(emp)}
+  </div>
+</div>
                       </div>
 
                       <div>
@@ -2835,7 +2948,7 @@ function AttendanceTable({
                   <div
                     className="monthly-grid"
                     style={{
-                      gridTemplateColumns: `260px repeat(${daysArray.length}, 34px) 42px 42px 46px 42px 42px 46px 42px 76px`
+                      gridTemplateColumns: `260px repeat(${daysArray.length}, 34px) 42px 42px 42px 42px 42px 46px 46px 52px 42px 42px 76px`
                     }}
                   >
                     <div
@@ -2920,23 +3033,6 @@ function AttendanceTable({
                     </div>
 
                     <div
-                      className="monthly-head summary-head leave-text"
-                      style={{
-                        position: "sticky",
-                        top: 0,
-                        zIndex: 999,
-                        background: "#f8fafc",
-                        height: "72px",
-                        minHeight: "72px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      OL
-                    </div>
-
-                    <div
                       className="monthly-head summary-head late-text"
                       style={{
                         position: "sticky",
@@ -2950,24 +3046,7 @@ function AttendanceTable({
                         justifyContent: "center",
                       }}
                     >
-                      LT
-                    </div>
-
-                    <div
-                      className="monthly-head summary-head weekend-text"
-                      style={{
-                        position: "sticky",
-                        top: 0,
-                        zIndex: 999,
-                        background: "#f8fafc",
-                        height: "72px",
-                        minHeight: "72px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      W
+                      L
                     </div>
 
                     <div
@@ -2985,6 +3064,91 @@ function AttendanceTable({
                       }}
                     >
                       HD
+                    </div>
+
+                    <div
+                      className="monthly-head summary-head leave-text"
+                      style={{
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 999,
+                        background: "#f8fafc",
+                        height: "72px",
+                        minHeight: "72px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      OL
+                    </div>
+
+                    <div
+                      className="monthly-head summary-head lop-text"
+                      style={{
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 999,
+                        background: "#f8fafc",
+                        height: "72px",
+                        minHeight: "72px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      LOP
+                    </div>
+
+                    <div
+                      className="monthly-head summary-head mc-text"
+                      style={{
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 999,
+                        background: "#f8fafc",
+                        height: "72px",
+                        minHeight: "72px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      MC
+                    </div>
+
+                    <div
+                      className="monthly-head summary-head lmc-text"
+                      style={{
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 999,
+                        background: "#f8fafc",
+                        height: "72px",
+                        minHeight: "72px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      LMC
+                    </div>
+
+                    <div
+                      className="monthly-head summary-head weekend-text"
+                      style={{
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 999,
+                        background: "#f8fafc",
+                        height: "72px",
+                        minHeight: "72px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      W
                     </div>
 
                     <div
@@ -3146,21 +3310,6 @@ function AttendanceTable({
                           </div>
 
                           <div
-                            className="monthly-count leave-text"
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              minHeight: "58px",
-                              background: "#fff",
-                              borderBottom: "1px solid #eef2f7",
-                              marginTop: "-1px",
-                            }}
-                          >
-                            {counts.onLeave || 0}
-                          </div>
-
-                          <div
                             className="monthly-count late-text"
                             style={{
                               display: "flex",
@@ -3176,21 +3325,6 @@ function AttendanceTable({
                           </div>
 
                           <div
-                            className="monthly-count weekend-text"
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              minHeight: "58px",
-                              background: "#fff",
-                              borderBottom: "1px solid #eef2f7",
-                              marginTop: "-1px",
-                            }}
-                          >
-                            {counts.weekend || 0}
-                          </div>
-
-                          <div
                             className="monthly-count halfday-text"
                             style={{
                               display: "flex",
@@ -3203,6 +3337,81 @@ function AttendanceTable({
                             }}
                           >
                             {counts.halfDay || 0}
+                          </div>
+
+                          <div
+                            className="monthly-count leave-text"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              minHeight: "58px",
+                              background: "#fff",
+                              borderBottom: "1px solid #eef2f7",
+                              marginTop: "-1px",
+                            }}
+                          >
+                            {counts.onLeave || 0}
+                          </div>
+
+                          <div
+                            className="monthly-count lop-text"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              minHeight: "58px",
+                              background: "#fff",
+                              borderBottom: "1px solid #eef2f7",
+                              marginTop: "-1px",
+                            }}
+                          >
+                            {counts.lossOfPay || 0}
+                          </div>
+
+                          <div
+                            className="monthly-count mc-text"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              minHeight: "58px",
+                              background: "#fff",
+                              borderBottom: "1px solid #eef2f7",
+                              marginTop: "-1px",
+                            }}
+                          >
+                            {counts.missedCheckout || 0}
+                          </div>
+
+                          <div
+                            className="monthly-count lmc-text"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              minHeight: "58px",
+                              background: "#fff",
+                              borderBottom: "1px solid #eef2f7",
+                              marginTop: "-1px",
+                            }}
+                          >
+                            {counts.lateMissedCheckout || 0}
+                          </div>
+
+                          <div
+                            className="monthly-count weekend-text"
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              minHeight: "58px",
+                              background: "#fff",
+                              borderBottom: "1px solid #eef2f7",
+                              marginTop: "-1px",
+                            }}
+                          >
+                            {counts.weekend || 0}
                           </div>
 
                           <div
@@ -3842,19 +4051,39 @@ function AttendanceTable({
                     <h3>{detailSummary.onLeave}</h3>
                   </div>
 
-                  <div className="summary-card blue">
-                    <span>Half Day</span>
-                    <h3>{detailSummary.halfDay}</h3>
-                  </div>
-
                   <div className="summary-card orange">
                     <span>Late</span>
                     <h3>{detailSummary.late}</h3>
                   </div>
 
+                  <div className="summary-card blue">
+                    <span>Half Day</span>
+                    <h3>{detailSummary.halfDay}</h3>
+                  </div>
+
+                  <div className="summary-card gray">
+                    <span>Loss Of Pay</span>
+                    <h3>{detailSummary.lossOfPay}</h3>
+                  </div>
+
+                  <div className="summary-card amber">
+                    <span>Missed Checkout</span>
+                    <h3>{detailSummary.missedCheckout}</h3>
+                  </div>
+
+                  <div className="summary-card rose">
+                    <span>Late & Missed Checkout</span>
+                    <h3>{detailSummary.lateMissedCheckout}</h3>
+                  </div>
+
                   <div className="summary-card gray">
                     <span>Weekends</span>
                     <h3>{detailSummary.weekends}</h3>
+                  </div>
+
+                  <div className="summary-card gray">
+                    <span>Holidays</span>
+                    <h3>{detailSummary.holidays}</h3>
                   </div>
 
                   <div className="summary-card gray">

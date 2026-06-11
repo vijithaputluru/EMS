@@ -11,29 +11,75 @@ const ATTENDANCE_TABS = [
   "Late",
   "Absent",
   "Half Day",
-  "On Leave"
+  "On Leave",
+  "Loss Of Pay",
+  "Missed Checkout",
+  "Late & Missed Checkout"
 ];
+
+const normalizeStatusQueryValue = (value) => {
+  const normalizedValue = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  if (!normalizedValue) {
+    return "";
+  }
+
+  if (["present", "p"].includes(normalizedValue)) {
+    return "Present";
+  }
+
+  if (["late", "l", "lt"].includes(normalizedValue)) {
+    return "Late";
+  }
+
+  if (["absent", "a"].includes(normalizedValue)) {
+    return "Absent";
+  }
+
+  if (["half day", "halfday", "hd"].includes(normalizedValue)) {
+    return "Half Day";
+  }
+
+  if (["on leave", "leave", "ol"].includes(normalizedValue)) {
+    return "On Leave";
+  }
+
+  if (["loss of pay", "lop"].includes(normalizedValue)) {
+    return "Loss Of Pay";
+  }
+
+  if (
+    ["missed checkout", "missed check out", "mc"].includes(
+      normalizedValue
+    )
+  ) {
+    return "Missed Checkout";
+  }
+
+  if (
+    ["late & missed checkout", "late & missed check out", "lmc"].includes(
+      normalizedValue
+    )
+  ) {
+    return "Late & Missed Checkout";
+  }
+
+  return "";
+};
 
 const getInitialAttendanceState = (searchString) => {
   const params = new URLSearchParams(searchString);
 
-  const status = String(
-    params.get("status") || ""
-  )
-    .trim()
-    .toLowerCase();
+  const status = normalizeStatusQueryValue(params.get("status"));
 
-  if (status === "present") {
+  if (status) {
     return {
       viewMode: "daily",
-      filter: "Present",
-    };
-  }
-
-  if (status === "absent") {
-    return {
-      viewMode: "daily",
-      filter: "Absent",
+      filter: status,
     };
   }
 

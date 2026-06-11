@@ -65,6 +65,8 @@ namespace EmployeeManagementSystem.Services
                 "W" => "Weekend",
                 "H" => "Holiday",
                 "LOP" => "Loss Of Pay",
+                "MC" => "Missed Checkout",
+                "LMC" => "Late & Missed Checkout",
                 _ => status
             };
 
@@ -284,7 +286,9 @@ namespace EmployeeManagementSystem.Services
         //---------------------------------------
 
         public async Task<List<object>> GetTodayAttendance(string status = "All", string search = "")
+
         {
+            await CheckMissingCheckouts();
             var today = DateTime.UtcNow.Date;
 
             var employees = await _context.Employees
@@ -313,6 +317,7 @@ namespace EmployeeManagementSystem.Services
                 result.Add(new
                 {
                     emp.Name,
+                    emp.Employee_Id,
                     emp.Department,
                     Status = finalStatus,
                     CheckIn = att?.Check_In != null ? (DateTime?)ConvertToIST(att.Check_In.Value) : null,
@@ -332,6 +337,7 @@ namespace EmployeeManagementSystem.Services
 
         public async Task<List<AdminEmployeeAttendanceDto>> GetAllEmployeeAttendance(int month, int year)
         {
+            await CheckMissingCheckouts();
             var employees = await _context.Employees
                 .AsNoTracking()
                 .AsNoTracking().ToListAsync();
@@ -438,6 +444,7 @@ namespace EmployeeManagementSystem.Services
         public async Task<IActionResult> GetWeeklyAttendance(ClaimsPrincipal user)
 
         {
+            await CheckMissingCheckouts();
 
             var emp = await GetEmployee(user);
 
@@ -553,6 +560,7 @@ namespace EmployeeManagementSystem.Services
         public async Task<IActionResult> GetPreviousWeekAttendance(ClaimsPrincipal user)
 
         {
+            await CheckMissingCheckouts();
 
             var emp = await GetEmployee(user);
 
@@ -654,6 +662,7 @@ namespace EmployeeManagementSystem.Services
         public async Task<IActionResult> GetCurrentMonthAttendance(ClaimsPrincipal user)
 
         {
+            await CheckMissingCheckouts();
 
             var emp = await GetEmployee(user);
 
@@ -812,6 +821,7 @@ namespace EmployeeManagementSystem.Services
         public async Task<IActionResult> GetPreviousMonthAttendance(ClaimsPrincipal user)
 
         {
+            await CheckMissingCheckouts();
 
             var emp = await GetEmployee(user);
 
@@ -936,12 +946,44 @@ namespace EmployeeManagementSystem.Services
 
         }
 
-        public async Task CheckMissedCheckIns() { }
+        public async Task CheckMissedCheckIns()
+        {
+            await Task.CompletedTask;
+        }
+
 
         public async Task CheckMissingCheckouts()
         {
-            
-}
+            var today = DateTime.UtcNow.Date;
+
+            var records = await _context.Attendance
+                .Where(a =>
+                    a.Attendance_Date.Date < today &&
+                    a.Check_In != null &&
+                    a.Check_Out == null &&
+                    a.Status != "LOP" &&
+                    a.Status != "MC")
+                .ToListAsync();
+
+
+            foreach (var record in records)
+            {
+                var istCheckIn = ConvertToIST(record.Check_In.Value);
+
+                if (istCheckIn.TimeOfDay > new TimeSpan(9, 15, 0))
+                {
+                    record.Status = "LMC";
+                }
+                else
+                {
+                    record.Status = "MC";
+                }
+
+                await _context.SaveChangesAsync();
+            }
+        }
+
+
         public async Task<object> GetTodayStats()
         {
             await CheckMissingCheckouts();
@@ -952,24 +994,30 @@ namespace EmployeeManagementSystem.Services
 
             var todayAttendance = await _context.Attendance
                 .Where(a => a.Attendance_Date.Date == today)
-                .AsNoTracking().ToListAsync();
+                .AsNoTracking()
+                .ToListAsync();
 
             var presentCount = todayAttendance.Count(a => a.Status == "Present");
 
             var lateCount = todayAttendance.Count(a => a.Status == "Late");
 
-            var absentCount = totalEmployees - presentCount;
+            var missedCheckoutCount = todayAttendance.Count(a => a.Status == "MC");
+
+            var lopCount = todayAttendance.Count(a => a.Status == "LOP");
+
+            var absentCount = totalEmployees -
+                (presentCount + lateCount + missedCheckoutCount + lopCount);
 
             return new
             {
                 TotalEmployees = totalEmployees,
                 Present = presentCount,
-                Absent = absentCount,
-                Late = lateCount
+                Late = lateCount,
+                MissedCheckout = missedCheckoutCount,
+                LossOfPay = lopCount,
+                Absent = absentCount
             };
         }
-
-
         public async Task<IActionResult> GetMonthAttendance(
     ClaimsPrincipal user,
     int month,
@@ -1090,7 +1138,9 @@ namespace EmployeeManagementSystem.Services
         }
 
         public async Task<object> GetYearlySummary(int year)
+
         {
+            await CheckMissingCheckouts();
             var result = new List<object>();
 
             for (int month = 1; month <= 12; month++)
@@ -1249,6 +1299,7 @@ namespace EmployeeManagementSystem.Services
         public async Task<AttendanceSummaryDto> GetMonthlyAttendanceSummary(string employeeId, int month, int year)
 
         {
+            await CheckMissingCheckouts();
 
             var start = new DateTime(year, month, 1, 0, 0, 0, DateTimeKind.Utc);
 
@@ -1510,6 +1561,7 @@ namespace EmployeeManagementSystem.Services
 
         public async Task<byte[]> ExportMonthlyAttendance(int month, int year)
         {
+            await CheckMissingCheckouts();
             var attendance = await GetAllEmployeeAttendance(month, year);
             var monthName = new DateTime(year, month, 1).ToString("MMMM");
 
@@ -1632,6 +1684,7 @@ namespace EmployeeManagementSystem.Services
 
         public async Task<byte[]> ExportAbsentEmployees(DateTime date)
         {
+            await CheckMissingCheckouts();
             date = date.Date;
 
             var employees = await _context.Employees
@@ -1678,6 +1731,7 @@ namespace EmployeeManagementSystem.Services
 
         public async Task<byte[]> ExportPresentAndLateEmployees(DateTime date)
         {
+            await CheckMissingCheckouts();
             date = date.Date;
 
             var attendance = await _context.Attendance
@@ -1737,6 +1791,7 @@ namespace EmployeeManagementSystem.Services
 
         public async Task<byte[]> ExportWeeklyAttendance(DateTime weekStartDate)
         {
+            await CheckMissingCheckouts();
             var monday = DateTime.SpecifyKind(weekStartDate.Date, DateTimeKind.Utc);
             var weekEnd = monday.AddDays(7);
 
@@ -1891,6 +1946,7 @@ namespace EmployeeManagementSystem.Services
         }
         public async Task<byte[]> ExportDailyAttendance(DateTime date)
         {
+            await CheckMissingCheckouts();
             date = date.Date;
 
             var employees = await _context.Employees

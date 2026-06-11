@@ -1,14 +1,9 @@
 ﻿using EmployeeManagementSystem.Data;
 using EmployeeManagementSystem.DTOs;
-using EmployeeManagementSystem.DTOs;
 using EmployeeManagementSystem.Interfaces;
 using EmployeeManagementSystem.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
+
 
 namespace EmployeeManagementSystem.Services
 {
@@ -27,7 +22,40 @@ namespace EmployeeManagementSystem.Services
         {
             if (dto.Files == null || !dto.Files.Any())
                 return "Please select at least one file";
+            if (string.IsNullOrWhiteSpace(dto.DocumentType))
+                return "Please select document type";
+            var allowedDocumentTypes = new List<string>
+{
+    "10th Certificate",
+    "Intermediate / 12th Certificate",
+    "Degree Certificate",
+    "Post Graduation Certificate",
+    "Aadhaar Card",
+    "PAN Card",
+    "Passport",
+    "Passport Size Photo",
+    "Offer Letter",
+    "Appointment Letter",
+    "Relieving Letter",
+    "Payslip Month 1",
+    "Payslip Month 2",
+    "Payslip Month 3"
+};
 
+            if (!allowedDocumentTypes.Contains(dto.DocumentType))
+            {
+                return "Invalid document type";
+            }
+
+            var alreadyUploaded = await _context.EmployeeDocuments
+                .AnyAsync(x =>
+                    x.Employee_Id == dto.EmployeeId &&
+                    x.Document_Type == dto.DocumentType);
+
+            if (alreadyUploaded)
+            {
+                return $"{dto.DocumentType} already uploaded";
+            }
             foreach (var file in dto.Files!)
             {
                 if (file.Length > 2 * 1024 * 1024)
@@ -117,13 +145,25 @@ namespace EmployeeManagementSystem.Services
 
             return "Documents uploaded successfully";
         }
-
-        public async Task<List<EmployeeDocument>>
-            GetEmployeeDocuments(string employeeId)
+        public async Task<List<EmployeeDocumentResponseDto>>
+        GetEmployeeDocuments(string employeeId)
         {
-            return await _context.EmployeeDocuments
+            var documents = await _context.EmployeeDocuments
                 .Where(x => x.Employee_Id == employeeId)
                 .ToListAsync();
+
+            return documents.Select(x => new EmployeeDocumentResponseDto
+            {
+                Id = x.Id,
+                FileName = x.File_Name,
+                DocumentType = x.Document_Type,
+                FileType = Path.GetExtension(x.File_Name)
+                                .Replace(".", "")
+                                .ToUpper(),
+                FileSizeMB = x.File_Size_MB,
+                UploadedDate = x.Uploaded_Date,
+                VerificationStatus = x.Verification_Status
+            }).ToList();
         }
 
         public async Task<byte[]> DownloadDocument(int id)

@@ -432,10 +432,10 @@ function ReviewSubmit({
                     value={formatDocumentSize(doc.size)}
                   />
 
-                  <ReviewField
+                  {/* <ReviewField
                     label="Uploaded Date"
                     value={formatDateTime(doc.uploadedAt || doc.createdAt)}
-                  />
+                  /> */}
 
                   {doc.fileUrl && (
                     <div className="review-item review-item-full">
