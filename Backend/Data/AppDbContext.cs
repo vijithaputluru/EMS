@@ -127,6 +127,7 @@ namespace EmployeeManagementSystem.Data
 
         public DbSet<MonitoringLog> MonitoringLogs { get; set; }
         public DbSet<EmployeeDocument> EmployeeDocuments { get; set; }
+        public DbSet<BreakLog> BreakLogs { get; set; }
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

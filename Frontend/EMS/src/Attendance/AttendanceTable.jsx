@@ -149,7 +149,8 @@ function AttendanceTable({
   filter = "All",
   search = "",
   month,
-  year
+  year,
+  selectedDate
 }) {
   const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -210,20 +211,20 @@ function AttendanceTable({
   // HELPERS
   // =========================
   const getEmployeeId = (emp) => {
-  return (
-    emp?.employee_Id ||     // <-- add this
-    emp?.employeeId ||
-    emp?.id ||
-    emp?._id ||
-    emp?.empId ||
-    emp?.staffId ||
-    emp?.userId ||
-    emp?.employee?.employee_Id ||  // <-- add this too
-    emp?.employee?.employeeId ||
-    emp?.employee?.id ||
-    emp?.employee?._id ||
-    ""
-  );
+    return (
+      emp?.employee_Id ||     // <-- add this
+      emp?.employeeId ||
+      emp?.id ||
+      emp?._id ||
+      emp?.empId ||
+      emp?.staffId ||
+      emp?.userId ||
+      emp?.employee?.employee_Id ||  // <-- add this too
+      emp?.employee?.employeeId ||
+      emp?.employee?.id ||
+      emp?.employee?._id ||
+      ""
+    );
   };
 
   const getEmployeeName = (emp) => {
@@ -1134,12 +1135,21 @@ function AttendanceTable({
       setLoading(true);
       startPerformanceTimer(timerLabel);
 
-      const res = await api.get(API_ENDPOINTS.attendance.today, {
-        signal,
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const todayDate = selectedDate || getTodayInputValue();
+
+      const res = await api.get(
+        API_ENDPOINTS.attendance.today,
+        {
+          signal,
+          params: {
+            date: todayDate,
+            status: filter || "All"
+          },
+          headers: {
+            Authorization: `Bearer ${token}`,
+          }
         }
-      });
+      );
 
       const raw = Array.isArray(res.data)
         ? res.data
@@ -1173,7 +1183,7 @@ function AttendanceTable({
         setLoading(false);
       }
     }
-  }, [token]);
+  }, [token, selectedDate, filter]);
 
   const fetchMonthlyAttendance = useCallback(async (requestId, signal) => {
     let canceled = false;
@@ -1247,7 +1257,8 @@ function AttendanceTable({
     fetchTodayAttendance,
     viewMode,
     monthNum,
-    yearNum
+    yearNum,
+    selectedDate
   ]);
 
   // =========================
@@ -2330,7 +2341,7 @@ function AttendanceTable({
       if (status === "Half Day") halfDay++;
       if (status === "Loss Of Pay") lossOfPay++;
       if (status === "Missed Checkout") missedCheckout++;
-      if (status === "Late & Missed Checkout") late&MissedCheckout++;
+      if (status === "Late & Missed Checkout") late & MissedCheckout++;
       if (status === "Weekend") weekends++;
       if (status === "Holiday") holidays++;
 
@@ -2882,19 +2893,19 @@ function AttendanceTable({
                           {getEmployeeName(emp).charAt(0).toUpperCase()}
                         </div>
 
-                       <div>
-  <div className="emp-name" title={getEmployeeName(emp)}>
-    {getEmployeeName(emp)}
-  </div>
+                        <div>
+                          <div className="emp-name" title={getEmployeeName(emp)}>
+                            {getEmployeeName(emp)}
+                          </div>
 
-  <div className="emp-dept">
-    EMP ID: {getEmployeeId(emp)}
-  </div>
+                          <div className="emp-dept">
+                            EMP ID: {getEmployeeId(emp)}
+                          </div>
 
-  <div className="emp-dept">
-    {getEmployeeDept(emp)}
-  </div>
-</div>
+                          <div className="emp-dept">
+                            {getEmployeeDept(emp)}
+                          </div>
+                        </div>
                       </div>
 
                       <div>

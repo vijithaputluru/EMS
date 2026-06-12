@@ -101,7 +101,7 @@ namespace EmployeeManagementSystem.Services
         //---------------------------------------
         public async Task<IActionResult> CheckIn(ClaimsPrincipal user)
         {
-           
+
             var emp = await GetEmployee(user);
 
             if (emp == null)
@@ -212,12 +212,19 @@ namespace EmployeeManagementSystem.Services
             return new OkObjectResult(new
             {
                 Message = "Check-in successful",
+
+                CheckInTime = ConvertToIST(now)
+         .ToString("hh:mm:ss tt"),
+
+                Status = status,
+
                 MissedCheckouts = missedCheckoutCount,
+
                 Reminder = missedCheckoutCount > 0
-    ? $"You have {missedCheckoutCount} missed checkout(s) this week. On the 3rd missed checkout, LOP will be applied."
-    : null
-        });
-           
+         ? $"You have {missedCheckoutCount} missed checkout(s) this week. On the 3rd missed checkout, LOP will be applied."
+         : null
+            });
+
         }
 
         //---------------------------------------
@@ -234,6 +241,7 @@ namespace EmployeeManagementSystem.Services
 
             if (emp == null) return new UnauthorizedObjectResult("Invalid user");
 
+
             var today = DateTime.UtcNow.Date;
 
             var att = await _context.Attendance
@@ -247,16 +255,28 @@ namespace EmployeeManagementSystem.Services
             if (att.Check_Out != null)
 
                 return new BadRequestObjectResult("Already checked out");
+            var activeBreak = await _context.BreakLogs
+    .AnyAsync(x =>
+        x.EmployeeId == emp.Employee_Id &&
+        x.BreakEnd == null);
+
+            if (activeBreak)
+            {
+                return new BadRequestObjectResult(
+                    "Please end your break before checkout");
+            }
 
             var now = DateTime.UtcNow;
 
             att.Check_Out = now;
 
-            var minutes = (int)(now - att.Check_In.Value).TotalMinutes;
+            var totalMinutes =
+     (int)(now - att.Check_In.Value).TotalMinutes;
 
-            att.WorkingMinutes = minutes;
+            att.WorkingMinutes =
+                totalMinutes - att.TotalBreakMinutes;
 
-            var hours = minutes / 60.0;
+            var hours = att.WorkingMinutes / 60.0;
 
             if (hours >= 3 && hours < 4)
                 att.Status = "Half Day";
@@ -268,15 +288,195 @@ namespace EmployeeManagementSystem.Services
                 {
                     att.Status = "Present";
                 }
-            
-        }
+
+            }
             else
                 att.Status = "Absent";
 
             await _context.SaveChangesAsync();
 
-            return new OkObjectResult("Check-out successful");
+            return new OkObjectResult(new
+            {
+                Message = "Check-out successful",
 
+                CheckOutTime = ConvertToIST(att.Check_Out.Value)
+          .ToString("hh:mm:ss tt"),
+
+                WorkingHours = FormatHours(att.WorkingMinutes),
+
+                BreakMinutes = att.TotalBreakMinutes,
+
+                Status = att.Status
+            });
+
+        }
+
+
+        public async Task<IActionResult> StartBreak(ClaimsPrincipal user)
+        {
+            var emp = await GetEmployee(user);
+
+            if (emp == null)
+                return new UnauthorizedObjectResult("Invalid user");
+
+            var today = DateTime.UtcNow.Date;
+
+            var attendance = await _context.Attendance
+                .FirstOrDefaultAsync(x =>
+                    x.Employee_Id == emp.Employee_Id &&
+                    x.Attendance_Date.Date == today);
+            if (attendance.Check_In == null)
+            {
+                return new BadRequestObjectResult(
+                    "Please check in before starting a break");
+            }
+
+            if (attendance == null)
+                return new BadRequestObjectResult("Please check in first");
+
+            if (attendance.Check_Out != null)
+                return new BadRequestObjectResult("Already checked out");
+
+            var activeBreak = await _context.BreakLogs
+                .AnyAsync(x =>
+                    x.EmployeeId == emp.Employee_Id &&
+                    x.BreakEnd == null);
+
+            if (activeBreak)
+                return new BadRequestObjectResult("Break already started");
+            var breakAlreadyTaken = await _context.BreakLogs
+    .AnyAsync(x =>
+        x.EmployeeId == emp.Employee_Id &&
+        x.AttendanceId == attendance.Id);
+
+            if (breakAlreadyTaken)
+            {
+                return new BadRequestObjectResult(
+                    "You have already used your break for today.");
+            }
+
+            _context.BreakLogs.Add(new BreakLog
+            {
+                AttendanceId = attendance.Id,
+                EmployeeId = emp.Employee_Id,
+                BreakStart = DateTime.UtcNow
+            });
+
+            await _context.SaveChangesAsync();
+
+            return new OkObjectResult(new
+            {
+                Message = "Break started",
+                BreakStartTime = ConvertToIST(
+          DateTime.UtcNow)
+          .ToString("hh:mm:ss tt")
+            });
+        }
+
+
+        public async Task<IActionResult> EndBreak(ClaimsPrincipal user)
+        {
+            var emp = await GetEmployee(user);
+
+            if (emp == null)
+                return new UnauthorizedObjectResult("Invalid user");
+
+            var activeBreak = await _context.BreakLogs
+                .FirstOrDefaultAsync(x =>
+                    x.EmployeeId == emp.Employee_Id &&
+                    x.BreakEnd == null);
+
+            if (activeBreak == null)
+                return new BadRequestObjectResult("No active break found");
+
+            activeBreak.BreakEnd = DateTime.UtcNow;
+
+            activeBreak.BreakMinutes =
+                (int)(activeBreak.BreakEnd.Value -
+                      activeBreak.BreakStart).TotalMinutes;
+
+            var attendance = await _context.Attendance
+                .FirstOrDefaultAsync(x => x.Id == activeBreak.AttendanceId);
+
+            if (attendance != null)
+            {
+                attendance.TotalBreakMinutes += activeBreak.BreakMinutes;
+            }
+
+            await _context.SaveChangesAsync();
+
+            return new OkObjectResult(new
+            {
+                Message = "Break ended",
+                BreakStartTime = ConvertToIST(activeBreak.BreakStart)
+         .ToString("hh:mm:ss tt"),
+
+                BreakEndTime = ConvertToIST(activeBreak.BreakEnd.Value)
+         .ToString("hh:mm:ss tt"),
+
+                BreakMinutes = activeBreak.BreakMinutes
+            });
+        }
+
+        public async Task<IActionResult> GetTodayBreakSummary(ClaimsPrincipal user)
+        {
+            var emp = await GetEmployee(user);
+
+            if (emp == null)
+                return new UnauthorizedObjectResult("Invalid user");
+
+            var today = DateTime.UtcNow.Date;
+
+            var attendance = await _context.Attendance
+                .FirstOrDefaultAsync(x =>
+                    x.Employee_Id == emp.Employee_Id &&
+                    x.Attendance_Date.Date == today);
+
+            if (attendance == null)
+            {
+                return new OkObjectResult(new
+                {
+                    TotalBreaks = 0,
+                    TotalBreakMinutes = 0,
+                    IsOnBreak = false,
+                    CurrentBreakStart = (string?)null
+                });
+            }
+
+            var breakLogs = await _context.BreakLogs
+                .Where(x => x.AttendanceId == attendance.Id)
+                .OrderBy(x => x.BreakStart)
+                .ToListAsync();
+
+            var activeBreak = breakLogs
+                .FirstOrDefault(x => x.BreakEnd == null);
+
+            return new OkObjectResult(new
+            {
+                TotalBreaks = breakLogs.Count,
+
+                TotalBreakMinutes = attendance.TotalBreakMinutes,
+
+                IsOnBreak = activeBreak != null,
+
+                CurrentBreakStart = activeBreak != null
+                    ? ConvertToIST(activeBreak.BreakStart)
+                        .ToString("dd-MM-yyyy hh:mm tt")
+                    : null,
+
+                BreakHistory = breakLogs.Select(x => new
+                {
+                    BreakStart = ConvertToIST(x.BreakStart)
+                        .ToString("dd-MM-yyyy hh:mm tt"),
+
+                    BreakEnd = x.BreakEnd != null
+                        ? ConvertToIST(x.BreakEnd.Value)
+                            .ToString("dd-MM-yyyy hh:mm tt")
+                        : null,
+
+                    BreakMinutes = x.BreakMinutes
+                })
+            });
         }
 
         //---------------------------------------
@@ -285,21 +485,23 @@ namespace EmployeeManagementSystem.Services
 
         //---------------------------------------
 
-        public async Task<List<object>> GetTodayAttendance(string status = "All", string search = "")
-
+        public async Task<List<object>> GetAttendanceByDate(
+      DateTime date,
+      string status = "All",
+      string search = "")
         {
             await CheckMissingCheckouts();
-            var today = DateTime.UtcNow.Date;
+
+            date = date.Date;
 
             var employees = await _context.Employees
                 .AsNoTracking()
-                .AsNoTracking().ToListAsync();
+                .ToListAsync();
 
-            // ✅ Load all attendance once
             var attendanceList = await _context.Attendance
                 .AsNoTracking()
-                .Where(x => x.Attendance_Date == today)
-               .AsNoTracking().ToListAsync();
+                .Where(x => x.Attendance_Date.Date == date)
+                .ToListAsync();
 
             var result = new List<object>();
 
@@ -308,27 +510,43 @@ namespace EmployeeManagementSystem.Services
                 var att = attendanceList
                     .FirstOrDefault(x => x.Employee_Id == emp.Employee_Id);
 
-                string finalStatus = att != null ? MapStatus(att.Status) : "Absent";
+                string finalStatus = att != null
+                    ? MapStatus(att.Status)
+                    : "Absent";
 
                 if (!string.Equals(status, "All", StringComparison.OrdinalIgnoreCase) &&
                     !string.Equals(finalStatus, status, StringComparison.OrdinalIgnoreCase))
                     continue;
+
+                if (!string.IsNullOrWhiteSpace(search))
+                {
+                    if (!(emp.Name?.Contains(search, StringComparison.OrdinalIgnoreCase) == true ||
+                          emp.Employee_Id?.Contains(search, StringComparison.OrdinalIgnoreCase) == true ||
+                          emp.Department?.Contains(search, StringComparison.OrdinalIgnoreCase) == true))
+                    {
+                        continue;
+                    }
+                }
 
                 result.Add(new
                 {
                     emp.Name,
                     emp.Employee_Id,
                     emp.Department,
+                    Date = date.ToString("yyyy-MM-dd"),
                     Status = finalStatus,
-                    CheckIn = att?.Check_In != null ? (DateTime?)ConvertToIST(att.Check_In.Value) : null,
-                    CheckOut = att?.Check_Out != null ? (DateTime?)ConvertToIST(att.Check_Out.Value) : null,
+                    CheckIn = att?.Check_In != null
+                        ? (DateTime?)ConvertToIST(att.Check_In.Value)
+                        : null,
+                    CheckOut = att?.Check_Out != null
+                        ? (DateTime?)ConvertToIST(att.Check_Out.Value)
+                        : null,
                     Hours = FormatHours(att?.WorkingMinutes ?? 0)
                 });
             }
 
             return result;
         }
-
         //---------------------------------------
 
         // ADMIN - MONTHLY
@@ -487,7 +705,7 @@ namespace EmployeeManagementSystem.Services
                     {
                         Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "W",
+                        Status = "Weekend",
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
                         Hours = "0h 0m"
@@ -506,7 +724,7 @@ namespace EmployeeManagementSystem.Services
                     {
                         Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "H",
+                        Status = "Holiday",
                         HolidayName = holiday.Holiday_Name,
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
@@ -532,14 +750,26 @@ namespace EmployeeManagementSystem.Services
                 string status;
 
                 if (date.Date > todayIst)
+                {
                     status = "-";
+                }
                 else if (att != null)
-                    status = att.Status == "Half Day" ? "HD"
-                           : att.Status == "Present" ? "P"
-                           : att.Status == "Late" ? "P"
-                           : att.Status;
+                {
+                    status = att.Status switch
+                    {
+                        "Present" => "Present",
+                        "Late" => "Late",
+                        "Half Day" => "Half Day",
+                        "LOP" => "Loss Of Pay",
+                        "MC" => "Missed Checkout",
+                        "LMC" => "Late Missed Checkout",
+                        _ => att.Status
+                    };
+                }
                 else
-                    status = "A";
+                {
+                    status = "Absent";
+                }
 
                 result.Add(new
                 {
@@ -552,10 +782,10 @@ namespace EmployeeManagementSystem.Services
                 });
             }
 
-                return new OkObjectResult(result);
+            return new OkObjectResult(result);
 
-            }
-        
+        }
+
 
         public async Task<IActionResult> GetPreviousWeekAttendance(ClaimsPrincipal user)
 
@@ -602,7 +832,7 @@ namespace EmployeeManagementSystem.Services
                     {
                         Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "W",
+                        Status = "Weekend",
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
                         Hours = "0h 0m"
@@ -620,7 +850,7 @@ namespace EmployeeManagementSystem.Services
                     {
                         Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "H",
+                        Status = "Holiday",
                         HolidayName = holiday.Holiday_Name, // ✅ ADD THIS
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
@@ -641,11 +871,17 @@ namespace EmployeeManagementSystem.Services
                     Day = date.DayOfWeek.ToString(),
                     Date = date.ToString("dd MMM yyyy"),
                     Status = att != null
-    ? (att.Status == "Half Day" ? "HD"
-    : att.Status == "Present" ? "P"
-    : att.Status == "Late" ? "P"
-    : att.Status)
-    : "A",
+? att.Status switch
+{
+    "Present" => "Present",
+    "Late" => "Late",
+    "Half Day" => "Half Day",
+    "LOP" => "Loss Of Pay",
+    "MC" => "Missed Checkout",
+    "LMC" => "Late Missed Checkout",
+    _ => att.Status
+}
+: "Absent",
 
                     CheckIn = checkIn?.ToString("hh:mm tt"),
                     CheckOut = checkOut?.ToString("hh:mm tt"),
@@ -1449,16 +1685,16 @@ namespace EmployeeManagementSystem.Services
                 }
             }
 
-                return new AttendanceSummaryDto
-                {
-                    PresentDays = present,
-                    AbsentDays = absent,
-                    LopDays = lopDays
-                };
+            return new AttendanceSummaryDto
+            {
+                PresentDays = present,
+                AbsentDays = absent,
+                LopDays = lopDays
+            };
 
-            }
-        
-        
+        }
+
+
 
 
         public async Task<IActionResult> GetEmployeeWorkingHours(
@@ -1976,8 +2212,10 @@ namespace EmployeeManagementSystem.Services
         }).OrderBy(x => x.Status == "Present" ? 1 : x.Status == "Late" ? 2 : x.Status == "Half Day" ? 3 : x.Status == "On Leave" ? 4 : 5).ThenBy(x => x.Attendance?.Check_In);
 
             var presentEmployees = reportData
-
-        .Where(x => x.Attendance != null).ToList();
+     .Where(x => x.Attendance != null &&
+                 x.Attendance.Status != "MC" &&
+                 x.Attendance.Status != "LOP")
+     .ToList();
 
             var absentEmployees = reportData
                 .Where(x => x.Attendance == null)
@@ -1989,7 +2227,26 @@ namespace EmployeeManagementSystem.Services
                     ConvertToIST(x.Attendance.Check_In.Value)
                         .TimeOfDay > new TimeSpan(9, 15, 0))
                 .ToList();
+            var lopEmployees = reportData
+    .Where(x =>
+        x.Attendance != null &&
+        x.Attendance.Status == "LOP")
+    .ToList();
 
+            var missedCheckoutEmployees = reportData
+                .Where(x =>
+                    x.Attendance != null &&
+                    x.Attendance.Status == "MC")
+                .ToList();
+
+            var lateMissedCheckoutEmployees = reportData
+                .Where(x =>
+                    x.Attendance != null &&
+                    x.Attendance.Status == "MC" &&
+                    x.Attendance.Check_In != null &&
+                    ConvertToIST(x.Attendance.Check_In.Value)
+                        .TimeOfDay > new TimeSpan(9, 15, 0))
+                .ToList();
             using var workbook = new XLWorkbook();
 
             var presentSheet =
@@ -2000,6 +2257,12 @@ namespace EmployeeManagementSystem.Services
 
             var lateSheet =
                 workbook.Worksheets.Add("Late Employees");
+
+            var lopSheet = workbook.Worksheets.Add("LOP Employees");
+
+            var mcSheet = workbook.Worksheets.Add("Missed Checkouts");
+
+            var lateMcSheet = workbook.Worksheets.Add("Late Missed Checkouts");
 
             //=====================================
             // PRESENT EMPLOYEES SHEET
@@ -2140,6 +2403,181 @@ namespace EmployeeManagementSystem.Services
 
             absentSheet.Columns()
                 .AdjustToContents();
+
+
+            //----- LOP sheets ------
+            lopSheet.Cell(1, 1).Value = "LOP Employees Report";
+
+            lopSheet.Cell(2, 1).Value =
+                $"Report Date : {date:dd-MMM-yyyy}";
+
+            lopSheet.Cell(3, 1).Value =
+                $"Total Employees : {employees.Count}";
+
+            lopSheet.Cell(3, 4).Value =
+                $"Total LOP : {lopEmployees.Count}";
+
+            lopSheet.Cell(5, 1).Value = "Employee ID";
+            lopSheet.Cell(5, 2).Value = "Employee Name";
+            lopSheet.Cell(5, 3).Value = "Department";
+            lopSheet.Cell(5, 4).Value = "Date";
+            lopSheet.Cell(5, 5).Value = "Status";
+
+            var lopHeader = lopSheet.Range(5, 1, 5, 5);
+
+            lopHeader.Style.Font.Bold = true;
+            lopHeader.Style.Fill.BackgroundColor = XLColor.Red;
+            lopHeader.Style.Font.FontColor = XLColor.White;
+
+            int lopRow = 6;
+
+            foreach (var item in lopEmployees)
+            {
+                lopSheet.Cell(lopRow, 1).Value =
+                    item.Employee.Employee_Id;
+
+                lopSheet.Cell(lopRow, 2).Value =
+                    item.Employee.Name;
+
+                lopSheet.Cell(lopRow, 3).Value =
+                    item.Employee.Department;
+
+                lopSheet.Cell(lopRow, 4).Value =
+                    date.ToString("dd-MMM-yyyy");
+
+                lopSheet.Cell(lopRow, 5).Value =
+                    "LOP";
+
+                lopRow++;
+            }
+
+            lopSheet.Columns().AdjustToContents();
+
+
+            // ---- MIssed Checkout sheets -------
+            mcSheet.Cell(1, 1).Value =
+    "Missed Checkout Employees Report";
+
+            mcSheet.Cell(2, 1).Value =
+                $"Report Date : {date:dd-MMM-yyyy}";
+
+            mcSheet.Cell(3, 1).Value =
+                $"Total Employees : {employees.Count}";
+
+            mcSheet.Cell(3, 4).Value =
+                $"Total MC : {missedCheckoutEmployees.Count}";
+
+            mcSheet.Cell(5, 1).Value = "Employee ID";
+            mcSheet.Cell(5, 2).Value = "Employee Name";
+            mcSheet.Cell(5, 3).Value = "Department";
+            mcSheet.Cell(5, 4).Value = "Date";
+            mcSheet.Cell(5, 5).Value = "Check In";
+            mcSheet.Cell(5, 6).Value = "Status";
+
+            var mcHeader = mcSheet.Range(5, 1, 5, 6);
+
+            mcHeader.Style.Font.Bold = true;
+            mcHeader.Style.Fill.BackgroundColor = XLColor.Brown;
+            mcHeader.Style.Font.FontColor = XLColor.White;
+
+            int mcRow = 6;
+
+            foreach (var item in missedCheckoutEmployees)
+            {
+                mcSheet.Cell(mcRow, 1).Value =
+                    item.Employee.Employee_Id;
+
+                mcSheet.Cell(mcRow, 2).Value =
+                    item.Employee.Name;
+
+                mcSheet.Cell(mcRow, 3).Value =
+                    item.Employee.Department;
+
+                mcSheet.Cell(mcRow, 4).Value =
+                    date.ToString("dd-MMM-yyyy");
+
+                mcSheet.Cell(mcRow, 5).Value =
+                    item.Attendance?.Check_In != null
+                        ? ConvertToIST(item.Attendance.Check_In.Value)
+                            .ToString("hh:mm tt")
+                        : "-";
+
+                mcSheet.Cell(mcRow, 6).Value = "MC";
+
+                mcRow++;
+            }
+
+            mcSheet.Columns().AdjustToContents();
+
+            //---  LAte Missed CHeckouts,----
+            lateMcSheet.Cell(1, 1).Value =
+    "Late Missed Checkout Report";
+
+            lateMcSheet.Cell(2, 1).Value =
+                $"Report Date : {date:dd-MMM-yyyy}";
+
+            lateMcSheet.Cell(3, 1).Value =
+                $"Total Employees : {employees.Count}";
+
+            lateMcSheet.Cell(3, 4).Value =
+                $"Total Late MC : {lateMissedCheckoutEmployees.Count}";
+
+            lateMcSheet.Cell(5, 1).Value = "Employee ID";
+            lateMcSheet.Cell(5, 2).Value = "Employee Name";
+            lateMcSheet.Cell(5, 3).Value = "Department";
+            lateMcSheet.Cell(5, 4).Value = "Date";
+            lateMcSheet.Cell(5, 5).Value = "Check In";
+            lateMcSheet.Cell(5, 6).Value = "Late By";
+            lateMcSheet.Cell(5, 7).Value = "Status";
+
+            var lateMcHeader =
+                lateMcSheet.Range(5, 1, 5, 7);
+
+            lateMcHeader.Style.Font.Bold = true;
+            lateMcHeader.Style.Fill.BackgroundColor =
+                XLColor.Orange;
+
+            lateMcHeader.Style.Font.FontColor =
+                XLColor.White;
+
+            int lateMcRow = 6;
+
+            foreach (var item in lateMissedCheckoutEmployees)
+            {
+                var checkIn =
+                    ConvertToIST(item.Attendance.Check_In.Value);
+
+                var lateMinutes =
+                    (int)(checkIn.TimeOfDay -
+                          new TimeSpan(9, 15, 0))
+                    .TotalMinutes;
+
+                lateMcSheet.Cell(lateMcRow, 1).Value =
+                    item.Employee.Employee_Id;
+
+                lateMcSheet.Cell(lateMcRow, 2).Value =
+                    item.Employee.Name;
+
+                lateMcSheet.Cell(lateMcRow, 3).Value =
+                    item.Employee.Department;
+
+                lateMcSheet.Cell(lateMcRow, 4).Value =
+                    date.ToString("dd-MMM-yyyy");
+
+                lateMcSheet.Cell(lateMcRow, 5).Value =
+                    checkIn.ToString("hh:mm tt");
+
+                lateMcSheet.Cell(lateMcRow, 6).Value =
+                    $"{lateMinutes} Min";
+
+                lateMcSheet.Cell(lateMcRow, 7).Value =
+                    "MC";
+
+                lateMcRow++;
+            }
+
+            lateMcSheet.Columns().AdjustToContents();
+
 
             //=====================================
             // LATE EMPLOYEES SHEET

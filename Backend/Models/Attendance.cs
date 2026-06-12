@@ -28,6 +28,7 @@ namespace EmployeeManagementSystem.Models
         public string? DeviceInfo { get; set; }
 
         public int WorkingMinutes { get; set; }
+        public int TotalBreakMinutes { get; set; }
 
     }
 

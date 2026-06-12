@@ -37,6 +37,10 @@ export const API = {
   ATTENDANCE: {
     CHECKIN: "/Attendance/check-in",
     CHECKOUT: "/Attendance/check-out",
+
+    START_BREAK: "/Attendance/start-break",
+    END_BREAK: "/Attendance/end-break",
+
     WEEKLY: "/Attendance/weekly",
     PREVIOUS_WEEK: "/Attendance/previous-week",
     CURRENT_MONTH: "/Attendance/current-month",
@@ -410,6 +414,9 @@ export const API_ENDPOINTS = {
   attendance: {
     checkIn: API.ATTENDANCE.CHECKIN,
     checkOut: API.ATTENDANCE.CHECKOUT,
+
+    startBreak: API.ATTENDANCE.START_BREAK,
+    endBreak: API.ATTENDANCE.END_BREAK,
     weekly: API.ATTENDANCE.WEEKLY,
     previousWeek: API.ATTENDANCE.PREVIOUS_WEEK,
     previousMonth: API.ATTENDANCE.PREVIOUS_MONTH,

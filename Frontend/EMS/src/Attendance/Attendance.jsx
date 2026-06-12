@@ -118,6 +118,16 @@ function Attendance() {
     today.getFullYear()
   );
 
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date();
+
+    return `${today.getFullYear()}-${String(
+      today.getMonth() + 1
+    ).padStart(2, "0")}-${String(
+      today.getDate()
+    ).padStart(2, "0")}`;
+  });
+
   // ================= URL FILTER HANDLING =================
 
   useEffect(() => {
@@ -195,6 +205,34 @@ function Attendance() {
 
           </select>
 
+          {viewMode === "daily" && (
+            <select
+              className="attendance-select"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+            >
+              {Array.from({ length: 365 }, (_, i) => {
+                const date = new Date(new Date().getFullYear(), 0, 1);
+                date.setDate(date.getDate() + i);
+
+                const value = `${date.getFullYear()}-${String(
+                  date.getMonth() + 1
+                ).padStart(2, "0")}-${String(
+                  date.getDate()
+                ).padStart(2, "0")}`;
+
+                return (
+                  <option key={value} value={value}>
+                    {date.toLocaleDateString("en-GB", {
+                      day: "2-digit",
+                      month: "short",
+                      year: "numeric"
+                    })}
+                  </option>
+                );
+              })}
+            </select>
+          )}
           {/* ================= MONTH PICKER ================= */}
 
           {String(viewMode)
@@ -265,6 +303,7 @@ function Attendance() {
         search={debouncedSearch}
         month={month}
         year={year}
+        selectedDate={selectedDate}
       />
 
     </div>

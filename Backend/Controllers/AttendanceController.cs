@@ -73,7 +73,26 @@ namespace EmployeeManagementSystem.Controllers
             return await _attendanceService.CheckOut(User);
 
         }
+        [Authorize]
 
+        [HttpPost("start-break")]
+        public async Task<IActionResult> StartBreak()
+        {
+            return await _attendanceService.StartBreak(User);
+        }
+
+        [Authorize]
+        [HttpPost("end-break")]
+        public async Task<IActionResult> EndBreak()
+        {
+            return await _attendanceService.EndBreak(User);
+        }
+
+        [HttpGet("break-summary")]
+        public async Task<IActionResult> GetBreakSummary()
+        {
+            return await _attendanceService.GetTodayBreakSummary(User);
+        }
         //---------------------------------------
 
         // 👨‍💻 EMPLOYEE ATTENDANCE VIEW
@@ -154,22 +173,17 @@ namespace EmployeeManagementSystem.Controllers
 
 
 
-        [HttpGet("today")]
+      [HttpGet("today")]
+public async Task<IActionResult> GetAttendanceByDate(
+    DateTime date,
+    string status = "All",
+    string search = "")
+{
+    var result = await _attendanceService
+        .GetAttendanceByDate(date, status, search);
 
-        public async Task<IActionResult> GetTodayAttendance(
-
-            [FromQuery] string status = "All",
-
-            [FromQuery] string search = "")
-
-        {
-
-
-            var result = await _attendanceService.GetTodayAttendance(status, search);
-
-            return Ok(result);
-
-        }
+    return Ok(result);
+}
 
         // ✅ Monthly / Year View
 

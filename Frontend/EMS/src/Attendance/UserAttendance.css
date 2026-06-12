@@ -7,13 +7,20 @@
  
 .attendance-card,
 .week-card {
-  max-width: 1200px;
-  margin: 0 auto 24px;
+  max-width: 1200px !important;
+  width: 100% !important;
+  margin: 0 auto 24px auto !important;
   background: #fff;
   border-radius: 22px;
   box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
   padding: 30px 32px;
   border: 1px solid #eef2f7;
+}
+
+.attendance-page h1,
+.attendance-page h2 {
+  margin-left: 0 !important;
+  text-align: left;
 }
  
 /* Heading */
@@ -276,15 +283,22 @@
  
 /* Status */
 .status {
-  display: inline-flex;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 160px;
+  height: 36px;
+  margin: 0 auto;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.week-row > span:last-child {
+  display: flex;
   justify-content: center;
   align-items: center;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  width: fit-content;
-  white-space: nowrap;
 }
  
 .status.present {
@@ -307,12 +321,12 @@
   color: #dc2626;
 }
 
-.status.mc {
+.status.missed-checkout {
   background: #ffedd5;
   color: #c2410c;
 }
 
-.status.lmc {
+.status.late-missed {
   background: #ffe4e6;
   color: #be123c;
 }
@@ -429,3 +443,96 @@
 }
  
  
+.status.present {
+  background: #dcfce7 !important;
+  color: #16a34a !important;
+}
+
+.status.absent {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.status.late {
+  background: #fef3c7 !important;
+  color: #d97706 !important;
+}
+
+.status.halfday {
+  background: #dbeafe !important;
+  color: #2563eb !important;
+}
+
+.status.leave {
+  background: #ede9fe !important;
+  color: #7c3aed !important;
+}
+
+.status.lop {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.status.missed-checkout {
+  background: #ffedd5 !important;
+  color: #c2410c !important;
+}
+
+.status.late-missed {
+  background: #fce7f3 !important;
+  color: #be185d !important;
+}
+
+.status.weekend {
+  background: #e2e8f0 !important;
+  color: #64748b !important;
+}
+
+.status.holiday {
+  background: #ffedd5 !important;
+  color: #ea580c !important;
+}
+
+.status.upcoming {
+  background: #f1f5f9 !important;
+  color: #334155 !important;
+}
+
+.break-btn,
+.resume-btn {
+  border: none;
+  border-radius: 14px;
+  padding: 13px 26px;
+  min-width: 165px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.08);
+}
+
+.break-btn {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.resume-btn {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.break-btn:hover:not(:disabled),
+.resume-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+}
+
+.break-btn:disabled,
+.resume-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}

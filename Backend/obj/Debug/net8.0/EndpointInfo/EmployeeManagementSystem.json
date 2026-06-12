@@ -367,6 +367,42 @@
         }
       }
     },
+    "/api/Attendance/start-break": {
+      "post": {
+        "tags": [
+          "Attendance"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Attendance/end-break": {
+      "post": {
+        "tags": [
+          "Attendance"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/Attendance/break-summary": {
+      "get": {
+        "tags": [
+          "Attendance"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
     "/api/Attendance/weekly": {
       "get": {
         "tags": [
@@ -451,6 +487,14 @@
           "Attendance"
         ],
         "parameters": [
+          {
+            "name": "date",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
           {
             "name": "status",
             "in": "query",

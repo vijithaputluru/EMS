@@ -312,6 +312,16 @@
   },
   {
     "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
+    "Method": "GetBreakSummary",
+    "RelativePath": "api/Attendance/break-summary",
+    "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
     "Method": "CheckIn",
     "RelativePath": "api/Attendance/check-in",
     "HttpMethod": "POST",
@@ -335,6 +345,16 @@
     "Method": "GetCurrentMonth",
     "RelativePath": "api/Attendance/current-month",
     "HttpMethod": "GET",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
+    "Method": "EndBreak",
+    "RelativePath": "api/Attendance/end-break",
+    "HttpMethod": "POST",
     "IsController": true,
     "Order": 0,
     "Parameters": [],
@@ -456,6 +476,16 @@
   },
   {
     "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
+    "Method": "StartBreak",
+    "RelativePath": "api/Attendance/start-break",
+    "HttpMethod": "POST",
+    "IsController": true,
+    "Order": 0,
+    "Parameters": [],
+    "ReturnTypes": []
+  },
+  {
+    "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
     "Method": "GetTodayStats",
     "RelativePath": "api/Attendance/stats/today",
     "HttpMethod": "GET",
@@ -482,12 +512,17 @@
   },
   {
     "ContainingType": "EmployeeManagementSystem.Controllers.AttendanceController",
-    "Method": "GetTodayAttendance",
+    "Method": "GetAttendanceByDate",
     "RelativePath": "api/Attendance/today",
     "HttpMethod": "GET",
     "IsController": true,
     "Order": 0,
     "Parameters": [
+      {
+        "Name": "date",
+        "Type": "System.DateTime",
+        "IsRequired": false
+      },
       {
         "Name": "status",
         "Type": "System.String",

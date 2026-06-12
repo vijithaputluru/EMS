@@ -44,7 +44,10 @@ namespace EmployeeManagementSystem.Interfaces
 
         //---------------------------------------
 
-        Task<List<object>> GetTodayAttendance(string status = "All", string search = "");
+        Task<List<object>> GetAttendanceByDate(
+      DateTime date,
+      string status = "All",
+      string search = "");
 
         Task<List<AdminEmployeeAttendanceDto>> GetAllEmployeeAttendance(int month, int year);
 
@@ -87,5 +90,10 @@ namespace EmployeeManagementSystem.Interfaces
 
         Task<byte[]> ExportPresentAndLateEmployees(DateTime date);
 
+        Task<IActionResult> StartBreak(ClaimsPrincipal user);
+
+        Task<IActionResult> EndBreak(ClaimsPrincipal user);
+
+        Task<IActionResult> GetTodayBreakSummary(ClaimsPrincipal user);
     }
 }

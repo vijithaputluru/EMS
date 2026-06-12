@@ -18,34 +18,40 @@ import {
   FaArrowRight,
   FaArrowLeft
 } from "react-icons/fa";
- 
+
 function UserAttendance() {
   const getToken = () =>
     localStorage.getItem("token") || sessionStorage.getItem("token");
- 
+
   const today = new Date();
- 
+
   const [checkedIn, setCheckedIn] = useState(false);
   const [checkedOut, setCheckedOut] = useState(false);
   const [loading, setLoading] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [viewType, setViewType] = useState("week");
+  const [breakLoading, setBreakLoading] = useState(false);
   const [attendanceData, setAttendanceData] = useState([]);
+  const [onBreak, setOnBreak] = useState(false);
+  const [breakUsed, setBreakUsed] = useState(false);
+  const [breakStartTime, setBreakStartTime] = useState(null);
   const [stats, setStats] = useState({
     checkIn: "--",
+    breakStart: "--",
+    breakEnd: "--",
     checkOut: "--",
     workedHours: "--"
   });
- 
+
   const formattedDate = formatDate(today);
- 
+
   const formatTime = (value) => {
     if (!value) return "--";
- 
+
     try {
       const stringValue = String(value).trim();
- 
+
       // Already formatted AM/PM
       if (
         stringValue.toUpperCase().includes("AM") ||
@@ -53,18 +59,18 @@ function UserAttendance() {
       ) {
         return stringValue;
       }
- 
+
       // Handle 24-hour time from backend
       const parts = stringValue.split(":");
- 
+
       const hours = Number(parts[0] || 0);
       const minutes = Number(parts[1] || 0);
- 
+
       const period = hours >= 12 ? "PM" : "AM";
- 
+
       const formattedHour =
         hours % 12 === 0 ? 12 : hours % 12;
- 
+
       return `${String(formattedHour).padStart(
         2,
         "0"
@@ -73,51 +79,55 @@ function UserAttendance() {
       return value;
     }
   };
- 
+
   const formatHoursFromMinutes = (minutes) => {
     if (minutes === null || minutes === undefined) return "—";
- 
+
     const hrs = Math.floor(minutes / 60);
     const mins = minutes % 60;
- 
+
     if (mins === 0) return `${hrs}h`;
     return `${hrs}h ${mins}m`;
   };
- 
+
   const normalizeStatus = (status) => {
     const value = (status || "").toString().trim().toUpperCase();
- 
-    // BACKEND SHORT CODES
+
     if (value === "P") return "Present";
     if (value === "A") return "Absent";
     if (value === "W") return "Weekend";
     if (value === "L") return "Late";
     if (value === "HD") return "Half Day";
     if (value === "OL") return "On Leave";
- 
+    if (value === "LOP") return "Loss Of Pay";
+    if (value === "MC") return "Missed Checkout";
+    if (value === "LMC") return "Late & Missed Checkout";
+    if (value === "H") return "Holiday";
+    if (value === "UP") return "Upcoming";
+
     return status || "-";
   };
   const formatDateLabel = (item) => {
     if (item.date) {
       return formatDate(item.date);
     }
- 
+
     if (item.day) {
       return `Day ${item.day}`;
     }
- 
+
     return "";
   };
- 
+
   const formatDayName = (item) => {
     if (item.date) {
       return getDayName(item.date, "-").slice(0, 3);
     }
- 
+
     if (item.dayName) return item.dayName;
     return "-";
   };
- 
+
   const mapApiData = (data) => {
     return (Array.isArray(data) ? data : []).map((item, index) => ({
       id: item.id || `${item.date || item.day || index}`,
@@ -130,95 +140,99 @@ function UserAttendance() {
       status: normalizeStatus(item.status)
     }));
   };
- 
+
   const updateTopStats = (rows) => {
     if (!rows.length) {
       setStats({
         checkIn: "--",
+        breakStart: "--",
+        breakEnd: "--",
         checkOut: "--",
         workedHours: "--"
       });
       return;
     }
- 
+
     const todayStr = getInputDateValue(new Date());
- 
+
     const todayRow = rows.find((row) => {
       if (!row.rawDate) return false;
       return getInputDateValue(row.rawDate) === todayStr;
     });
- 
+
     if (todayRow) {
-      setStats({
+      setStats(prev => ({
+        ...prev,
         checkIn: todayRow.checkIn || "--",
         checkOut: todayRow.checkOut || "--",
         workedHours: todayRow.hours || "--"
-      });
+      }));
     } else {
-      setStats({
+      setStats(prev => ({
+        ...prev,
         checkIn: "--",
         checkOut: "--",
         workedHours: "--"
-      });
+      }));
     }
   };
- 
+
   const updateTodayAttendanceState = (rows) => {
- 
+
     const todayStr =
       getInputDateValue(new Date());
- 
+
     const todayRow =
       rows.find((row) => {
- 
+
         if (!row.rawDate) {
           return false;
         }
- 
+
         return (
           getInputDateValue(row.rawDate) ===
           todayStr
         );
- 
+
       });
- 
+
     if (todayRow) {
- 
+
       const hasCheckIn =
         todayRow.checkIn &&
         todayRow.checkIn !== "--";
- 
+
       const hasCheckOut =
         todayRow.checkOut &&
         todayRow.checkOut !== "--";
- 
+
       setCheckedIn(!!hasCheckIn);
       setCheckedOut(!!hasCheckOut);
- 
+
       // LIVE HOURS BEFORE CHECKOUT
       if (
         hasCheckIn &&
         !hasCheckOut
       ) {
- 
+
         const checkInTime =
           todayRow.checkIn;
- 
+
         setStats((prev) => ({
           ...prev,
           checkIn: checkInTime,
           checkOut: "--",
         }));
       }
- 
+
     } else {
- 
+
       setCheckedIn(false);
       setCheckedOut(false);
- 
+
     }
   };
- 
+
   const fetchWeeklySummary = async () => {
     try {
       const res = await api.get(API_ENDPOINTS.attendance.weekly, {
@@ -226,7 +240,7 @@ function UserAttendance() {
           Authorization: `Bearer ${getToken()}`,
         }
       });
- 
+
       const data = res.data;
       const mapped = mapApiData(data);
       updateTopStats(mapped);
@@ -235,29 +249,29 @@ function UserAttendance() {
       console.error("Weekly fetch failed:", err?.response?.data || err.message);
     }
   };
- 
+
   const fetchAttendanceHistory = async (type) => {
     try {
       setHistoryLoading(true);
- 
+
       let apiUrl = API_ENDPOINTS.attendance.weekly;
- 
+
       if (type === "lastWeek") {
         apiUrl = API_ENDPOINTS.attendance.previousWeek;
       } else if (type === "month") {
         apiUrl = API_ENDPOINTS.attendance.previousMonth;
       }
- 
+
       const res = await api.get(apiUrl, {
         headers: {
           Authorization: `Bearer ${getToken()}`,
         }
       });
- 
+
       const data = res.data;
       const mapped = mapApiData(data);
       setAttendanceData(mapped);
- 
+
       if (type === "week") {
         updateTopStats(mapped);
         updateTodayAttendanceState(mapped);
@@ -270,126 +284,65 @@ function UserAttendance() {
       setInitialLoading(false);
     }
   };
- 
+
   useEffect(() => {
     fetchWeeklySummary();
     fetchAttendanceHistory("week");
   }, []);
- 
+
+  useEffect(() => {
+    const savedBreakTime =
+      localStorage.getItem("breakStartTime");
+
+    const breakUsed =
+      localStorage.getItem("breakUsed");
+
+    const savedBreakStart =
+      localStorage.getItem("breakStartDisplay");
+
+    const savedBreakEnd =
+      localStorage.getItem("breakEndDisplay");
+
+    if (savedBreakTime) {
+      setOnBreak(true);
+      setBreakStartTime(
+        new Date(savedBreakTime)
+      );
+    }
+
+    if (breakUsed === "true") {
+      setBreakUsed(true);
+    }
+
+    if (savedBreakStart || savedBreakEnd) {
+      setStats(prev => ({
+        ...prev,
+        breakStart: savedBreakStart
+          ? savedBreakStart.replace(/:\d{2}(?=\s*(AM|PM))/i, "")
+          : "--",
+        breakEnd: savedBreakEnd
+          ? savedBreakEnd.replace(/:\d{2}(?=\s*(AM|PM))/i, "")
+          : "--"
+      }));
+    }
+  }, []);
+
   useEffect(() => {
     fetchAttendanceHistory(viewType);
   }, [viewType]);
- 
-  useEffect(() => {
- 
-    let interval;
- 
-    // LIVE WORKING HOURS
-    if (
-      checkedIn &&
-      !checkedOut &&
-      stats.checkIn &&
-      stats.checkIn !== "--"
-    ) {
- 
-      interval = setInterval(() => {
- 
-        try {
- 
-          const currentTime =
-            stats.checkIn;
- 
-          const [time, modifier] =
-            currentTime.split(" ");
- 
-          let [hours, minutes] =
-            time.split(":").map(Number);
- 
-          // convert AM PM
-          if (
-            modifier === "PM" &&
-            hours !== 12
-          ) {
-            hours += 12;
-          }
- 
-          if (
-            modifier === "AM" &&
-            hours === 12
-          ) {
-            hours = 0;
-          }
- 
-          const checkInDate =
-            new Date();
- 
-          checkInDate.setHours(
-            hours,
-            minutes,
-            0,
-            0
-          );
- 
-          const now =
-            new Date();
- 
-          const diff =
-            now - checkInDate;
- 
-          const totalMinutes =
-            Math.floor(diff / 60000);
- 
-          const hrs =
-            Math.floor(totalMinutes / 60);
- 
-          const mins =
-            totalMinutes % 60;
- 
-          setStats((prev) => ({
-            ...prev,
-            workedHours:
-              `${hrs}h ${mins}m`
-          }));
- 
-        } catch (error) {
- 
-          console.error(
-            "Live hours error:",
-            error
-          );
- 
-        }
- 
-      }, 1000);
- 
-    }
- 
-    return () => {
- 
-      if (interval) {
-        clearInterval(interval);
-      }
- 
-    };
- 
-  }, [
-    checkedIn,
-    checkedOut,
-    stats.checkIn
-  ]);
- 
+
   const handleCheckIn = async () => {
- 
+
     // prevent multiple checkin
     if (checkedIn) {
       toast.warning("Already checked in");
       return;
     }
- 
+
     setLoading(true);
- 
+
     try {
- 
+
       await api.post(
         API_ENDPOINTS.attendance.checkIn,
         null,
@@ -397,39 +350,39 @@ function UserAttendance() {
           headers: {
             Authorization: `Bearer ${getToken()}`,
             "Content-Type": "application/json",
-          }
+          },
         }
       );
- 
+
       toast.success(
         "Checked in successfully"
       );
- 
+
       setCheckedIn(true);
       setCheckedOut(false);
- 
+
       await fetchWeeklySummary();
       await fetchAttendanceHistory(viewType);
- 
+
     } catch (err) {
- 
+
       console.error(
         err?.response?.data ||
         err.message
       );
- 
+
       toast.error(
         err?.response?.data?.message ||
         "Already checked in today"
       );
     }
- 
+
     setLoading(false);
   };
- 
+
   const handleCheckOut = async () => {
     setLoading(true);
- 
+
     try {
       await api.post(
         API_ENDPOINTS.attendance.checkOut,
@@ -441,45 +394,147 @@ function UserAttendance() {
           }
         }
       );
- 
+
       toast.success("Checked out successfully");
       setCheckedOut(true);
- 
+
       await fetchWeeklySummary();
       await fetchAttendanceHistory(viewType);
     } catch (err) {
       console.error(err?.response?.data || err.message);
       toast.error("Server error during check-out");
     }
- 
+
     setLoading(false);
   };
- const currentTime = new Date();
-const isBefore855 =
-  currentTime.getHours() < 8 ||
-  (
-    currentTime.getHours() === 8 &&
-    currentTime.getMinutes() < 55
-  );
-const isAfter615 =
-  currentTime.getHours() > 18 ||
-  (
-    currentTime.getHours() === 18 &&
-    currentTime.getMinutes() >= 15
-  );
+
+  const handleStartBreak = async () => {
+    if (breakUsed) {
+      toast.warning("You have already used your break for today");
+      return;
+    }
+
+    setBreakLoading(true);
+
+    try {
+      const res = await api.post(
+        API_ENDPOINTS.attendance.startBreak,
+        null,
+        {
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        }
+      );
+      console.log("Start Break Response:", res.data);
+      const breakStartTime =
+        res.data?.breakStartTime
+          ?.replace(/:\d{2}(?=\s*(AM|PM))/i, "") || "--";
+
+      setStats((prev) => ({
+        ...prev,
+        breakStart: breakStartTime,
+        breakEnd: "--"
+      }));
+
+      localStorage.setItem(
+        "breakStartDisplay",
+        breakStartTime
+      );
+
+      toast.success("Break started");
+
+      setOnBreak(true);
+      setBreakStartTime(new Date());
+      setBreakUsed(true);
+
+      localStorage.setItem("breakUsed", "true");
+      localStorage.setItem(
+        "breakStartTime",
+        new Date().toISOString()
+      );
+
+    } catch (err) {
+      console.log(err.response?.data);
+      toast.error(err.response?.data?.message || "Failed to end break");
+    } finally {
+      setBreakLoading(false);
+    }
+  };
+
+  const handleEndBreak = async () => {
+    setBreakLoading(true);
+
+    try {
+      const res = await api.post(
+        API_ENDPOINTS.attendance.endBreak,
+        null,
+        {
+          headers: {
+            Authorization: `Bearer ${getToken()}`,
+          },
+        }
+      );
+      console.log("End Break Response:", res.data);
+      const breakEndTime =
+        res.data?.breakEndTime
+          ?.replace(/:\d{2}(?=\s*(AM|PM))/i, "") || "--";
+
+      setStats((prev) => ({
+        ...prev,
+        breakEnd: breakEndTime
+      }));
+
+      localStorage.setItem(
+        "breakEndDisplay",
+        breakEndTime
+      );
+
+      toast.success("Break ended");
+
+      localStorage.removeItem("breakStartTime");
+
+      setOnBreak(false);
+      setBreakStartTime(null);
+
+    } catch (err) {
+      toast.error("Failed to end break");
+    } finally {
+      setBreakLoading(false);
+    }
+  };
+
+  const currentTime = new Date();
+  const isBefore855 =
+    currentTime.getHours() < 8 ||
+    (
+      currentTime.getHours() === 8 &&
+      currentTime.getMinutes() < 55
+    );
+  const isAfter615 =
+    currentTime.getHours() > 18 ||
+    (
+      currentTime.getHours() === 18 &&
+      currentTime.getMinutes() >= 15
+    );
   const getStatusClass = (status) => {
     const value = normalizeStatus(status).toLowerCase().replace(/\s+/g, "");
- 
+
     if (value === "present") return "present";
     if (value === "absent") return "absent";
     if (value === "late") return "late";
     if (value === "halfday") return "halfday";
     if (value === "onleave") return "leave";
     if (value === "weekend") return "weekend";
- 
+    if (value === "lossofpay") return "lop";
+    if (value === "missedcheckout") return "missed-checkout";
+    if (value === "late&missedcheckout") return "late-missed";
+    if (value === "holiday") return "holiday";
+    if (value === "upcoming") return "upcoming";
+
     return "default";
   };
- 
+
   return (
     <>
       <div
@@ -491,19 +546,20 @@ const isAfter615 =
           boxSizing: "border-box",
           display: "flex",
           flexDirection: "column",
-          alignItems: "center",
+          alignItems: "flex-start",
           justifyContent: "flex-start",
           background: "#f1f5f9",
           overflowX: "hidden"
         }}
       >
         <ToastContainer position="top-right" autoClose={3000} />
- 
+
         <div
           style={{
             width: "100%",
             maxWidth: "1200px",
-            marginBottom: "18px"
+            margin: "0"
+            
           }}
         >
           <h1
@@ -511,15 +567,14 @@ const isAfter615 =
               fontSize: "24px",
               fontWeight: "700",
               color: "#0f172a",
-              margin: "-20px 0 0 0",
-              textAlign: "left",
-              transform: "translateX(0px)"
+              margin: "0 0 18px -20px",
+              textAlign: "left"
             }}
           >
             My Attendance
           </h1>
         </div>
- 
+
         <div
           className="attendance-card"
           style={{
@@ -541,61 +596,84 @@ const isAfter615 =
           )}
           <h3>Mark Attendance</h3>
           <h1>{formattedDate}</h1>
- 
+
           <div className="attendance-buttons">
             <button
-  className="checkin-btn"
-  onClick={handleCheckIn}
-  disabled={
-    checkedIn ||
-    loading ||
-    isBefore855
-  }
-  title={
-    isBefore855
-      ? "Check-in opens at 8:55 AM"
-      : ""
-  }
->
-  <FaSignInAlt />
+              className="checkin-btn"
+              onClick={handleCheckIn}
+              disabled={
+                checkedIn ||
+                loading ||
+                isBefore855
+              }
+              title={
+                isBefore855
+                  ? "Check-in opens at 8:55 AM"
+                  : ""
+              }
+            >
+              <FaSignInAlt />
 
-  {isBefore855
-    ? "Check In Opens 8:55 AM"
-    : loading
-      ? "Processing..."
-      : "Check In"}
-</button>
- 
+              {isBefore855
+                ? "Check In Opens 8:55 AM"
+                : loading
+                  ? "Processing..."
+                  : "Check In"}
+            </button>
+
             <button
-  className="checkout-btn"
-  onClick={handleCheckOut}
-  disabled={
-    !checkedIn ||
-    checkedOut ||
-    loading ||
-    isAfter615
-  }
-  title={
-    isAfter615
-      ? "Checkout disabled after 6:15 PM"
-      : ""
-  }
->
-  <FaSignOutAlt />
+              className="break-btn"
+              onClick={handleStartBreak}
+              disabled={onBreak || breakLoading}
+            >
+              {breakUsed
+                ? "Break Used"
+                : breakLoading && !onBreak
+                  ? "Starting..."
+                  : "Start Break"}
+            </button>
 
-  {isAfter615
-    ? "Checkout Closed"
-    : loading
-      ? "Processing..."
-      : "Check Out"}
-</button>
+            <button
+              className="resume-btn"
+              onClick={handleEndBreak}
+              disabled={!onBreak || breakLoading}
+            >
+              {breakLoading && onBreak
+                ? "Ending..."
+                : "End Break"}
+            </button>
+
+            <button
+              className="checkout-btn"
+              onClick={handleCheckOut}
+              disabled={
+                !checkedIn ||
+                checkedOut ||
+                loading ||
+                isAfter615
+              }
+              title={
+                isAfter615
+                  ? "Checkout disabled after 6:15 PM"
+                  : ""
+              }
+            >
+              <FaSignOutAlt />
+
+              {isAfter615
+                ? "Checkout Closed"
+                : loading
+                  ? "Processing..."
+                  : "Check Out"}
+            </button>
+
           </div>
- 
+
           <div
             className="attendance-stats-row"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
+              gridTemplateColumns: "repeat(5, 1fr)",
               gap: "20px",
               width: "100%",
               marginTop: "35px"
@@ -608,7 +686,22 @@ const isAfter615 =
               <div className="stat-label">Check In</div>
               <div className="stat-value">{stats.checkIn}</div>
             </div>
- 
+
+            <div className="attendance-stat-box">
+              <div className="stat-icon hours-icon">
+                <FaClock />
+              </div>
+              <div className="stat-label">Break Start</div>
+              <div className="stat-value">{stats.breakStart}</div>
+            </div>
+            <div className="attendance-stat-box">
+              <div className="stat-icon hours-icon">
+                <FaClock />
+              </div>
+              <div className="stat-label">Break End</div>
+              <div className="stat-value">{stats.breakEnd}</div>
+            </div>
+
             <div className="attendance-stat-box">
               <div className="stat-icon checkout-icon">
                 <FaArrowLeft />
@@ -616,7 +709,7 @@ const isAfter615 =
               <div className="stat-label">Check Out</div>
               <div className="stat-value">{stats.checkOut}</div>
             </div>
- 
+
             <div className="attendance-stat-box">
               <div className="stat-icon hours-icon">
                 <FaClock />
@@ -626,7 +719,7 @@ const isAfter615 =
             </div>
           </div>
         </div>
- 
+
         <div
           className="week-card"
           style={{
@@ -648,7 +741,7 @@ const isAfter615 =
                   ? "Last Week"
                   : "This Month"}
             </h3>
- 
+
             <div className="week-toggle">
               <button
                 className={viewType === "week" ? "active" : ""}
@@ -656,14 +749,14 @@ const isAfter615 =
               >
                 Week
               </button>
- 
+
               <button
                 className={viewType === "lastWeek" ? "active" : ""}
                 onClick={() => setViewType("lastWeek")}
               >
                 Last Week
               </button>
- 
+
               <button
                 className={viewType === "month" ? "active" : ""}
                 onClick={() => setViewType("month")}
@@ -672,7 +765,7 @@ const isAfter615 =
               </button>
             </div>
           </div>
- 
+
           <div
             className="week-table-header"
             style={{
@@ -692,7 +785,7 @@ const isAfter615 =
             <span>HOURS</span>
             <span>STATUS</span>
           </div>
- 
+
           {historyLoading || loading ? (
             <div className="attendance-empty">
               Loading attendance...
@@ -721,11 +814,11 @@ const isAfter615 =
                   <div>{item.day}</div>
                   <small>{item.dateLabel}</small>
                 </div>
- 
+
                 <span>{item.checkIn}</span>
                 <span>{item.checkOut}</span>
                 <span>{item.hours}</span>
- 
+
                 <span className={`status ${getStatusClass(item.status)}`}>
                   {item.status}
                 </span>
@@ -737,9 +830,8 @@ const isAfter615 =
     </>
   );
 }
- 
+
 export default UserAttendance;
- 
- 
- 
- 
+
+
+
