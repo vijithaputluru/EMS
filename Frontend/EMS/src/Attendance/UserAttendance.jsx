@@ -31,11 +31,8 @@ function UserAttendance() {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [viewType, setViewType] = useState("week");
-  const [breakLoading, setBreakLoading] = useState(false);
   const [attendanceData, setAttendanceData] = useState([]);
-  const [onBreak, setOnBreak] = useState(false);
-  const [breakUsed, setBreakUsed] = useState(false);
-  const [breakStartTime, setBreakStartTime] = useState(null);
+  
   const [stats, setStats] = useState({
     checkIn: "--",
     breakStart: "--",
@@ -291,43 +288,6 @@ function UserAttendance() {
   }, []);
 
   useEffect(() => {
-    const savedBreakTime =
-      localStorage.getItem("breakStartTime");
-
-    const breakUsed =
-      localStorage.getItem("breakUsed");
-
-    const savedBreakStart =
-      localStorage.getItem("breakStartDisplay");
-
-    const savedBreakEnd =
-      localStorage.getItem("breakEndDisplay");
-
-    if (savedBreakTime) {
-      setOnBreak(true);
-      setBreakStartTime(
-        new Date(savedBreakTime)
-      );
-    }
-
-    if (breakUsed === "true") {
-      setBreakUsed(true);
-    }
-
-    if (savedBreakStart || savedBreakEnd) {
-      setStats(prev => ({
-        ...prev,
-        breakStart: savedBreakStart
-          ? savedBreakStart.replace(/:\d{2}(?=\s*(AM|PM))/i, "")
-          : "--",
-        breakEnd: savedBreakEnd
-          ? savedBreakEnd.replace(/:\d{2}(?=\s*(AM|PM))/i, "")
-          : "--"
-      }));
-    }
-  }, []);
-
-  useEffect(() => {
     fetchAttendanceHistory(viewType);
   }, [viewType]);
 
@@ -345,7 +305,7 @@ function UserAttendance() {
 
       await api.post(
         API_ENDPOINTS.attendance.checkIn,
-        null,
+        {}, // Changed from null to empty object
         {
           headers: {
             Authorization: `Bearer ${getToken()}`,
@@ -384,9 +344,10 @@ function UserAttendance() {
     setLoading(true);
 
     try {
+      // Changed body from null to {} to prevent 400 validation errors in some .NET APIs
       await api.post(
         API_ENDPOINTS.attendance.checkOut,
-        null,
+        {}, 
         {
           headers: {
             Authorization: `Bearer ${getToken()}`,
@@ -401,107 +362,17 @@ function UserAttendance() {
       await fetchWeeklySummary();
       await fetchAttendanceHistory(viewType);
     } catch (err) {
-      console.error(err?.response?.data || err.message);
-      toast.error("Server error during check-out");
+      console.error("Checkout Error:", err?.response?.data || err.message);
+      
+      // More specific error message based on API response
+      const errorMsg = err?.response?.data?.errors 
+        ? Object.values(err.response.data.errors).flat().join(", ") 
+        : err?.response?.data?.message || "Server error during check-out";
+        
+      toast.error(errorMsg);
     }
 
     setLoading(false);
-  };
-
-  const handleStartBreak = async () => {
-    if (breakUsed) {
-      toast.warning("You have already used your break for today");
-      return;
-    }
-
-    setBreakLoading(true);
-
-    try {
-      const res = await api.post(
-        API_ENDPOINTS.attendance.startBreak,
-        null,
-        {
-          headers: {
-            Authorization: `Bearer ${getToken()}`,
-          },
-        }
-      );
-      console.log("Start Break Response:", res.data);
-      const breakStartTime =
-        res.data?.breakStartTime
-          ?.replace(/:\d{2}(?=\s*(AM|PM))/i, "") || "--";
-
-      setStats((prev) => ({
-        ...prev,
-        breakStart: breakStartTime,
-        breakEnd: "--"
-      }));
-
-      localStorage.setItem(
-        "breakStartDisplay",
-        breakStartTime
-      );
-
-      toast.success("Break started");
-
-      setOnBreak(true);
-      setBreakStartTime(new Date());
-      setBreakUsed(true);
-
-      localStorage.setItem("breakUsed", "true");
-      localStorage.setItem(
-        "breakStartTime",
-        new Date().toISOString()
-      );
-
-    } catch (err) {
-      console.log(err.response?.data);
-      toast.error(err.response?.data?.message || "Failed to end break");
-    } finally {
-      setBreakLoading(false);
-    }
-  };
-
-  const handleEndBreak = async () => {
-    setBreakLoading(true);
-
-    try {
-      const res = await api.post(
-        API_ENDPOINTS.attendance.endBreak,
-        null,
-        {
-          headers: {
-            Authorization: `Bearer ${getToken()}`,
-          },
-        }
-      );
-      console.log("End Break Response:", res.data);
-      const breakEndTime =
-        res.data?.breakEndTime
-          ?.replace(/:\d{2}(?=\s*(AM|PM))/i, "") || "--";
-
-      setStats((prev) => ({
-        ...prev,
-        breakEnd: breakEndTime
-      }));
-
-      localStorage.setItem(
-        "breakEndDisplay",
-        breakEndTime
-      );
-
-      toast.success("Break ended");
-
-      localStorage.removeItem("breakStartTime");
-
-      setOnBreak(false);
-      setBreakStartTime(null);
-
-    } catch (err) {
-      toast.error("Failed to end break");
-    } finally {
-      setBreakLoading(false);
-    }
   };
 
   const currentTime = new Date();
@@ -622,28 +493,6 @@ function UserAttendance() {
             </button>
 
             <button
-              className="break-btn"
-              onClick={handleStartBreak}
-              disabled={onBreak || breakLoading}
-            >
-              {breakUsed
-                ? "Break Used"
-                : breakLoading && !onBreak
-                  ? "Starting..."
-                  : "Start Break"}
-            </button>
-
-            <button
-              className="resume-btn"
-              onClick={handleEndBreak}
-              disabled={!onBreak || breakLoading}
-            >
-              {breakLoading && onBreak
-                ? "Ending..."
-                : "End Break"}
-            </button>
-
-            <button
               className="checkout-btn"
               onClick={handleCheckOut}
               disabled={
@@ -673,7 +522,7 @@ function UserAttendance() {
             className="attendance-stats-row"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(5, 1fr)",
+              gridTemplateColumns: "repeat(3, 1fr)",
               gap: "20px",
               width: "100%",
               marginTop: "35px"
@@ -685,21 +534,6 @@ function UserAttendance() {
               </div>
               <div className="stat-label">Check In</div>
               <div className="stat-value">{stats.checkIn}</div>
-            </div>
-
-            <div className="attendance-stat-box">
-              <div className="stat-icon hours-icon">
-                <FaClock />
-              </div>
-              <div className="stat-label">Break Start</div>
-              <div className="stat-value">{stats.breakStart}</div>
-            </div>
-            <div className="attendance-stat-box">
-              <div className="stat-icon hours-icon">
-                <FaClock />
-              </div>
-              <div className="stat-label">Break End</div>
-              <div className="stat-value">{stats.breakEnd}</div>
             </div>
 
             <div className="attendance-stat-box">
@@ -832,6 +666,3 @@ function UserAttendance() {
 }
 
 export default UserAttendance;
-
-
-
