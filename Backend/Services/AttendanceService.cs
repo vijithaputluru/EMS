@@ -541,7 +541,13 @@ namespace EmployeeManagementSystem.Services
                     CheckOut = att?.Check_Out != null
                         ? (DateTime?)ConvertToIST(att.Check_Out.Value)
                         : null,
-                    Hours = FormatHours(att?.WorkingMinutes ?? 0)
+                   Hours = FormatHours(
+    att == null
+        ? 0
+        : att.Check_Out == null
+            ? (int)(DateTime.UtcNow - att.Check_In.Value).TotalMinutes
+            : att.WorkingMinutes
+),
                 });
             }
 
@@ -659,133 +665,140 @@ namespace EmployeeManagementSystem.Services
 
         //---------------------------------------
 
-        public async Task<IActionResult> GetWeeklyAttendance(ClaimsPrincipal user)
+           public async Task<IActionResult> GetWeeklyAttendance(ClaimsPrincipal user)
+
+    {
+        await CheckMissingCheckouts();
+
+        var emp = await GetEmployee(user);
+
+        if (emp == null)
+
+            return new UnauthorizedObjectResult("Invalid user");
+
+        var today = DateTime.UtcNow.Date;
+
+        int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
+
+        var monday = DateTime.SpecifyKind(today.AddDays(-diff), DateTimeKind.Utc);
+
+        var weekEnd = monday.AddDays(7);
+
+        var attendances = await _context.Attendance
+
+            .Where(a => a.Employee_Id == emp.Employee_Id &&
+
+                        a.Attendance_Date >= monday &&
+
+                        a.Attendance_Date < weekEnd)
+
+           .AsNoTracking().ToListAsync();
+
+        var result = new List<object>();
+
+        // ✅ WEEKEND FIX
+
+
+        for (int i = 0; i < 7; i++)
 
         {
-            await CheckMissingCheckouts();
 
-            var emp = await GetEmployee(user);
+            var date = monday.AddDays(i);
 
-            if (emp == null)
-
-                return new UnauthorizedObjectResult("Invalid user");
-
-            var today = DateTime.UtcNow.Date;
-
-            int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
-
-            var monday = DateTime.SpecifyKind(today.AddDays(-diff), DateTimeKind.Utc);
-
-            var weekEnd = monday.AddDays(7);
-
-            var attendances = await _context.Attendance
-
-                .Where(a => a.Employee_Id == emp.Employee_Id &&
-
-                            a.Attendance_Date >= monday &&
-
-                            a.Attendance_Date < weekEnd)
-
-               .AsNoTracking().ToListAsync();
-
-            var result = new List<object>();
-
-            // ✅ WEEKEND FIX
-
-
-            for (int i = 0; i < 7; i++)
-
+            if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
             {
-
-                var date = monday.AddDays(i);
-
-                if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
-                {
-                    result.Add(new
-                    {
-                        Day = date.DayOfWeek.ToString(),
-                        Date = date.ToString("dd MMM yyyy"),
-                        Status = "Weekend",
-                        CheckIn = (string?)null,
-                        CheckOut = (string?)null,
-                        Hours = "0h 0m"
-                    });
-
-                    continue; // 🔥 VERY IMPORTANT
-                }
-
-                // ✅ STEP 4: HOLIDAY CHECK
-                var holiday = await _context.Holidays
-      .FirstOrDefaultAsync(h => h.Holiday_Date.Date == date.Date);
-
-                if (holiday != null)
-                {
-                    result.Add(new
-                    {
-                        Day = date.DayOfWeek.ToString(),
-                        Date = date.ToString("dd MMM yyyy"),
-                        Status = "Holiday",
-                        HolidayName = holiday.Holiday_Name,
-                        CheckIn = (string?)null,
-                        CheckOut = (string?)null,
-                        Hours = "0h 0m"
-                    });
-
-                    continue;
-                }
-                var att = attendances
-    .FirstOrDefault(a => a.Attendance_Date.Date == date.Date);
-
-                DateTime? checkIn = null;
-                DateTime? checkOut = null;
-
-                if (att?.Check_In != null)
-                    checkIn = ConvertToIST(att.Check_In.Value);
-
-                if (att?.Check_Out != null)
-                    checkOut = ConvertToIST(att.Check_Out.Value);
-
-                var todayIst = ConvertToIST(DateTime.UtcNow).Date;
-
-                string status;
-
-                if (date.Date > todayIst)
-                {
-                    status = "-";
-                }
-                else if (att != null)
-                {
-                    status = att.Status switch
-                    {
-                        "Present" => "Present",
-                        "Late" => "Late",
-                        "Half Day" => "Half Day",
-                        "LOP" => "Loss Of Pay",
-                        "MC" => "Missed Checkout",
-                        "LMC" => "Late Missed Checkout",
-                        _ => att.Status
-                    };
-                }
-                else
-                {
-                    status = "Absent";
-                }
-
                 result.Add(new
                 {
                     Day = date.DayOfWeek.ToString(),
                     Date = date.ToString("dd MMM yyyy"),
-                    Status = status,
-                    CheckIn = checkIn?.ToString("hh:mm tt"),
-                    CheckOut = checkOut?.ToString("hh:mm tt"),
-                    Hours = att != null ? FormatHours(att.WorkingMinutes) : "0h 0m"
+                    Status = "Weekend",
+                    CheckIn = (string?)null,
+                    CheckOut = (string?)null,
+                    Hours = "0h 0m"
+                   
                 });
+
+                continue; // 🔥 VERY IMPORTANT
             }
+
+            // ✅ STEP 4: HOLIDAY CHECK
+            var holiday = await _context.Holidays
+  .FirstOrDefaultAsync(h => h.Holiday_Date.Date == date.Date);
+
+            if (holiday != null)
+            {
+                result.Add(new
+                {
+                    Day = date.DayOfWeek.ToString(),
+                    Date = date.ToString("dd MMM yyyy"),
+                    Status = "Holiday",
+                    HolidayName = holiday.Holiday_Name,
+                    CheckIn = (string?)null,
+                    CheckOut = (string?)null,
+                    Hours = "0h 0m"
+                   
+                });
+
+                continue;
+            }
+            var att = attendances
+.FirstOrDefault(a => a.Attendance_Date.Date == date.Date);
+
+            DateTime? checkIn = null;
+            DateTime? checkOut = null;
+
+            if (att?.Check_In != null)
+                checkIn = ConvertToIST(att.Check_In.Value);
+
+            if (att?.Check_Out != null)
+                checkOut = ConvertToIST(att.Check_Out.Value);
+
+            var todayIst = ConvertToIST(DateTime.UtcNow).Date;
+
+            string status;
+
+            if (date.Date > todayIst)
+            {
+                status = "-";
+            }
+            else if (att != null)
+            {
+                status = att.Status switch
+                {
+                    "Present" => "Present",
+                    "Late" => "Late",
+                    "Half Day" => "Half Day",
+                    "LOP" => "Loss Of Pay",
+                    "MC" => "Missed Checkout",
+                    "LMC" => "Late Missed Checkout",
+                    _ => att.Status
+                };
+            }
+            else
+            {
+                status = "Absent";
+            }
+
+            result.Add(new
+            {
+                Day = date.DayOfWeek.ToString(),
+                Date = date.ToString("dd MMM yyyy"),
+                Status = status,
+                CheckIn = checkIn?.ToString("hh:mm tt"),
+                CheckOut = checkOut?.ToString("hh:mm tt"),
+                Hours = att != null
+? FormatHours(
+    att.Check_Out == null
+        ? (int)(DateTime.UtcNow - att.Check_In.Value).TotalMinutes
+        : att.WorkingMinutes)
+: "0h 0m"
+            });
+        }
 
             return new OkObjectResult(result);
 
         }
-
+    
 
         public async Task<IActionResult> GetPreviousWeekAttendance(ClaimsPrincipal user)
 
