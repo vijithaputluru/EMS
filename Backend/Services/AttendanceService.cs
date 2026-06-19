@@ -786,12 +786,12 @@ namespace EmployeeManagementSystem.Services
                 Status = status,
                 CheckIn = checkIn?.ToString("hh:mm tt"),
                 CheckOut = checkOut?.ToString("hh:mm tt"),
-                Hours = att != null
-? FormatHours(
-    att.Check_Out == null
-        ? (int)(DateTime.UtcNow - att.Check_In.Value).TotalMinutes
-        : att.WorkingMinutes)
-: "0h 0m"
+Hours = att?.Check_In != null
+    ? FormatHours(
+        att.Check_Out == null
+            ? (int)(DateTime.UtcNow - att.Check_In.Value).TotalMinutes
+            : att.WorkingMinutes)
+    : "0h 0m"
             });
         }
 
