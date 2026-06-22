@@ -1,15 +1,12 @@
-﻿using EmployeeManagementSystem.Data;
-
-using EmployeeManagementSystem.Interfaces;
-
-using EmployeeManagementSystem.Models;
-
-using Microsoft.AspNetCore.Mvc;
-
-using Microsoft.EntityFrameworkCore;
-
-using System.Security.Claims;
 using ClosedXML.Excel;
+using EmployeeManagementSystem.Data;
+using EmployeeManagementSystem.DTOs;
+using EmployeeManagementSystem.Interfaces;
+using EmployeeManagementSystem.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using OpenXmlPowerTools;
+using System.Security.Claims;
 
 public class EmployeeLeaveService : IEmployeeLeaveService
 
@@ -18,19 +15,18 @@ public class EmployeeLeaveService : IEmployeeLeaveService
     private readonly AppDbContext _context;
 
     private readonly IAdminNotificationService _notificationService;
-
+    private readonly IEmailService _emailService;
     public EmployeeLeaveService(
 
     AppDbContext context,
 
-    IAdminNotificationService notificationService)
-
+   
+    IAdminNotificationService notificationService,
+    IEmailService emailService)
     {
-
         _context = context;
-
         _notificationService = notificationService;
-
+        _emailService = emailService;
     }
 
     public async Task<IActionResult> ApplyLeave(EmployeeLeaveDto dto, ClaimsPrincipal user)
@@ -94,11 +90,55 @@ public class EmployeeLeaveService : IEmployeeLeaveService
             Status = "Pending",
             ManagerStatus = "Pending",
             HRStatus = "Pending",
+
+
             CreatedAt = DateTime.UtcNow
         };
 
         await _context.EmployeeLeaves.AddAsync(leave);
         await _context.SaveChangesAsync();
+        var approvers = await _context.Employees
+        .Where(x =>
+            x.RoleName != null &&
+            (
+                x.RoleName.ToLower() == "manager" ||
+                x.RoleName.ToLower() == "hr" ||
+                x.RoleName.ToLower() == "hradmin"
+            ))
+        .ToListAsync();
+
+        foreach (var approver in approvers)
+        {
+            if (!string.IsNullOrWhiteSpace(approver.Email))
+            {
+                await _emailService.SendEmailAsync(
+                    approver.Email,
+
+                    $"Leave Approval Required - {employee.Name} ({employee.Employee_Id})",
+
+                    $@"
+            <h3>New Leave Request Submitted</h3>
+
+            <p><b>Employee Name:</b> {employee.Name}</p>
+
+            <p><b>Employee ID:</b> {employee.Employee_Id}</p>
+
+            <p><b>Applied On:</b> {DateTime.Now:dd-MMM-yyyy hh:mm:ss tt}</p>
+
+            <p><b>Leave Type:</b> {dto.LeaveType}</p>
+
+            <p><b>From Date:</b> {fromDate:dd-MMM-yyyy}</p>
+
+            <p><b>To Date:</b> {toDate:dd-MMM-yyyy}</p>
+
+            <p><b>Reason:</b> {dto.Reason}</p>
+
+            <br/>
+
+            <p>Please login to EMS and review the leave request.</p>"
+                );
+            }
+        }
 
         _context.AdminNotifications.Add(new AdminNotification
         {
@@ -116,212 +156,208 @@ public class EmployeeLeaveService : IEmployeeLeaveService
             message = "Leave applied successfully"
         });
     }
-    public async Task<IActionResult> UpdateStatus(
-        int id,
-        string status,
-        ClaimsPrincipal user)
-    {
 
+
+    public async Task<IActionResult> UpdateStatus(
+    int id,
+    string status,
+    ClaimsPrincipal user)
+    {
         var leave = await _context.EmployeeLeaves.FindAsync(id);
 
         if (leave == null)
-
             return new NotFoundObjectResult("Leave not found");
 
-        var fromDate = DateTime.SpecifyKind(leave.FromDate, DateTimeKind.Utc);
-
-        var toDate = DateTime.SpecifyKind(leave.ToDate, DateTimeKind.Utc);
-
-        //---------------------------------------
-
-        // ✅ STORE OLD STATUS (IMPORTANT FIX)
-
-        //---------------------------------------
-
-        var oldStatus = leave.Status;
-
-        //---------------------------------------
-
-        // ✅ CHECK BEFORE UPDATE (KEEP YOUR LOGIC)
-
-        //---------------------------------------
-
-        if (leave.Status == "Approved" && status == "Approved")
-
+        if (leave.Status != null &&
+            leave.Status.StartsWith("Approved") &&
+            status == "Approved")
+        {
             return new BadRequestObjectResult("Already approved");
-
-        //---------------------------------------
-
-        // GET BALANCE
-
-        //---------------------------------------
+        }
 
         var balance = await _context.EmployeeLeaveBalances
-
             .FirstOrDefaultAsync(b => b.Employee_Id == leave.EmployeeId);
 
         if (balance == null)
-
         {
-
             balance = new EmployeeLeaveBalance
-
             {
-
                 Employee_Id = leave.EmployeeId
-
             };
 
             _context.EmployeeLeaveBalances.Add(balance);
-
             await _context.SaveChangesAsync();
-
         }
 
-        int days = await CalculateSandwichLeaveDays(
-    leave.EmployeeId,
-    fromDate,
-    toDate);
-
-        var leaveType = leave.LeaveType?.Trim().ToLower();
         var email = user.FindFirst(ClaimTypes.Email)?.Value?.Trim().ToLower();
 
         var loggedInUser = await _context.Employees
             .FirstOrDefaultAsync(x => x.Email.ToLower() == email);
 
         if (loggedInUser == null)
-        {
             return new UnauthorizedObjectResult("User not found");
-        }
+        var approver = await _context.Employees
+            .FirstOrDefaultAsync(x => x.Employee_Id == loggedInUser.Employee_Id);
 
+        string approverName = "";
+
+        if (!string.IsNullOrWhiteSpace(approver?.Name))
+        {
+            approverName = approver.Name
+                .Trim()
+                .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)
+                .FirstOrDefault() ?? "";
+        }
         var role = loggedInUser.RoleName?.Trim();
 
-
-
-        // ========================================
-        // MANAGER APPROVAL
-        // ========================================
-
-        if (string.Equals(role, "Manager",
-            StringComparison.OrdinalIgnoreCase))
+        if (!string.Equals(role, "Manager", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(role, "HR", StringComparison.OrdinalIgnoreCase))
         {
-            if (leave.ManagerStatus == "Approved")
-            {
-                return new BadRequestObjectResult(
-                    "Manager already approved this leave");
-            }
+            return new BadRequestObjectResult(
+                "Only Manager or HR can approve leave");
+        }
+        Console.WriteLine($"Original Name = {approver.Name}");
+        Console.WriteLine($"First Name = {approverName}");
 
+        // Save approver details
+
+        leave.ApprovedBy = approverName;
+        leave.ApprovedOn = DateTime.UtcNow;
+        if (string.Equals(role, "Manager", StringComparison.OrdinalIgnoreCase))
+        {
             leave.ManagerStatus = status;
+        }
 
-            if (status == "Approved")
+        if (string.Equals(role, "HR", StringComparison.OrdinalIgnoreCase))
+        {
+            leave.HRStatus = status;
+        }
+        var employee = await _context.Employees
+    .FirstOrDefaultAsync(x => x.Employee_Id == leave.EmployeeId);
+        if (status.Equals("Approved", StringComparison.OrdinalIgnoreCase))
+        {
+            leave.Status = $"Approved By {approverName}";
+
+            _context.UserNotifications.Add(new UserNotification
             {
-                leave.Status = "Waiting for HR Approval";
+                Employee_Id = leave.EmployeeId,
+                Title = "Leave Approved",
+                Message = $"Your leave request has been approved by {approverName}.",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            });
 
-                // Notify Employee
+            await _context.SaveChangesAsync();
 
-                _context.UserNotifications.Add(new UserNotification
-                {
-                    Employee_Id = leave.EmployeeId,
-                    Title = "Leave Approved By Manager",
-                    Message = "Manager approved your leave request. Waiting for HR confirmation.",
-                    IsRead = false,
-                    CreatedAt = DateTime.UtcNow
-                });
+            await _emailService.SendEmailAsync(
+                employee.Email,
+                "Leave Approved",
+                $@"
+        <h3>Leave Request Approved</h3>
 
-                // Notify HR
+        <p>Dear {leave.EmployeeName},</p>
 
-                _context.AdminNotifications.Add(new AdminNotification
-                {
-                    Title = "Leave Approval Required",
-                    Message = $"{leave.EmployeeName}'s leave is waiting for HR approval",
-                    UserRole = "HR",
-                    IsRead = false,
-                    CreatedAt = DateTime.UtcNow
-                });
-            }
-            else
+        <p>Your leave request has been approved.</p>
+
+        <table border='1' cellpadding='8' cellspacing='0' style='border-collapse:collapse;'>
+            <tr>
+                <td><b>Leave Type</b></td>
+                <td>{leave.LeaveType}</td>
+            </tr>
+            <tr>
+                <td><b>From Date</b></td>
+                <td>{leave.FromDate:dd-MMM-yyyy}</td>
+            </tr>
+            <tr>
+                <td><b>To Date</b></td>
+                <td>{leave.ToDate:dd-MMM-yyyy}</td>
+            </tr>
+            <tr>
+                <td><b>Reason</b></td>
+                <td>{leave.Reason}</td>
+            </tr>
+            <tr>
+                <td><b>Approved By</b></td>
+                <td>{approverName}</td>
+            </tr>
+            <tr>
+                <td><b>Approved On</b></td>
+                <td>{DateTime.Now:dd-MMM-yyyy hh:mm tt}</td>
+            </tr>
+        </table>
+
+        <br/>
+
+        <p>Regards,<br/>EMS Team</p>");
+
+            await RecalculateLeaveBalance(leave.EmployeeId);
+
+            return new OkObjectResult(
+                $"Leave approved by {approverName}");
+        }
+        else
+        {
+            leave.Status = $"Rejected By {approverName}";
+
+            _context.UserNotifications.Add(new UserNotification
             {
-                leave.Status = "Rejected";
+                Employee_Id = leave.EmployeeId,
+                Title = "Leave Rejected",
+                Message = $"Your leave request has been rejected by {approverName}.",
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow
+            });
 
-                _context.UserNotifications.Add(new UserNotification
-                {
-                    Employee_Id = leave.EmployeeId,
-                    Title = "Leave Rejected",
-                    Message = "Your leave request has been rejected by Manager.",
-                    IsRead = false,
-                    CreatedAt = DateTime.UtcNow
-                });
+            if (employee != null && !string.IsNullOrWhiteSpace(employee.Email))
+            {
+                await _emailService.SendEmailAsync(
+                    employee.Email,
+                    "Leave Rejected",
+                    $@"
+            <h3>Leave Request Rejected</h3>
+
+            <p>Dear {leave.EmployeeName},</p>
+
+            <p>Your leave request has been rejected.</p>
+
+            <table border='1' cellpadding='8' cellspacing='0' style='border-collapse:collapse;'>
+                <tr>
+                    <td><b>Leave Type</b></td>
+                    <td>{leave.LeaveType}</td>
+                </tr>
+                <tr>
+                    <td><b>From Date</b></td>
+                    <td>{leave.FromDate:dd-MMM-yyyy}</td>
+                </tr>
+                <tr>
+                    <td><b>To Date</b></td>
+                    <td>{leave.ToDate:dd-MMM-yyyy}</td>
+                </tr>
+                <tr>
+                    <td><b>Reason</b></td>
+                    <td>{leave.Reason}</td>
+                </tr>
+                <tr>
+                    <td><b>Rejected By</b></td>
+                    <td>{approverName}</td>
+                </tr>
+                <tr>
+                    <td><b>Rejected On</b></td>
+                    <td>{DateTime.Now:dd-MMM-yyyy hh:mm tt}</td>
+                </tr>
+            </table>
+
+            <br/>
+
+            <p>Regards,<br/>EMS Team</p>");
             }
 
             await _context.SaveChangesAsync();
 
-            return new OkObjectResult("Manager action completed");
+            return new OkObjectResult(
+                $"Leave rejected by {approverName}");
         }
-        // ========================================
-        // HR APPROVAL
-        // ========================================
-
-        if (string.Equals(role, "HR",
-            StringComparison.OrdinalIgnoreCase))
-        {
-            if (leave.HRStatus == "Approved")
-            {
-                return new BadRequestObjectResult(
-                    "HR already approved this leave");
-            }
-
-            if (leave.ManagerStatus != "Approved")
-            {
-                return new BadRequestObjectResult(
-                    "Manager approval pending");
-            }
-
-            leave.HRStatus = status;
-
-            if (status == "Approved")
-            {
-                leave.Status = "Approved";
-
-                _context.UserNotifications.Add(new UserNotification
-                {
-                    Employee_Id = leave.EmployeeId,
-                    Title = "Leave Approved",
-                    Message = "Your leave request has been approved by HR.",
-                    IsRead = false,
-                    CreatedAt = DateTime.UtcNow
-                });
-
-                await _context.SaveChangesAsync();
-
-                await RecalculateLeaveBalance(leave.EmployeeId);
-
-                return new OkObjectResult("HR approved leave");
-            }
-            else
-            {
-                leave.Status = "Rejected";
-
-                _context.UserNotifications.Add(new UserNotification
-                {
-                    Employee_Id = leave.EmployeeId,
-                    Title = "Leave Rejected",
-                    Message = "Your leave request has been rejected by HR.",
-                    IsRead = false,
-                    CreatedAt = DateTime.UtcNow
-                });
-
-                await _context.SaveChangesAsync();
-
-                return new OkObjectResult("HR rejected leave");
-            }
-        }
-    
-
-        return new BadRequestObjectResult(
-            "Only Manager or HR can approve leave");
-
     }
-
     public async Task<IActionResult> GetAllLeaves()
 
     {
@@ -444,6 +480,82 @@ public class EmployeeLeaveService : IEmployeeLeaveService
 
         });
 
+    }
+
+    public async Task<IActionResult> GetEmployeeLeaveDetails(string employeeId)
+    {
+        var employee = await _context.Employees
+            .FirstOrDefaultAsync(x => x.Employee_Id == employeeId);
+
+        if (employee == null)
+            return new NotFoundObjectResult("Employee not found");
+
+        var balance = await _context.EmployeeLeaveBalances
+            .FirstOrDefaultAsync(x => x.Employee_Id == employeeId);
+
+        if (balance == null)
+        {
+            balance = new EmployeeLeaveBalance
+            {
+                Employee_Id = employeeId
+            };
+
+            _context.EmployeeLeaveBalances.Add(balance);
+            await _context.SaveChangesAsync();
+        }
+
+        var leaveHistory = await _context.EmployeeLeaves
+            .Where(x => x.EmployeeId == employeeId)
+            .OrderByDescending(x => x.CreatedAt)
+            .Select(x => new
+            {
+                x.Id,
+                x.LeaveType,
+                x.FromDate,
+                x.ToDate,
+                x.Reason,
+                x.Status,
+                x.ApprovedBy,
+                x.ApprovedOn,
+                x.CreatedAt
+            })
+            .ToListAsync();
+
+        return new OkObjectResult(new
+        {
+            EmployeeId = employee.Employee_Id,
+            EmployeeName = employee.Name,
+            Department = employee.Department,
+            Email = employee.Email,
+
+            LeaveBalance = new
+            {
+                Earned = new
+                {
+                    Total = balance.Earned_Total,
+                    Used = balance.Earned_Used,
+                    Remaining = balance.Earned_Total - balance.Earned_Used
+                },
+
+                Casual = new
+                {
+                    Total = balance.Casual_Total,
+                    Used = balance.Casual_Used,
+                    Remaining = balance.Casual_Total - balance.Casual_Used
+                },
+
+                Sick = new
+                {
+                    Total = balance.Sick_Total,
+                    Used = balance.Sick_Used,
+                    Remaining = balance.Sick_Total - balance.Sick_Used
+                }
+            },
+
+            TotalLeavesApplied = leaveHistory.Count,
+
+            LeaveHistory = leaveHistory
+        });
     }
     public async Task<byte[]> ExportLeavesExcel()
     {
@@ -588,7 +700,7 @@ public class EmployeeLeaveService : IEmployeeLeaveService
         var previousLeave = await _context.EmployeeLeaves
             .Where(x =>
                 x.EmployeeId == employeeId &&
-                x.Status == "Approved" &&
+              x.Status.StartsWith("Approved") &&
                 x.ToDate.Date < fromDate.Date)
             .OrderByDescending(x => x.ToDate)
             .FirstOrDefaultAsync();
@@ -630,7 +742,7 @@ public class EmployeeLeaveService : IEmployeeLeaveService
         var nextLeave = await _context.EmployeeLeaves
             .Where(x =>
                 x.EmployeeId == employeeId &&
-                x.Status == "Approved" &&
+               x.Status.StartsWith("Approved") &&
                 x.FromDate.Date > toDate.Date)
             .OrderBy(x => x.FromDate)
             .FirstOrDefaultAsync();
@@ -684,7 +796,7 @@ public class EmployeeLeaveService : IEmployeeLeaveService
         var approvedLeaves = await _context.EmployeeLeaves
             .Where(x =>
                 x.EmployeeId == employeeId &&
-                x.Status == "Approved")
+                x.Status.StartsWith("Approved"))
             .ToListAsync();
 
         foreach (var leave in approvedLeaves)
@@ -713,5 +825,6 @@ public class EmployeeLeaveService : IEmployeeLeaveService
 
         await _context.SaveChangesAsync();
     }
+
 }
 
