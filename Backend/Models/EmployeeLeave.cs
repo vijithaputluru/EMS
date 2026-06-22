@@ -30,6 +30,8 @@ public class EmployeeLeave
 
     public string HRStatus { get; set; } = "Pending";
     public DateOnly? AppliedDate {  get; set; }
+    public string? ApprovedBy { get; set; }
 
+    public DateTime? ApprovedOn { get; set; }
     public DateTime CreatedAt { get; set; }
 }
