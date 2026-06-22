@@ -15,17 +15,6 @@ namespace EmployeeManagementSystem.Interfaces
     string toEmail,
     string subject,
     string body);
-        Task SendLocationMismatchEmail(
-    string adminEmail,
-    string employeeId,
-    string employeeName,
-    string employeeEmail,
-    decimal checkInLatitude,
-    decimal checkInLongitude,
-    decimal checkOutLatitude,
-    decimal checkOutLongitude,
-    decimal distance,
-    string reason);
-    }
+     
 
 }
