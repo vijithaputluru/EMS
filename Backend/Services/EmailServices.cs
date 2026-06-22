@@ -80,5 +80,31 @@ namespace EmployeeManagementSystem.Services
                 smtp.Send(message);
             }
         }
+            public async Task SendEmailAsync(
+string toEmail,
+string subject,
+string body)
+    {
+        using (var smtp = new SmtpClient("smtp.gmail.com", 587))
+        {
+            smtp.EnableSsl = true;
+            smtp.UseDefaultCredentials = false;
+            smtp.Credentials = new NetworkCredential(
+                _fromEmail,
+                _appPassword);
+
+            var message = new MailMessage();
+
+            message.From = new MailAddress(_fromEmail);
+            message.To.Add(toEmail);
+
+            message.Subject = subject;
+            message.Body = body;
+            message.IsBodyHtml = true;
+
+            await smtp.SendMailAsync(message);
+        }
+    }
+     
     }
 }
