@@ -27,9 +27,7 @@ public class EmployeeLeaveService : IEmployeeLeaveService
         _context = context;
         _notificationService = notificationService;
         _emailService = emailService;
-    }
-
-      public async Task<IActionResult> ApplyLeave(EmployeeLeaveDto dto, ClaimsPrincipal user)
+    }    public async Task<IActionResult> ApplyLeave(EmployeeLeaveDto dto, ClaimsPrincipal user)
     {
         var email = user.FindFirst(ClaimTypes.Email)?.Value?.Trim().ToLower();
 
@@ -112,49 +110,105 @@ public class EmployeeLeaveService : IEmployeeLeaveService
             if (!string.IsNullOrWhiteSpace(approver.Email))
             {
                 await _emailService.SendEmailAsync(
+
      approver.Email,
 
-     $"Leave Approval Required - {employee.Name} ({employee.Employee_Id})",
+     $"Leave Approval Request - {employee.Name} ({employee.Employee_Id})",
 
      $@"
-<h3>New Leave Request Submitted</h3>
-
-<p><b>Employee Name:</b> {employee.Name}</p>
-
-<p><b>Employee ID:</b> {employee.Employee_Id}</p>
-
-<p><b>Applied On:</b> {DateTime.Now:dd-MMM-yyyy hh:mm:ss tt}</p>
-
-<p><b>Leave Type:</b> {dto.LeaveType}</p>
-
-<p><b>From Date:</b> {fromDate:dd-MMM-yyyy}</p>
-
-<p><b>To Date:</b> {toDate:dd-MMM-yyyy}</p>
-
-<p><b>Reason:</b> {dto.Reason}</p>
-
-<hr/>
-
-<p><b>Note:</b> Please review and approve this leave request in the <b>EMS Application</b>.</p>
-
+<html>
+<body style='font-family:Calibri,Arial,sans-serif;font-size:14px;color:#333;'>
+ 
+<p>Hi Team,</p>
+ 
+<p>Hope you are doing well!!</p>
+ 
 <p>
-    <b>Login URL:</b>
-    <a href='http://3.108.78.39/login' target='_blank'>
-        http://3.108.78.39/login
-    </a>
-</p>
 
+With reference to the above subject, employee
+<b>{employee.Name} ({employee.Employee_Id})</b>
+
+has applied for <b>{dto.LeaveType}</b> from
+<b>{fromDate:dd-MMM-yyyy}</b> to
+<b>{toDate:dd-MMM-yyyy}</b>.
+</p>
+ 
 <p>
-    After logging in, navigate to
-    <b>Leave Management → Pending Requests</b>
-    to review and approve/reject the request.
-</p>
+<b>Applied On:</b>
 
+{leave.CreatedAt.ToLocalTime():dd-MMM-yyyy hh:mm:ss tt}
+</p>
+ 
+<p>
+<b>Reason:</b> {dto.Reason}
+</p>
+ 
+<p>
+
+We kindly request you to review the leave application and provide your approval/rejection at the earliest.
+</p>
+ 
+<p>
+
+Please log in to the EMS application using the link below:
+</p>
+ 
+<p>
+<a href='http://3.108.78.39/login' target='_blank'>
+
+EMS Login Portal
+</a>
+</p>
+ 
+<p>
+
+Or copy and paste the URL into your browser:
 <br/>
+<b>http://3.108.78.39/login</b>
+</p>
+ 
+<p>
 
-<p>Thanks & Regards,</p>
-<p><b>Employee Management System (EMS)</b></p>"
+After logging in, navigate to:
+<br/>
+<b>Leave Management → Pending Requests</b>
+</p>
+ 
+<p>
+
+to take the necessary action.
+</p>
+ 
+<p>
+
+Thank you for your understanding and support.
+</p>
+ 
+<p>
+
+Thank you,
+</p>
+ 
+<p>
+
+Regards,
+</p>
+ 
+<p>
+<b>PIRNAV EMS</b><br/>
+
+Employee Management System<br/>
+
+Pirnav Software Solutions Pvt. Ltd.<br/>
+</p>
+ 
+</body>
+</html>"
+
  );
+                
+ 
+
             }
         }
 
@@ -174,6 +228,8 @@ public class EmployeeLeaveService : IEmployeeLeaveService
             message = "Leave applied successfully"
         });
     }
+
+
 
 
     public async Task<IActionResult> UpdateStatus(
