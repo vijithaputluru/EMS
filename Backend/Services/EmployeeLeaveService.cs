@@ -29,7 +29,7 @@ public class EmployeeLeaveService : IEmployeeLeaveService
         _emailService = emailService;
     }
 
-    public async Task<IActionResult> ApplyLeave(EmployeeLeaveDto dto, ClaimsPrincipal user)
+      public async Task<IActionResult> ApplyLeave(EmployeeLeaveDto dto, ClaimsPrincipal user)
     {
         var email = user.FindFirst(ClaimTypes.Email)?.Value?.Trim().ToLower();
 
@@ -112,35 +112,53 @@ public class EmployeeLeaveService : IEmployeeLeaveService
             if (!string.IsNullOrWhiteSpace(approver.Email))
             {
                 await _emailService.SendEmailAsync(
-                    approver.Email,
+     approver.Email,
 
-                    $"Leave Approval Required - {employee.Name} ({employee.Employee_Id})",
+     $"Leave Approval Required - {employee.Name} ({employee.Employee_Id})",
 
-                    $@"
-            <h3>New Leave Request Submitted</h3>
+     $@"
+<h3>New Leave Request Submitted</h3>
 
-            <p><b>Employee Name:</b> {employee.Name}</p>
+<p><b>Employee Name:</b> {employee.Name}</p>
 
-            <p><b>Employee ID:</b> {employee.Employee_Id}</p>
+<p><b>Employee ID:</b> {employee.Employee_Id}</p>
 
-            <p><b>Applied On:</b> {DateTime.Now:dd-MMM-yyyy hh:mm:ss tt}</p>
+<p><b>Applied On:</b> {DateTime.Now:dd-MMM-yyyy hh:mm:ss tt}</p>
 
-            <p><b>Leave Type:</b> {dto.LeaveType}</p>
+<p><b>Leave Type:</b> {dto.LeaveType}</p>
 
-            <p><b>From Date:</b> {fromDate:dd-MMM-yyyy}</p>
+<p><b>From Date:</b> {fromDate:dd-MMM-yyyy}</p>
 
-            <p><b>To Date:</b> {toDate:dd-MMM-yyyy}</p>
+<p><b>To Date:</b> {toDate:dd-MMM-yyyy}</p>
 
-            <p><b>Reason:</b> {dto.Reason}</p>
+<p><b>Reason:</b> {dto.Reason}</p>
 
-            <br/>
+<hr/>
 
-            <p>Please login to EMS and review the leave request.</p>"
-                );
+<p><b>Note:</b> Please review and approve this leave request in the <b>EMS Application</b>.</p>
+
+<p>
+    <b>Login URL:</b>
+    <a href='http://3.108.78.39/login' target='_blank'>
+        http://3.108.78.39/login
+    </a>
+</p>
+
+<p>
+    After logging in, navigate to
+    <b>Leave Management → Pending Requests</b>
+    to review and approve/reject the request.
+</p>
+
+<br/>
+
+<p>Thanks & Regards,</p>
+<p><b>Employee Management System (EMS)</b></p>"
+ );
             }
         }
 
-        _context.AdminNotifications.Add(new AdminNotification
+            _context.AdminNotifications.Add(new AdminNotification
         {
             Title = "Leave Request",
             Message = $"{employee.Name} applied for leave",
