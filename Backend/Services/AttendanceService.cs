@@ -59,7 +59,8 @@ namespace EmployeeManagementSystem.Services
             {
                 "P" => "Present",
                 "A" => "Absent",
-                "L" => "On Leave",
+                  "L" => "Late",
+                "OL" => "On Leave",
                 "W" => "Weekend",
                 "H" => "Holiday",
                 "LOP" => "Loss Of Pay",
