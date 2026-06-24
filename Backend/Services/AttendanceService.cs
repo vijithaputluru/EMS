@@ -777,7 +777,17 @@ namespace EmployeeManagementSystem.Services
                     Status = status,
                     CheckIn = checkIn?.ToString("hh:mm tt"),
                     CheckOut = checkOut?.ToString("hh:mm tt"),
-                    Hours = att != null ? FormatHours(att.WorkingMinutes) : "0h 0m"
+                                   Hours = att != null
+? FormatHours(
+    att.Check_Out != null
+        ? att.WorkingMinutes
+        : Math.Max(
+            0,
+            (int)(DateTime.UtcNow - att.Check_In.Value).TotalMinutes
+              - att.TotalBreakMinutes
+          )
+  )
+: "0h 0m"
                 });
             }
 
@@ -884,7 +894,17 @@ namespace EmployeeManagementSystem.Services
 
                     CheckIn = checkIn?.ToString("hh:mm tt"),
                     CheckOut = checkOut?.ToString("hh:mm tt"),
-                    Hours = att != null ? FormatHours(att.WorkingMinutes) : "0h 0m"
+                                   Hours = att != null
+? FormatHours(
+    att.Check_Out != null
+        ? att.WorkingMinutes
+        : Math.Max(
+            0,
+            (int)(DateTime.UtcNow - att.Check_In.Value).TotalMinutes
+              - att.TotalBreakMinutes
+          )
+  )
+: "0h 0m"
                 });
             }
 
