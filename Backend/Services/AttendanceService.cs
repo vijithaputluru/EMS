@@ -101,7 +101,7 @@ namespace EmployeeManagementSystem.Services
         //---------------------------------------
         public async Task<IActionResult> CheckIn(ClaimsPrincipal user)
         {
-
+           
             var emp = await GetEmployee(user);
 
             if (emp == null)
@@ -212,19 +212,12 @@ namespace EmployeeManagementSystem.Services
             return new OkObjectResult(new
             {
                 Message = "Check-in successful",
-
-                CheckInTime = ConvertToIST(now)
-         .ToString("hh:mm:ss tt"),
-
-                Status = status,
-
                 MissedCheckouts = missedCheckoutCount,
-
                 Reminder = missedCheckoutCount > 0
-         ? $"You have {missedCheckoutCount} missed checkout(s) this week. On the 3rd missed checkout, LOP will be applied."
-         : null
-            });
-
+    ? $"You have {missedCheckoutCount} missed checkout(s) this week. On the 3rd missed checkout, LOP will be applied."
+    : null
+        });
+           
         }
 
         //---------------------------------------
@@ -240,7 +233,6 @@ namespace EmployeeManagementSystem.Services
             var emp = await GetEmployee(user);
 
             if (emp == null) return new UnauthorizedObjectResult("Invalid user");
-
 
             var today = DateTime.UtcNow.Date;
 
@@ -276,7 +268,7 @@ namespace EmployeeManagementSystem.Services
             att.WorkingMinutes =
                 totalMinutes - att.TotalBreakMinutes;
 
-            var hours = att.WorkingMinutes / 60.0;
+            var hours = totalMinutes / 60.0;
 
             if (hours >= 3 && hours < 4)
                 att.Status = "Half Day";
@@ -288,26 +280,14 @@ namespace EmployeeManagementSystem.Services
                 {
                     att.Status = "Present";
                 }
-
-            }
+            
+        }
             else
                 att.Status = "Absent";
 
             await _context.SaveChangesAsync();
 
-            return new OkObjectResult(new
-            {
-                Message = "Check-out successful",
-
-                CheckOutTime = ConvertToIST(att.Check_Out.Value)
-          .ToString("hh:mm:ss tt"),
-
-                WorkingHours = FormatHours(att.WorkingMinutes),
-
-                BreakMinutes = att.TotalBreakMinutes,
-
-                Status = att.Status
-            });
+            return new OkObjectResult("Check-out successful");
 
         }
 
@@ -344,16 +324,6 @@ namespace EmployeeManagementSystem.Services
 
             if (activeBreak)
                 return new BadRequestObjectResult("Break already started");
-            var breakAlreadyTaken = await _context.BreakLogs
-    .AnyAsync(x =>
-        x.EmployeeId == emp.Employee_Id &&
-        x.AttendanceId == attendance.Id);
-
-            if (breakAlreadyTaken)
-            {
-                return new BadRequestObjectResult(
-                    "You have already used your break for today.");
-            }
 
             _context.BreakLogs.Add(new BreakLog
             {
@@ -705,7 +675,7 @@ namespace EmployeeManagementSystem.Services
                     {
                         Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "Weekend",
+                        Status = "W",
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
                         Hours = "0h 0m"
@@ -724,7 +694,7 @@ namespace EmployeeManagementSystem.Services
                     {
                         Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "Holiday",
+                        Status = "H",
                         HolidayName = holiday.Holiday_Name,
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
@@ -750,26 +720,14 @@ namespace EmployeeManagementSystem.Services
                 string status;
 
                 if (date.Date > todayIst)
-                {
                     status = "-";
-                }
                 else if (att != null)
-                {
-                    status = att.Status switch
-                    {
-                        "Present" => "Present",
-                        "Late" => "Late",
-                        "Half Day" => "Half Day",
-                        "LOP" => "Loss Of Pay",
-                        "MC" => "Missed Checkout",
-                        "LMC" => "Late Missed Checkout",
-                        _ => att.Status
-                    };
-                }
+                    status = att.Status == "Half Day" ? "HD"
+                           : att.Status == "Present" ? "P"
+                           : att.Status == "Late" ? "P"
+                           : att.Status;
                 else
-                {
-                    status = "Absent";
-                }
+                    status = "A";
 
                 result.Add(new
                 {
@@ -782,10 +740,10 @@ namespace EmployeeManagementSystem.Services
                 });
             }
 
-            return new OkObjectResult(result);
+                return new OkObjectResult(result);
 
-        }
-
+            }
+        
 
         public async Task<IActionResult> GetPreviousWeekAttendance(ClaimsPrincipal user)
 
@@ -832,7 +790,7 @@ namespace EmployeeManagementSystem.Services
                     {
                         Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "Weekend",
+                        Status = "W",
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
                         Hours = "0h 0m"
@@ -850,7 +808,7 @@ namespace EmployeeManagementSystem.Services
                     {
                         Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "Holiday",
+                        Status = "H",
                         HolidayName = holiday.Holiday_Name, // ✅ ADD THIS
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
@@ -871,17 +829,11 @@ namespace EmployeeManagementSystem.Services
                     Day = date.DayOfWeek.ToString(),
                     Date = date.ToString("dd MMM yyyy"),
                     Status = att != null
-? att.Status switch
-{
-    "Present" => "Present",
-    "Late" => "Late",
-    "Half Day" => "Half Day",
-    "LOP" => "Loss Of Pay",
-    "MC" => "Missed Checkout",
-    "LMC" => "Late Missed Checkout",
-    _ => att.Status
-}
-: "Absent",
+    ? (att.Status == "Half Day" ? "HD"
+    : att.Status == "Present" ? "P"
+    : att.Status == "Late" ? "P"
+    : att.Status)
+    : "A",
 
                     CheckIn = checkIn?.ToString("hh:mm tt"),
                     CheckOut = checkOut?.ToString("hh:mm tt"),
@@ -1685,16 +1637,16 @@ namespace EmployeeManagementSystem.Services
                 }
             }
 
-            return new AttendanceSummaryDto
-            {
-                PresentDays = present,
-                AbsentDays = absent,
-                LopDays = lopDays
-            };
+                return new AttendanceSummaryDto
+                {
+                    PresentDays = present,
+                    AbsentDays = absent,
+                    LopDays = lopDays
+                };
 
-        }
-
-
+            }
+        
+        
 
 
         public async Task<IActionResult> GetEmployeeWorkingHours(
