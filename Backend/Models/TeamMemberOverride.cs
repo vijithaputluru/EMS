@@ -12,6 +12,10 @@
 
 //        public bool IsCrossMapped { get; set; }
 
+//        public bool DifferentProject { get; set; }
+
+//        public bool CustomReportingDays { get; set; }
+
 //        public int? OverrideProjectId { get; set; }
 
 //        [ForeignKey(nameof(TeamMemberId))]
@@ -19,5 +23,6 @@
 
 //        [ForeignKey(nameof(OverrideProjectId))]
 //        public Project? OverrideProject { get; set; }
+        
 //    }
 //}

@@ -43,25 +43,22 @@ namespace EmployeeManagementSystem.Controllers
         // GENERATE SINGLE PAYSLIP
 
         //--------------------------------
-
         [HttpPost("generate")]
-
         public async Task<IActionResult> GeneratePaySlip(
-
-            string employeeId,
-
-            int year,
-
-            string month,
-
-            decimal? OtherDeductions)
-
+    string employeeId,
+    int year,
+    string month,
+    decimal? OtherDeductions,
+    string? DeductionLabel)
         {
-
-            var result = await _service.GeneratePaySlip(employeeId, year, month, OtherDeductions ?? 0);
+            var result = await _service.GeneratePaySlip(
+                employeeId,
+                year,
+                month,
+                OtherDeductions ?? 0,
+                DeductionLabel);
 
             return Ok(result);
-
         }
 
         //--------------------------------

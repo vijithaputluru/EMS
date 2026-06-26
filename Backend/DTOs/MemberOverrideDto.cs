@@ -1,13 +1,17 @@
-﻿namespace EmployeeManagementSystem.DTOs
-{
-    public class MemberOverrideDto
-    {
-        public int TeamMemberId { get; set; }
+﻿//namespace EmployeeManagementSystem.DTOs
+//{
+//    public class MemberOverrideDto
+//    {
+//        public int TeamId { get; set; }
 
-        public bool IsCrossMapped { get; set; }
+//        public string EmployeeId { get; set; }
+//        public int TeamMemberId { get; set; }
+//        public bool DifferentProject { get; set; }
 
-        public int? OverrideProjectId { get; set; }
-
-        public List<string>? CustomReportingDays { get; set; }
-    }
-}
+//        public string? ProjectName { get; set; }
+//        public int? OverrideProjectId { get; set; }
+//        public bool CustomReportingDays { get; set; }
+//        public bool IsCrossMapped { get; set; }
+//        public List<string>? ReportingDays { get; set; }
+//    }
+//}

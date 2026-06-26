@@ -19,5 +19,6 @@
 //        [ForeignKey(nameof(EmployeeId))]
 //        [InverseProperty(nameof(Employee.TeamMembers))]
 //        public Employee? Employee { get; set; }
+//        public TeamMemberOverride? TeamMemberOverride { get; set; }
 //    }
 //}

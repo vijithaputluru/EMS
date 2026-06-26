@@ -1,19 +1,14 @@
-﻿using EmployeeManagementSystem.Data;
-
+﻿using ClosedXML.Excel;
+using EmployeeManagementSystem.Data;
 using EmployeeManagementSystem.DTOs;
-
+using EmployeeManagementSystem.Helpers;
 using EmployeeManagementSystem.Interfaces;
-
 using EmployeeManagementSystem.Models;
-
 using Microsoft.AspNetCore.Mvc;
-
 using Microsoft.EntityFrameworkCore;
-
+using System.IO;
 using System.Security.Claims;
 using static System.Runtime.InteropServices.JavaScript.JSType;
-using ClosedXML.Excel;
-using System.IO;
 
 namespace EmployeeManagementSystem.Services
 
@@ -26,15 +21,18 @@ namespace EmployeeManagementSystem.Services
         private readonly AppDbContext _context;
 
         private readonly IAdminNotificationService _notificationService;
+        private readonly IEmailService _emailService;
 
-        public AttendanceService(AppDbContext context, IAdminNotificationService notificationService)
-
+        public AttendanceService(
+     AppDbContext context,
+     IAdminNotificationService notificationService,
+     IEmailService emailService)
         {
-
             _context = context;
 
             _notificationService = notificationService;
 
+            _emailService = emailService;
         }
 
         //---------------------------------------
@@ -84,6 +82,8 @@ namespace EmployeeManagementSystem.Services
 
         }
 
+       
+
         private async Task<Employee?> GetEmployee(ClaimsPrincipal user)
 
         {
@@ -99,7 +99,9 @@ namespace EmployeeManagementSystem.Services
         // CHECK IN (FIXED ONLY HERE)
 
         //---------------------------------------
-        public async Task<IActionResult> CheckIn(ClaimsPrincipal user)
+        public async Task<IActionResult> CheckIn(
+     ClaimsPrincipal user,
+     CheckInLocationDto dto)
         {
            
             var emp = await GetEmployee(user);
@@ -130,6 +132,9 @@ namespace EmployeeManagementSystem.Services
 
             var now = DateTime.UtcNow;
             var ist = ConvertToIST(now);
+
+            
+
             var checkInStartTime = new TimeSpan(8, 55, 0);
 
             if (ist.TimeOfDay < checkInStartTime)
@@ -140,10 +145,7 @@ namespace EmployeeManagementSystem.Services
 
             string status = "Present";
 
-            // =========================
             // MISSED CHECKOUT POLICY
-            // 2 missed checkouts -> next day LOP
-            // =========================
             if (missedCheckoutCount >= 2)
             {
                 status = "LOP";
@@ -166,7 +168,6 @@ namespace EmployeeManagementSystem.Services
                     status = "Late";
                 }
             }
-
             var employeeName = emp.Name;
 
             if (string.IsNullOrWhiteSpace(employeeName))
@@ -176,30 +177,42 @@ namespace EmployeeManagementSystem.Services
 
             if (existing != null)
             {
-                if (existing.Check_In != null)
-                    return new BadRequestObjectResult("Already checked in");
+                // TEMPORARY FOR GPS TESTING
 
                 existing.Check_In = now;
                 existing.Status = status;
 
+                existing.CheckInLatitude = dto.Latitude;
+                existing.CheckInLongitude = dto.Longitude;
+
+                existing.LastActivityTime = DateTime.UtcNow;
+
                 _context.ActivityLogs.Add(new ActivityLog
                 {
-                    Activity = $"{employeeName} checked in",
+                    Activity = $"{employeeName} checked in (GPS Test)",
                     CreatedAt = DateTime.UtcNow
                 });
 
                 await _context.SaveChangesAsync();
 
-                return new OkObjectResult("Check-in updated successfully");
+                return new OkObjectResult(new
+                {
+                    Message = "Check-in updated successfully",
+                    Latitude = existing.CheckInLatitude,
+                    Longitude = existing.CheckInLongitude
+                });
             }
-
             _context.Attendance.Add(new Attendance
             {
                 Employee_Id = emp.Employee_Id,
                 Attendance_Date = today,
                 Check_In = now,
                 Status = status,
-                WorkingMinutes = 0
+                WorkingMinutes = 0,
+                CheckInLatitude = dto.Latitude,
+                CheckInLongitude = dto.Longitude,
+
+                LastActivityTime = DateTime.UtcNow
             });
 
             _context.ActivityLogs.Add(new ActivityLog
@@ -212,12 +225,19 @@ namespace EmployeeManagementSystem.Services
             return new OkObjectResult(new
             {
                 Message = "Check-in successful",
+
+                CheckInTime = ConvertToIST(now)
+         .ToString("hh:mm:ss tt"),
+
+                Status = status,
+
                 MissedCheckouts = missedCheckoutCount,
+
                 Reminder = missedCheckoutCount > 0
-    ? $"You have {missedCheckoutCount} missed checkout(s) this week. On the 3rd missed checkout, LOP will be applied."
-    : null
-        });
-           
+         ? $"You have {missedCheckoutCount} missed checkout(s) this week. On the 3rd missed checkout, LOP will be applied."
+         : null
+            });
+
         }
 
         //---------------------------------------
@@ -226,13 +246,16 @@ namespace EmployeeManagementSystem.Services
 
         //---------------------------------------
 
-        public async Task<IActionResult> CheckOut(ClaimsPrincipal user)
+        public async Task<IActionResult> CheckOut(
+      ClaimsPrincipal user,
+      CheckOutLocationDto dto)
 
         {
 
             var emp = await GetEmployee(user);
 
             if (emp == null) return new UnauthorizedObjectResult("Invalid user");
+
 
             var today = DateTime.UtcNow.Date;
 
@@ -244,20 +267,10 @@ namespace EmployeeManagementSystem.Services
 
                 return new BadRequestObjectResult("Check-in not found");
 
-            if (att.Check_Out != null)
-
-                return new BadRequestObjectResult("Already checked out");
-            var activeBreak = await _context.BreakLogs
-    .AnyAsync(x =>
-        x.EmployeeId == emp.Employee_Id &&
-        x.BreakEnd == null);
-
-            if (activeBreak)
-            {
-                return new BadRequestObjectResult(
-                    "Please end your break before checkout");
-            }
-
+            
+            
+   
+           
             var now = DateTime.UtcNow;
 
             att.Check_Out = now;
@@ -268,7 +281,7 @@ namespace EmployeeManagementSystem.Services
             att.WorkingMinutes =
                 totalMinutes - att.TotalBreakMinutes;
 
-            var hours = totalMinutes / 60.0;
+            var hours = att.WorkingMinutes / 60.0;
 
             if (hours >= 3 && hours < 4)
                 att.Status = "Half Day";
@@ -284,176 +297,127 @@ namespace EmployeeManagementSystem.Services
         }
             else
                 att.Status = "Absent";
-
-            await _context.SaveChangesAsync();
-
-            return new OkObjectResult("Check-out successful");
-
-        }
-
-
-        public async Task<IActionResult> StartBreak(ClaimsPrincipal user)
-        {
-            var emp = await GetEmployee(user);
-
-            if (emp == null)
-                return new UnauthorizedObjectResult("Invalid user");
-
-            var today = DateTime.UtcNow.Date;
-
-            var attendance = await _context.Attendance
-                .FirstOrDefaultAsync(x =>
-                    x.Employee_Id == emp.Employee_Id &&
-                    x.Attendance_Date.Date == today);
-            if (attendance.Check_In == null)
+            // Store checkout location
+            att.CheckOutLatitude = dto.Latitude;
+            att.CheckOutLongitude = dto.Longitude;
+            if (dto == null)
             {
-                return new BadRequestObjectResult(
-                    "Please check in before starting a break");
+                return new BadRequestObjectResult("Checkout payload is null");
             }
 
-            if (attendance == null)
-                return new BadRequestObjectResult("Please check in first");
-
-            if (attendance.Check_Out != null)
-                return new BadRequestObjectResult("Already checked out");
-
-            var activeBreak = await _context.BreakLogs
-                .AnyAsync(x =>
-                    x.EmployeeId == emp.Employee_Id &&
-                    x.BreakEnd == null);
-
-            if (activeBreak)
-                return new BadRequestObjectResult("Break already started");
-
-            _context.BreakLogs.Add(new BreakLog
+            if (dto.Latitude == 0 || dto.Longitude == 0)
             {
-                AttendanceId = attendance.Id,
-                EmployeeId = emp.Employee_Id,
-                BreakStart = DateTime.UtcNow
-            });
-
-            await _context.SaveChangesAsync();
-
-            return new OkObjectResult(new
-            {
-                Message = "Break started",
-                BreakStartTime = ConvertToIST(
-          DateTime.UtcNow)
-          .ToString("hh:mm:ss tt")
-            });
-        }
-
-
-        public async Task<IActionResult> EndBreak(ClaimsPrincipal user)
-        {
-            var emp = await GetEmployee(user);
-
-            if (emp == null)
-                return new UnauthorizedObjectResult("Invalid user");
-
-            var activeBreak = await _context.BreakLogs
-                .FirstOrDefaultAsync(x =>
-                    x.EmployeeId == emp.Employee_Id &&
-                    x.BreakEnd == null);
-
-            if (activeBreak == null)
-                return new BadRequestObjectResult("No active break found");
-
-            activeBreak.BreakEnd = DateTime.UtcNow;
-
-            activeBreak.BreakMinutes =
-                (int)(activeBreak.BreakEnd.Value -
-                      activeBreak.BreakStart).TotalMinutes;
-
-            var attendance = await _context.Attendance
-                .FirstOrDefaultAsync(x => x.Id == activeBreak.AttendanceId);
-
-            if (attendance != null)
-            {
-                attendance.TotalBreakMinutes += activeBreak.BreakMinutes;
+                return new BadRequestObjectResult("Latitude/Longitude missing");
             }
 
-            await _context.SaveChangesAsync();
-
-            return new OkObjectResult(new
+            // Calculate distance
+            if (att.CheckInLatitude.HasValue &&
+     att.CheckInLongitude.HasValue)
             {
-                Message = "Break ended",
-                BreakStartTime = ConvertToIST(activeBreak.BreakStart)
-         .ToString("hh:mm:ss tt"),
+                var distance = GeoHelper.CalculateDistance(
+                    (double)att.CheckInLatitude.Value,
+                    (double)att.CheckInLongitude.Value,
+                    (double)dto.Latitude,
+                    (double)dto.Longitude);
 
-                BreakEndTime = ConvertToIST(activeBreak.BreakEnd.Value)
-         .ToString("hh:mm:ss tt"),
+                att.CheckOutLatitude = dto.Latitude;
+                att.CheckOutLongitude = dto.Longitude;
 
-                BreakMinutes = activeBreak.BreakMinutes
-            });
-        }
+                att.DistanceMeters = (decimal)distance;
 
-        public async Task<IActionResult> GetTodayBreakSummary(ClaimsPrincipal user)
-        {
-            var emp = await GetEmployee(user);
-
-            if (emp == null)
-                return new UnauthorizedObjectResult("Invalid user");
-
-            var today = DateTime.UtcNow.Date;
-
-            var attendance = await _context.Attendance
-                .FirstOrDefaultAsync(x =>
-                    x.Employee_Id == emp.Employee_Id &&
-                    x.Attendance_Date.Date == today);
-
-            if (attendance == null)
-            {
-                return new OkObjectResult(new
+                if (distance <= 500)
                 {
-                    TotalBreaks = 0,
-                    TotalBreakMinutes = 0,
-                    IsOnBreak = false,
-                    CurrentBreakStart = (string?)null
-                });
+                    att.LocationStatus = "VALID";
+                    att.IsLocationMismatch = false;
+                    att.LocationChangeReason = null;
+                }
+                else
+                {
+                    // Reason mandatory
+                    if (string.IsNullOrWhiteSpace(dto.LocationChangeReason))
+                    {
+                        return new BadRequestObjectResult(new
+                        {
+                            requiresReason = true,
+                            message = "Reason is required when checkout location is more than 500 meters away."
+                        });
+                    }
+
+                    att.LocationStatus = "MISMATCH";
+
+                    att.IsLocationMismatch = true;
+
+                    att.LocationChangeReason =
+                        dto.LocationChangeReason.Trim();
+
+                    await _emailService.SendLocationMismatchEmail(
+    "vijitha.putluru@pirnav.com", // Admin Email
+    emp.Employee_Id,
+    emp.Name ?? "",
+    emp.Email ?? "",
+    att.CheckInLatitude.Value,
+    att.CheckInLongitude.Value,
+    (decimal)dto.Latitude,
+    (decimal)dto.Longitude,
+    (decimal)distance,
+    dto.LocationChangeReason
+);
+                }
             }
+            att.CheckOutLatitude = dto.Latitude;
+            att.CheckOutLongitude = dto.Longitude;
+         
 
-            var breakLogs = await _context.BreakLogs
-                .Where(x => x.AttendanceId == attendance.Id)
-                .OrderBy(x => x.BreakStart)
-                .ToListAsync();
-
-            var activeBreak = breakLogs
-                .FirstOrDefault(x => x.BreakEnd == null);
+            await _context.SaveChangesAsync();
 
             return new OkObjectResult(new
             {
-                TotalBreaks = breakLogs.Count,
+                Message = "Check-out successful",
 
-                TotalBreakMinutes = attendance.TotalBreakMinutes,
+                CheckOutTime = ConvertToIST(att.Check_Out.Value)
+          .ToString("hh:mm:ss tt"),
 
-                IsOnBreak = activeBreak != null,
+                WorkingHours = FormatHours(att.WorkingMinutes),
 
-                CurrentBreakStart = activeBreak != null
-                    ? ConvertToIST(activeBreak.BreakStart)
-                        .ToString("dd-MM-yyyy hh:mm tt")
-                    : null,
+                BreakMinutes = att.TotalBreakMinutes,
 
-                BreakHistory = breakLogs.Select(x => new
-                {
-                    BreakStart = ConvertToIST(x.BreakStart)
-                        .ToString("dd-MM-yyyy hh:mm tt"),
+                Status = att.Status,
 
-                    BreakEnd = x.BreakEnd != null
-                        ? ConvertToIST(x.BreakEnd.Value)
-                            .ToString("dd-MM-yyyy hh:mm tt")
-                        : null,
-
-                    BreakMinutes = x.BreakMinutes
-                })
             });
+
         }
+
+
+
 
         //---------------------------------------
 
         // ADMIN - TODAY
 
         //---------------------------------------
+        public async Task<IActionResult> UpdateActivity(
+    ClaimsPrincipal user)
+        {
+            var emp = await GetEmployee(user);
+
+            if (emp == null)
+                return new UnauthorizedObjectResult("Invalid user");
+
+            var attendance = await _context.Attendance
+                .FirstOrDefaultAsync(x =>
+                    x.Employee_Id == emp.Employee_Id &&
+                    x.Check_Out == null);
+
+            if (attendance == null)
+                return new OkObjectResult("No active attendance");
+
+            attendance.LastActivityTime = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return new OkObjectResult("Activity Updated");
+        }
+
 
         public async Task<List<object>> GetAttendanceByDate(
       DateTime date,
@@ -499,20 +463,75 @@ namespace EmployeeManagementSystem.Services
                 }
 
                 result.Add(new
+
                 {
+
                     emp.Name,
+
                     emp.Employee_Id,
+
                     emp.Department,
+
                     Date = date.ToString("yyyy-MM-dd"),
+
                     Status = finalStatus,
+
                     CheckIn = att?.Check_In != null
-                        ? (DateTime?)ConvertToIST(att.Check_In.Value)
-                        : null,
+
+            ? (DateTime?)ConvertToIST(att.Check_In.Value)
+
+            : null,
+
                     CheckOut = att?.Check_Out != null
-                        ? (DateTime?)ConvertToIST(att.Check_Out.Value)
-                        : null,
-                    Hours = FormatHours(att?.WorkingMinutes ?? 0)
+
+            ? (DateTime?)ConvertToIST(att.Check_Out.Value)
+
+            : null,
+
+                    CheckInLatitude = att?.CheckInLatitude,
+
+                    CheckInLongitude = att?.CheckInLongitude,
+
+                    CheckOutLatitude = att?.CheckOutLatitude,
+
+                    CheckOutLongitude = att?.CheckOutLongitude,
+
+                    CheckInMapUrl =
+
+            att?.CheckInLatitude != null &&
+
+            att?.CheckInLongitude != null
+
+                ? $"https://www.google.com/maps/search/?api=1&query={att.CheckInLatitude},{att.CheckInLongitude}"
+
+                : null,
+
+                    CheckOutMapUrl =
+
+            att?.CheckOutLatitude != null &&
+
+            att?.CheckOutLongitude != null
+
+                ? $"https://www.google.com/maps/search/?api=1&query={att.CheckOutLatitude},{att.CheckOutLongitude}"
+
+                : null,
+
+                    Hours = FormatHours(
+
+            att == null
+
+                ? 0
+
+                : att.Check_Out == null
+
+                    ? (int)(DateTime.UtcNow - att.Check_In.Value).TotalMinutes
+
+                    : att.WorkingMinutes
+
+        )
+
                 });
+
             }
 
             return result;
@@ -542,9 +561,9 @@ namespace EmployeeManagementSystem.Services
                 .AsNoTracking().ToListAsync();
 
             var leaves = await _context.EmployeeLeaves
-                .AsNoTracking()
-                .Where(l => l.Status == "Approved")
-                .AsNoTracking().ToListAsync();
+    .AsNoTracking()
+    .Where(l => l.Status.StartsWith("Approved"))
+    .ToListAsync();
 
             var result = new List<AdminEmployeeAttendanceDto>();
 
@@ -590,7 +609,7 @@ namespace EmployeeManagementSystem.Services
                         days.Add(new AdminAttendanceDayDto
                         {
                             Day = d,
-                            Status = "L"
+                            Status = "OL"
                         });
                         continue;
                     }
@@ -630,63 +649,67 @@ namespace EmployeeManagementSystem.Services
         //---------------------------------------
 
         public async Task<IActionResult> GetWeeklyAttendance(ClaimsPrincipal user)
-
         {
             await CheckMissingCheckouts();
 
             var emp = await GetEmployee(user);
 
             if (emp == null)
-
                 return new UnauthorizedObjectResult("Invalid user");
 
             var today = DateTime.UtcNow.Date;
-
             int diff = (7 + (today.DayOfWeek - DayOfWeek.Monday)) % 7;
 
             var monday = DateTime.SpecifyKind(today.AddDays(-diff), DateTimeKind.Utc);
-
             var weekEnd = monday.AddDays(7);
 
+            // Attendance
             var attendances = await _context.Attendance
-
                 .Where(a => a.Employee_Id == emp.Employee_Id &&
-
                             a.Attendance_Date >= monday &&
-
                             a.Attendance_Date < weekEnd)
+                .AsNoTracking()
+                .ToListAsync();
 
-               .AsNoTracking().ToListAsync();
+            // Holidays
+            var holidays = await _context.Holidays
+                .Where(h => h.Holiday_Date >= monday &&
+                            h.Holiday_Date < weekEnd)
+                .AsNoTracking()
+                .ToListAsync();
+
+            // Approved Leaves
+            var leaves = await _context.EmployeeLeaves
+                .Where(l => l.EmployeeId == emp.Employee_Id &&
+                            l.Status.StartsWith("Approved"))
+                .AsNoTracking()
+                .ToListAsync();
 
             var result = new List<object>();
 
-            // ✅ WEEKEND FIX
-
-
             for (int i = 0; i < 7; i++)
-
             {
-
                 var date = monday.AddDays(i);
 
-                if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+                // Weekend
+                if (date.DayOfWeek == DayOfWeek.Saturday ||
+                    date.DayOfWeek == DayOfWeek.Sunday)
                 {
                     result.Add(new
                     {
                         Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "W",
+                        Status = "Weekend",
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
                         Hours = "0h 0m"
                     });
 
-                    continue; // 🔥 VERY IMPORTANT
+                    continue;
                 }
 
-                // ✅ STEP 4: HOLIDAY CHECK
-                var holiday = await _context.Holidays
-      .FirstOrDefaultAsync(h => h.Holiday_Date.Date == date.Date);
+                // Holiday
+                var holiday = holidays.FirstOrDefault(h => h.Holiday_Date.Date == date.Date);
 
                 if (holiday != null)
                 {
@@ -694,7 +717,7 @@ namespace EmployeeManagementSystem.Services
                     {
                         Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "H",
+                        Status = "Holiday",
                         HolidayName = holiday.Holiday_Name,
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
@@ -703,8 +726,31 @@ namespace EmployeeManagementSystem.Services
 
                     continue;
                 }
-                var att = attendances
-    .FirstOrDefault(a => a.Attendance_Date.Date == date.Date);
+
+                // Approved Leave
+                var leave = leaves.FirstOrDefault(l =>
+                    date.Date >= l.FromDate.Date &&
+                    date.Date <= l.ToDate.Date);
+
+                if (leave != null)
+                {
+                    result.Add(new
+                    {
+                        Day = date.DayOfWeek.ToString(),
+                        Date = date.ToString("dd MMM yyyy"),
+                        Status = "On Leave",   // Change to "OL" if required
+                        LeaveType = leave.LeaveType, // Optional
+                        CheckIn = (string?)null,
+                        CheckOut = (string?)null,
+                        Hours = "0h 0m"
+                    });
+
+                    continue;
+                }
+
+                // Attendance
+                var att = attendances.FirstOrDefault(a =>
+                    a.Attendance_Date.Date == date.Date);
 
                 DateTime? checkIn = null;
                 DateTime? checkOut = null;
@@ -720,14 +766,26 @@ namespace EmployeeManagementSystem.Services
                 string status;
 
                 if (date.Date > todayIst)
+                {
                     status = "-";
+                }
                 else if (att != null)
-                    status = att.Status == "Half Day" ? "HD"
-                           : att.Status == "Present" ? "P"
-                           : att.Status == "Late" ? "P"
-                           : att.Status;
+                {
+                    status = att.Status switch
+                    {
+                        "Present" => "Present",
+                        "Late" => "Late",
+                        "Half Day" => "Half Day",
+                        "LOP" => "Loss Of Pay",
+                        "MC" => "Missed Checkout",
+                        "LMC" => "Late Missed Checkout",
+                        _ => att.Status
+                    };
+                }
                 else
-                    status = "A";
+                {
+                    status = "Absent";
+                }
 
                 result.Add(new
                 {
@@ -736,15 +794,20 @@ namespace EmployeeManagementSystem.Services
                     Status = status,
                     CheckIn = checkIn?.ToString("hh:mm tt"),
                     CheckOut = checkOut?.ToString("hh:mm tt"),
-                    Hours = att != null ? FormatHours(att.WorkingMinutes) : "0h 0m"
+                    Hours = att != null
+                        ? FormatHours(
+                            att.Check_Out != null
+                                ? att.WorkingMinutes
+                                : Math.Max(
+                                    0,
+                                    (int)(DateTime.UtcNow - att.Check_In.Value).TotalMinutes
+                                    - att.TotalBreakMinutes))
+                        : "0h 0m"
                 });
             }
 
-                return new OkObjectResult(result);
-
-            }
-        
-
+            return new OkObjectResult(result);
+        }
         public async Task<IActionResult> GetPreviousWeekAttendance(ClaimsPrincipal user)
 
         {
@@ -790,10 +853,11 @@ namespace EmployeeManagementSystem.Services
                     {
                         Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "W",
+                        Status = "Weekend",
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
                         Hours = "0h 0m"
+                       
                     });
                     continue;
                 }
@@ -808,11 +872,12 @@ namespace EmployeeManagementSystem.Services
                     {
                         Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "H",
-                        HolidayName = holiday.Holiday_Name, // ✅ ADD THIS
+                        Status = "Holiday",
+                        HolidayName = holiday.Holiday_Name,
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
                         Hours = "0h 0m"
+                      
                     });
 
                     continue;
@@ -829,16 +894,34 @@ namespace EmployeeManagementSystem.Services
                     Day = date.DayOfWeek.ToString(),
                     Date = date.ToString("dd MMM yyyy"),
                     Status = att != null
-    ? (att.Status == "Half Day" ? "HD"
-    : att.Status == "Present" ? "P"
-    : att.Status == "Late" ? "P"
-    : att.Status)
-    : "A",
+         ? att.Status switch
+         {
+             "Present" => "Present",
+             "Late" => "Late",
+             "Half Day" => "Half Day",
+             "LOP" => "Loss Of Pay",
+             "MC" => "Missed Checkout",
+             "LMC" => "Late Missed Checkout",
+             _ => att.Status
+         }
+         : "Absent",
 
                     CheckIn = checkIn?.ToString("hh:mm tt"),
                     CheckOut = checkOut?.ToString("hh:mm tt"),
-                    Hours = att != null ? FormatHours(att.WorkingMinutes) : "0h 0m"
+                    Hours = att != null
+    ? FormatHours(
+        att.Check_Out != null
+            ? att.WorkingMinutes
+            : Math.Max(
+                0,
+                (int)(DateTime.UtcNow - att.Check_In.Value).TotalMinutes
+                  - att.TotalBreakMinutes
+              )
+      )
+    : "0h 0m"
+
                 });
+            
             }
 
             return new OkObjectResult(result);
@@ -867,7 +950,7 @@ namespace EmployeeManagementSystem.Services
             // ✅ Tomorrow (to avoid time issues)
 
             var tomorrow = today.Date.AddDays(1);
-            var employeeId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var employeeId = emp.Employee_Id;
 
             var attendances = await _context.Attendance
 
@@ -902,21 +985,15 @@ namespace EmployeeManagementSystem.Services
                 {
 
                     result.Add(new
-
                     {
-
-                        Day = day,
-
-                        Status = "W",
-
-                        CheckIn = (DateTime?)null,
-
-                        CheckOut = (DateTime?)null,
-
+                        Day = date.DayOfWeek.ToString(),
+                        Date = date.ToString("dd MMM yyyy"),
+                        Status = "Weekend",
+                        CheckIn = (string?)null,
+                        CheckOut = (string?)null,
                         Hours = "0h 0m"
-
+                      
                     });
-
                     continue;
 
                 }
@@ -930,9 +1007,9 @@ namespace EmployeeManagementSystem.Services
                 {
                     result.Add(new
                     {
-                        Day = date.Day,
+                        Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "H",
+                        Status = "Holiday",
                         HolidayName = holiday.Holiday_Name,
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
@@ -945,10 +1022,11 @@ namespace EmployeeManagementSystem.Services
                 // ✅ Leave check
 
                 var leave = await _context.EmployeeLeaves
-    .FirstOrDefaultAsync(l => l.EmployeeId == employeeId &&
-                             l.Status == "Approved" &&
-                             date >= l.FromDate &&
-                             date <= l.ToDate);
+    .FirstOrDefaultAsync(l =>
+        l.EmployeeId == employeeId &&
+        l.Status.StartsWith("Approved") &&
+        date.Date >= l.FromDate.Date &&
+        date.Date <= l.ToDate.Date);
 
                 if (leave != null)
                 {
@@ -986,16 +1064,22 @@ namespace EmployeeManagementSystem.Services
                 {
                     Day = day,
                     Status = date.Date > DateTime.UtcNow.Date
-    ? "-"
-    : (att != null
-        ? (att.Status == "Half Day" ? "HD"
-          : att.Status == "Present" ? "P"
-          : att.Status == "Late" ? "P"
-          : att.Status)
-        : "A"),
+           ? "-"
+           : (att != null
+               ? (att.Status == "Half Day" ? "HD"
+                 : att.Status == "Present" ? "P"
+                 : att.Status == "Late" ? "P"
+                 : att.Status)
+               : "A"),
+
                     CheckIn = checkIn?.ToString("hh:mm tt"),
                     CheckOut = checkOut?.ToString("hh:mm tt"),
-                    Hours = att != null ? FormatHours(att.WorkingMinutes) : "0h 0m"
+
+                    Hours = att != null
+           ? FormatHours(att.WorkingMinutes)
+           : "0h 0m"
+
+                   
                 });
 
             }
@@ -1037,7 +1121,7 @@ namespace EmployeeManagementSystem.Services
 
             var totalDays = DateTime.DaysInMonth(lastMonthStart.Year, lastMonthStart.Month);
 
-            var employeeId = user.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            var employeeId = emp.Employee_Id;
 
 
             var result = new List<object>();
@@ -1054,8 +1138,9 @@ namespace EmployeeManagementSystem.Services
                 {
                     result.Add(new
                     {
-                        Day = day,
-                        Status = "W",
+                        Day = date.DayOfWeek.ToString(),
+                        Date = date.ToString("dd MMM yyyy"),
+                        Status = "Weekend",
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
                         Hours = "0h 0m"
@@ -1071,24 +1156,26 @@ namespace EmployeeManagementSystem.Services
                 {
                     result.Add(new
                     {
-                        Day = date.Day,
+                        Day = date.DayOfWeek.ToString(),
                         Date = date.ToString("dd MMM yyyy"),
-                        Status = "H",
-                        HolidayName = holiday.Holiday_Name, // ✅ ADD
+                        Status = "Holiday",
+                        HolidayName = holiday.Holiday_Name,
                         CheckIn = (string?)null,
                         CheckOut = (string?)null,
                         Hours = "0h 0m"
                     });
+
 
                     continue;
                 }
 
                 // ✅ Leave
                 var leave = await _context.EmployeeLeaves
-    .FirstOrDefaultAsync(l => l.EmployeeId == employeeId &&
-                             l.Status == "Approved" &&
-                             date >= l.FromDate &&
-                             date <= l.ToDate);
+    .FirstOrDefaultAsync(l =>
+        l.EmployeeId == employeeId &&
+        l.Status.StartsWith("Approved") &&
+        date.Date >= l.FromDate.Date &&
+        date.Date <= l.ToDate.Date);
 
                 if (leave != null)
                 {
@@ -1116,17 +1203,22 @@ namespace EmployeeManagementSystem.Services
                 {
                     Day = day,
                     Status = date.Date > DateTime.UtcNow.Date
-    ? "-"
-    : (att != null
-        ? (att.Status == "Half Day" ? "HD"
-          : att.Status == "Present" ? "P"
-          : att.Status == "Late" ? "P"
-          : att.Status)
-        : "A"),
+            ? "-"
+            : (att != null
+                ? (att.Status == "Half Day" ? "HD"
+                  : att.Status == "Present" ? "P"
+                  : att.Status == "Late" ? "P"
+                  : att.Status)
+                : "A"),
 
                     CheckIn = checkIn?.ToString("hh:mm tt"),
                     CheckOut = checkOut?.ToString("hh:mm tt"),
-                    Hours = att != null ? FormatHours(att.WorkingMinutes) : "0h 0m"
+
+                    Hours = att != null
+            ? FormatHours(att.WorkingMinutes)
+            : "0h 0m",
+
+                   
                 });
             }
 
@@ -1500,7 +1592,7 @@ namespace EmployeeManagementSystem.Services
                 .AsNoTracking()
 
                 .Where(a =>
-
+                
                     a.Employee_Id == employeeId &&
 
                     a.Attendance_Date >= start &&
@@ -1508,7 +1600,18 @@ namespace EmployeeManagementSystem.Services
                     a.Attendance_Date < end)
 
                 .ToListAsync();
-
+            foreach (var a in attendances)
+            {
+                Console.WriteLine("================================");
+                Console.WriteLine($"Id             : {a.Id}");
+                Console.WriteLine($"Employee       : {a.Employee_Id}");
+                Console.WriteLine($"Date           : {a.Attendance_Date}");
+                Console.WriteLine($"Status         : {a.Status}");
+                Console.WriteLine($"Check_In       : {a.Check_In}");
+                Console.WriteLine($"Check_Out      : {a.Check_Out}");
+                Console.WriteLine($"WorkingMinutes : {a.WorkingMinutes}");
+                Console.WriteLine("================================");
+            }
             var attendanceLookup = attendances
 
                 .GroupBy(a => a.Attendance_Date.Date)
@@ -1536,16 +1639,10 @@ namespace EmployeeManagementSystem.Services
             // Leaves
 
             var leaves = await _context.EmployeeLeaves
-
-                .AsNoTracking()
-
-                .Where(l =>
-
-                    l.EmployeeId == employeeId &&
-
-                    l.Status == "Approved")
-
-                .ToListAsync();
+     .Where(l =>
+         l.EmployeeId == employeeId &&
+         l.Status.StartsWith("Approved"))
+     .ToListAsync();
 
             decimal present = 0;
 
@@ -1645,8 +1742,271 @@ namespace EmployeeManagementSystem.Services
                 };
 
             }
-        
-        
+
+
+        public async Task<string> UploadMonthlyAttendance(
+
+      IFormFile file,
+
+      int month,
+
+      int year)
+
+        {
+
+            try
+
+            {
+
+                if (file == null || file.Length == 0)
+
+                    return "No file uploaded";
+
+                if (month < 1 || month > 12)
+
+                    return "Invalid month";
+
+                if (year < 2000 || year > 2100)
+
+                    return "Invalid year";
+
+                if (!Path.GetExtension(file.FileName)
+
+                    .Equals(".xlsx", StringComparison.OrdinalIgnoreCase))
+
+                {
+
+                    return "Please upload only .xlsx files";
+
+                }
+
+                using var stream = new MemoryStream();
+
+                await file.CopyToAsync(stream);
+
+                stream.Position = 0;
+
+                using var workbook = new XLWorkbook(stream);
+
+                var worksheet = workbook.Worksheet(1);
+
+                if (worksheet == null)
+
+                    return "Worksheet not found";
+
+                var lastRowUsed = worksheet.LastRowUsed();
+
+                if (lastRowUsed == null)
+
+                    return "Excel file is empty";
+
+                int lastRow = lastRowUsed.RowNumber();
+
+                var monthStart = new DateTime(year, month, 1);
+
+                var monthEnd = monthStart.AddMonths(1);
+
+                // Load attendance records once
+
+                var attendanceList = await _context.Attendance
+
+                    .Where(x =>
+
+                        x.Attendance_Date >= monthStart &&
+
+                        x.Attendance_Date < monthEnd)
+
+                    .ToListAsync();
+
+                var attendanceDictionary = attendanceList
+
+                    .ToDictionary(
+
+                        x => $"{x.Employee_Id.Trim()}_{x.Attendance_Date:yyyy-MM-dd}",
+
+                        x => x);
+
+                // Load employees once
+
+                var employeeIds = await _context.Employees
+
+                    .Select(x => x.Employee_Id)
+
+                    .ToListAsync();
+
+                var employeeSet = employeeIds
+
+                    .Where(x => !string.IsNullOrWhiteSpace(x))
+
+                    .Select(x => x.Trim())
+
+                    .ToHashSet();
+
+                int updatedCount = 0;
+
+                int insertedCount = 0;
+
+                int skippedEmployees = 0;
+
+                for (int row = 2; row <= lastRow; row++)
+
+                {
+
+                    var employeeId = worksheet
+
+                        .Cell(row, 1)
+
+                        .GetString()
+
+                        .Trim();
+
+                    if (string.IsNullOrWhiteSpace(employeeId))
+
+                        continue;
+
+                    if (!employeeSet.Contains(employeeId))
+
+                    {
+
+                        skippedEmployees++;
+
+                        continue;
+
+                    }
+
+                    for (
+
+                        int day = 1;
+
+                        day <= DateTime.DaysInMonth(year, month);
+
+                        day++
+
+                    )
+
+                    {
+
+                        var excelStatus = worksheet
+
+                            .Cell(row, day + 2)
+
+                            .GetString()
+
+                            .Trim()
+
+                            .ToUpper();
+
+                        if (string.IsNullOrWhiteSpace(excelStatus))
+
+                            continue;
+
+                        string dbStatus = excelStatus switch
+
+                        {
+
+                            "P" => "Present",
+
+                            "A" => "Absent",
+
+                            "HD" => "Half Day",
+
+                            "LOP" => "LOP",
+
+                            "LT" => "Late",
+
+                            "W" => null,
+
+                            "H" => null,
+
+                            _ => null
+
+                        };
+
+                        if (string.IsNullOrWhiteSpace(dbStatus))
+
+                            continue;
+
+                        var attendanceDate =
+
+                            new DateTime(year, month, day);
+
+                        var key =
+
+                            $"{employeeId}_{attendanceDate:yyyy-MM-dd}";
+
+                        if (attendanceDictionary.TryGetValue(
+
+                            key,
+
+                            out var attendance))
+
+                        {
+
+                            attendance.Status = dbStatus;
+
+                            updatedCount++;
+
+                        }
+
+                        else
+
+                        {
+
+                            var newAttendance = new Attendance
+
+                            {
+
+                                Employee_Id = employeeId,
+
+                                Attendance_Date = attendanceDate,
+
+                                Status = dbStatus,
+
+                                Check_In = null,
+
+                                Check_Out = null,
+
+                                WorkingMinutes = 0,
+
+                                TotalBreakMinutes = 0,
+
+                                IsLocationMismatch = false
+
+                            };
+
+                            _context.Attendance.Add(newAttendance);
+
+                            attendanceDictionary.Add(
+
+                                key,
+
+                                newAttendance
+
+                            );
+
+                            insertedCount++;
+
+                        }
+
+                    }
+
+                }
+
+                await _context.SaveChangesAsync();
+
+                return $"Attendance Upload Completed. Updated: {updatedCount}, Inserted: {insertedCount}, Skipped Employees: {skippedEmployees}";
+
+            }
+
+            catch (Exception ex)
+
+            {
+
+                return $"Upload Failed : {ex.Message}";
+
+            }
+
+        }
 
 
         public async Task<IActionResult> GetEmployeeWorkingHours(
@@ -1998,9 +2358,9 @@ namespace EmployeeManagementSystem.Services
                 .ToListAsync();
 
             var leaves = await _context.EmployeeLeaves
-                .AsNoTracking()
-                .Where(l => l.Status == "Approved")
-                .ToListAsync();
+     .AsNoTracking()
+     .Where(l => l.Status.StartsWith("Approved"))
+     .ToListAsync();
 
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Weekly Attendance");
@@ -2284,13 +2644,9 @@ namespace EmployeeManagementSystem.Services
                     : "-";
 
                 presentSheet.Cell(presentRow, 7).Value =
-                    att != null && att.Check_In != null
-                        ? FormatHours(
-                            att.Check_Out != null
-                                ? att.WorkingMinutes
-                                : (int)(DateTime.UtcNow - att.Check_In.Value).TotalMinutes
-                          )
-                        : "0h 0m";
+                    att != null
+    ? FormatHours(att.WorkingMinutes)
+    : "0h 0m";
                 presentRow++;
             }
 

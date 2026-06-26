@@ -22,6 +22,7 @@ using System.Security.Claims;
 
 using System.Text;
 using Microsoft.AspNetCore.HttpOverrides;
+using QuestPDF.Infrastructure;
 
 using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 
@@ -83,6 +84,7 @@ builder.Services.AddScoped<IManualPayslipService, ManualPayslipService>();
 builder.Services.AddHostedService<AutoCheckoutService>();
 
 builder.Services.AddScoped<ExperienceOfferLetterService>();
+//builder.Services.AddScoped<ITeamService, TeamService>();
 
 builder.Services.AddScoped<ModuleSearchService>();
 builder.Services.AddScoped<
@@ -219,7 +221,7 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 // ================= BUILD =================
-
+QuestPDF.Settings.License = LicenseType.Community;
 var app = builder.Build();
 app.UseForwardedHeaders(new ForwardedHeadersOptions
 {

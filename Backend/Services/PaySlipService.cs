@@ -35,7 +35,8 @@ namespace EmployeeManagementSystem.Services
             string employeeId,
             int year,
             string month,
-            decimal OtherDeductions)
+            decimal OtherDeductions,
+            string? DeductionLabel)
 
         {
 
@@ -183,7 +184,9 @@ namespace EmployeeManagementSystem.Services
                 Path.Combine(outputFolder, fileName);
 
             File.Copy(templatePath, outputPath, true);
-
+            DeductionLabel = string.IsNullOrWhiteSpace(DeductionLabel)
+    ? "Other Deductions"
+    : DeductionLabel;
             //--------------------------------
             // REPLACE BOOKMARKS
             //--------------------------------
@@ -332,7 +335,10 @@ namespace EmployeeManagementSystem.Services
                     "ProfessionalTax",
                     professionalTax.ToString("N2"));
 
-
+                ReplaceBookmark(
+    wordDoc,
+    "DeductionType",
+    DeductionLabel);
                 ReplaceBookmark(
                     wordDoc,
                     "OtherDeduction",
@@ -472,12 +478,12 @@ namespace EmployeeManagementSystem.Services
             foreach (var empId in employeeIds)
             {
                 var filePath =
-                    await GeneratePaySlip(
-                        empId,
-                        year,
-                        month,
-                        0);
-
+    await GeneratePaySlip(
+        empId,
+        year,
+        month,
+        0,
+        "Other Deductions");
                 result.Add(filePath);
             }
 

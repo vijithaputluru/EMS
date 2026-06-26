@@ -3,16 +3,19 @@
 
 //namespace EmployeeManagementSystem.Models
 //{
+//    [Table("Teams")]
 //    public class Team
 //    {
+       
 //        [Key]
+        
 //        public int Id { get; set; }
 
 //        public string TeamNumber { get; set; } = string.Empty;
 
 //        public string TeamName { get; set; } = string.Empty;
 
-//        // Stores P001, P025 etc.
+//        // Stores P001, P025 etc.i
 //        public string ReportingManagerId { get; set; } = string.Empty;
 
 //        public string EngagementType { get; set; } = string.Empty;

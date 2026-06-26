@@ -14,6 +14,6 @@
 
 //        public List<string> ReportingDays { get; set; } = new();
 
-//        public int MemberCount { get; set; }
+//        public List<string> EmployeeNames { get; set; } = new();
 //    }
 //}
